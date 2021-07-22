@@ -9,7 +9,6 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core"
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go/config"
 	"github.com/ElrondNetwork/elrond-go/epochStart/metachain"
 	"github.com/ElrondNetwork/elrond-go/epochStart/shardchain"
 	"github.com/ElrondNetwork/elrond-go/process/block/bootstrapStorage"
@@ -20,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewLatestDataProvider_ShouldWork(t *testing.T) {
+func TestNewFullHistoryLatestDataProvider_ShouldWork(t *testing.T) {
 	t.Parallel()
 
 	ldp, err := NewLatestDataProvider(getLatestDataProviderArgs())
@@ -28,14 +27,14 @@ func TestNewLatestDataProvider_ShouldWork(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestGetParentDirAndLastEpoch_ShouldWork(t *testing.T) {
+func TestFullHistoryGetParentDirAndLastEpoch_ShouldWork(t *testing.T) {
 	t.Parallel()
 
 	workingDir := "testDir"
 	defaultDbPath := "default"
 	chainID := "chainID"
 	lastEpoch := uint32(2)
-	lastDirectories := []string{"WrongEpoch_10", "Epoch_1", fmt.Sprintf("Epoch_%d", lastEpoch)}
+	lastDirectories := []string{"WrongEpoch_10", "Epoch_1", fmt.Sprintf("Epoch_%d", lastEpoch), "Shard_1"}
 
 	args := getLatestDataProviderArgs()
 	args.ParentDir = filepath.Join(workingDir, defaultDbPath, chainID)
@@ -45,7 +44,27 @@ func TestGetParentDirAndLastEpoch_ShouldWork(t *testing.T) {
 		},
 	}
 
-	ldp, _ := NewLatestDataProvider(args)
+	bd := &bootstrapStorage.BootstrapData{
+		LastHeader:             bootstrapStorage.BootstrapHeaderInfo{},
+		HighestFinalBlockNonce: 1,
+		LastRound:              1,
+	}
+
+	storerStub := &testscommon.StorerStub{
+		GetCalled: func(key []byte) ([]byte, error) {
+			return json.Marshal(&shardchain.TriggerRegistry{
+				EpochStartRound: 1,
+			})
+		},
+	}
+
+	args.BootstrapDataProvider = &mock.BootStrapDataProviderStub{
+		LoadForPathCalled: func(persisterFactory storage.PersisterFactory, path string) (
+			*bootstrapStorage.BootstrapData, storage.Storer, error) {
+			return bd, storerStub, nil
+		}}
+
+	ldp, _ := NewFullHistoryLatestDataProvider(args)
 
 	parentDir, epoch, err := ldp.GetParentDirAndLastEpoch()
 	assert.NoError(t, err)
@@ -53,7 +72,7 @@ func TestGetParentDirAndLastEpoch_ShouldWork(t *testing.T) {
 	assert.Equal(t, lastEpoch, epoch)
 }
 
-func TestGetShardsFromDirectory(t *testing.T) {
+func TestFullHistoryGetShardsFromDirectory(t *testing.T) {
 	t.Parallel()
 
 	path := "testPath"
@@ -68,14 +87,14 @@ func TestGetShardsFromDirectory(t *testing.T) {
 			return nil, nil
 		},
 	}
-	ldp, _ := NewLatestDataProvider(args)
+	ldp, _ := NewFullHistoryLatestDataProvider(args)
 
 	result, err := ldp.GetShardsFromDirectory(path)
 	assert.NoError(t, err)
 	assert.Equal(t, shards, result)
 }
 
-func TestLatestDataProvider_GetCannotGetListDirectoriesShouldErr(t *testing.T) {
+func TestFullHistoryLatestDataProvider_GetCannotGetListDirectoriesShouldErr(t *testing.T) {
 	t.Parallel()
 
 	localErr := errors.New("localErr")
@@ -85,13 +104,13 @@ func TestLatestDataProvider_GetCannotGetListDirectoriesShouldErr(t *testing.T) {
 			return nil, localErr
 		},
 	}
-	ldp, _ := NewLatestDataProvider(args)
+	ldp, _ := NewFullHistoryLatestDataProvider(args)
 
 	_, err := ldp.Get()
 	assert.Equal(t, localErr, err)
 }
 
-func TestLatestDataProvider_Get(t *testing.T) {
+func TestFullHistoryLatestDataProvider_Get(t *testing.T) {
 	t.Parallel()
 
 	shardID := uint32(0)
@@ -130,7 +149,7 @@ func TestLatestDataProvider_Get(t *testing.T) {
 		},
 	}
 
-	ldp, _ := NewLatestDataProvider(args)
+	ldp, _ := NewFullHistoryLatestDataProvider(args)
 
 	expectedRes := storage.LatestDataFromStorage{
 		Epoch:           lastEpoch,
@@ -143,18 +162,7 @@ func TestLatestDataProvider_Get(t *testing.T) {
 	assert.Equal(t, expectedRes, result)
 }
 
-func getLatestDataProviderArgs() ArgsLatestDataProvider {
-	return ArgsLatestDataProvider{
-		GeneralConfig:         config.Config{},
-		BootstrapDataProvider: &mock.BootStrapDataProviderStub{},
-		DirectoryReader:       &mock.DirectoryReaderStub{},
-		ParentDir:             "db",
-		DefaultEpochString:    "Epoch",
-		DefaultShardString:    "Shard",
-	}
-}
-
-func TestLoadEpochStartRoundShard(t *testing.T) {
+func TestFullHistoryLoadEpochStartRoundShard(t *testing.T) {
 	t.Parallel()
 
 	key := []byte("123")
@@ -171,14 +179,14 @@ func TestLoadEpochStartRoundShard(t *testing.T) {
 	}
 
 	args := getLatestDataProviderArgs()
-	ldp, _ := NewLatestDataProvider(args)
+	ldp, _ := NewFullHistoryLatestDataProvider(args)
 
 	round, err := ldp.loadEpochStartRound(shardID, key, storer)
 	assert.NoError(t, err)
 	assert.Equal(t, startRound, round)
 }
 
-func TestLoadEpochStartRoundMetachain(t *testing.T) {
+func TestFullHistoryLoadEpochStartRoundMetachain(t *testing.T) {
 	t.Parallel()
 
 	key := []byte("123")
@@ -195,7 +203,7 @@ func TestLoadEpochStartRoundMetachain(t *testing.T) {
 	}
 
 	args := getLatestDataProviderArgs()
-	ldp, _ := NewLatestDataProvider(args)
+	ldp, _ := NewFullHistoryLatestDataProvider(args)
 
 	round, err := ldp.loadEpochStartRound(shardID, key, storer)
 	assert.NoError(t, err)
