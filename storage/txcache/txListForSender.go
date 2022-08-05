@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/ElrondNetwork/elrond-go-core/core/atomic"
-	"github.com/ElrondNetwork/elrond-go/storage"
-	"github.com/ElrondNetwork/elrond-go/storage/txcache/maps"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/txcache/maps"
 )
 
 var _ maps.BucketSortedMapItem = (*txListForSender)(nil)

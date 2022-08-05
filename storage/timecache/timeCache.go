@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
 	"github.com/ElrondNetwork/elrond-go/dataRetriever"
-	"github.com/ElrondNetwork/elrond-go/storage"
 )
 
 var _ dataRetriever.RequestedItemsHandler = (*TimeCache)(nil)

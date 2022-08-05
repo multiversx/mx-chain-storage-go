@@ -2,7 +2,7 @@ package storageUnit
 
 import (
 	storageCore "github.com/ElrondNetwork/elrond-go-core/storage"
-	"github.com/ElrondNetwork/elrond-go/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
 )
 
 // NilStorer resembles a disabled implementation of the Storer interface

@@ -1,9 +1,9 @@
 package mock
 
 import (
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
 	"github.com/ElrondNetwork/elrond-go/process"
 	"github.com/ElrondNetwork/elrond-go/process/block/bootstrapStorage"
-	"github.com/ElrondNetwork/elrond-go/storage"
 )
 
 // BootStrapDataProviderStub -

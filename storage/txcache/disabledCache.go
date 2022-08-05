@@ -1,7 +1,7 @@
 package txcache
 
 import (
-	"github.com/ElrondNetwork/elrond-go/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
 )
 
 var _ storage.Cacher = (*DisabledCache)(nil)

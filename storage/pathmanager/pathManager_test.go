@@ -3,8 +3,8 @@ package pathmanager_test
 import (
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go/storage"
-	"github.com/ElrondNetwork/elrond-go/storage/pathmanager"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/pathmanager"
 	"github.com/stretchr/testify/assert"
 )
 

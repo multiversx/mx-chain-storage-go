@@ -3,12 +3,15 @@ package factory
 import (
 	"errors"
 
+	logger "github.com/ElrondNetwork/elrond-go-logger"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/leveldb"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/memorydb"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/storageUnit"
 	"github.com/ElrondNetwork/elrond-go/config"
-	"github.com/ElrondNetwork/elrond-go/storage"
-	"github.com/ElrondNetwork/elrond-go/storage/leveldb"
-	"github.com/ElrondNetwork/elrond-go/storage/memorydb"
-	"github.com/ElrondNetwork/elrond-go/storage/storageUnit"
 )
+
+var log = logger.GetOrCreate("elrond-go-storage/storage/factory")
 
 // PersisterFactory is the factory which will handle creating new databases
 type PersisterFactory struct {

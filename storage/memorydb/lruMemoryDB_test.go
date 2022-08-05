@@ -3,8 +3,8 @@ package memorydb_test
 import (
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go/storage"
-	"github.com/ElrondNetwork/elrond-go/storage/memorydb"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/memorydb"
 	"github.com/stretchr/testify/assert"
 )
 

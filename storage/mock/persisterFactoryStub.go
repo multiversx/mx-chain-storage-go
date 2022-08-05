@@ -3,7 +3,7 @@ package mock
 import (
 	"errors"
 
-	"github.com/ElrondNetwork/elrond-go/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
 )
 
 // PersisterFactoryStub -

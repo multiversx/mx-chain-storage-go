@@ -1,8 +1,8 @@
 package mock
 
 import (
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
 	"github.com/ElrondNetwork/elrond-go/dataRetriever"
-	"github.com/ElrondNetwork/elrond-go/storage"
 )
 
 // StorageListProviderStub -

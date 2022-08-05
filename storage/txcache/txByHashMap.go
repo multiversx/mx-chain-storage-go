@@ -2,7 +2,7 @@ package txcache
 
 import (
 	"github.com/ElrondNetwork/elrond-go-core/core/atomic"
-	"github.com/ElrondNetwork/elrond-go/storage/txcache/maps"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/txcache/maps"
 )
 
 // txByHashMap is a new map-like structure for holding and accessing transactions by txHash

@@ -14,12 +14,12 @@ import (
 	"github.com/ElrondNetwork/elrond-go-core/hashing/keccak"
 	storageCore "github.com/ElrondNetwork/elrond-go-core/storage"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/fifocache"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/leveldb"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/lrucache"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/memorydb"
 	"github.com/ElrondNetwork/elrond-go/common"
-	"github.com/ElrondNetwork/elrond-go/storage"
-	"github.com/ElrondNetwork/elrond-go/storage/fifocache"
-	"github.com/ElrondNetwork/elrond-go/storage/leveldb"
-	"github.com/ElrondNetwork/elrond-go/storage/lrucache"
-	"github.com/ElrondNetwork/elrond-go/storage/memorydb"
 )
 
 var _ storage.Storer = (*Unit)(nil)

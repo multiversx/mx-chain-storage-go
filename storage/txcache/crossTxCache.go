@@ -1,8 +1,8 @@
 package txcache
 
 import (
-	"github.com/ElrondNetwork/elrond-go/storage"
-	"github.com/ElrondNetwork/elrond-go/storage/immunitycache"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/immunitycache"
 )
 
 var _ storage.Cacher = (*CrossTxCache)(nil)

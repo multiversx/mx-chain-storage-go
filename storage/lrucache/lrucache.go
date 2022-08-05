@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go/storage"
-	"github.com/ElrondNetwork/elrond-go/storage/lrucache/capacity"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/lrucache/capacity"
 	lru "github.com/hashicorp/golang-lru"
 )
 

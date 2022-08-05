@@ -1,6 +1,6 @@
 package mock
 
-import "github.com/ElrondNetwork/elrond-go/storage"
+import "github.com/ElrondNetwork/elrond-go-storage/storage"
 
 // LatestStorageDataProviderStub -
 type LatestStorageDataProviderStub struct {

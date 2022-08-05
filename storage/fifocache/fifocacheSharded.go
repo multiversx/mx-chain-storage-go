@@ -5,7 +5,7 @@ import (
 
 	cmap "github.com/ElrondNetwork/concurrent-map"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go/storage"
+	"github.com/ElrondNetwork/elrond-go-storage/storage"
 )
 
 var _ storage.Cacher = (*FIFOShardedCache)(nil)
