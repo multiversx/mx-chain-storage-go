@@ -3,15 +3,12 @@ package factory
 import (
 	"errors"
 
-	logger "github.com/ElrondNetwork/elrond-go-logger"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/storage"
 	"github.com/ElrondNetwork/elrond-go-storage/storage/leveldb"
 	"github.com/ElrondNetwork/elrond-go-storage/storage/memorydb"
 	"github.com/ElrondNetwork/elrond-go-storage/storage/storageUnit"
-	"github.com/ElrondNetwork/elrond-go/config"
 )
-
-var log = logger.GetOrCreate("elrond-go-storage/storage/factory")
 
 // PersisterFactory is the factory which will handle creating new databases
 type PersisterFactory struct {
@@ -22,7 +19,7 @@ type PersisterFactory struct {
 }
 
 // NewPersisterFactory will return a new instance of a PersisterFactory
-func NewPersisterFactory(config config.DBConfig) *PersisterFactory {
+func NewPersisterFactory(config common.DBConfig) *PersisterFactory {
 	return &PersisterFactory{
 		dbType:            config.Type,
 		batchDelaySeconds: config.BatchDelaySeconds,

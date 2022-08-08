@@ -4,8 +4,7 @@ import (
 	"time"
 
 	"github.com/ElrondNetwork/elrond-go-core/storage"
-	"github.com/ElrondNetwork/elrond-go/config"
-	"github.com/ElrondNetwork/elrond-go/epochStart"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 )
 
 // Persister provides storage of data services in a database like construct
@@ -109,12 +108,6 @@ type StorerWithPutInEpoch interface {
 	SetEpochForPutOperation(epoch uint32)
 }
 
-// EpochStartNotifier defines which actions should be done for handling new epoch's events
-type EpochStartNotifier interface {
-	RegisterHandler(handler epochStart.ActionHandler)
-	IsInterfaceNil() bool
-}
-
 // PathManagerHandler defines which actions should be done for generating paths for databases directories
 type PathManagerHandler interface {
 	PathForEpoch(shardId string, epoch uint32, identifier string) string
@@ -131,8 +124,8 @@ type PersisterFactory interface {
 
 // UnitOpenerHandler defines which actions should be done for opening storage units
 type UnitOpenerHandler interface {
-	OpenDB(dbConfig config.DBConfig, shardID uint32, epoch uint32) (Storer, error)
-	GetMostRecentStorageUnit(config config.DBConfig) (Storer, error)
+	OpenDB(dbConfig common.DBConfig, shardID uint32, epoch uint32) (Storer, error)
+	GetMostRecentStorageUnit(config common.DBConfig) (Storer, error)
 	IsInterfaceNil() bool
 }
 

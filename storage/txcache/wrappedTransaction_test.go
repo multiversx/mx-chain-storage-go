@@ -3,7 +3,7 @@ package txcache
 import (
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go/testscommon/txcachemocks"
+	"github.com/ElrondNetwork/elrond-go-storage/storage/mock/txcachemocks"
 	"github.com/stretchr/testify/require"
 )
 

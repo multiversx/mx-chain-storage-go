@@ -1,12 +1,12 @@
 package factory
 
 import (
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/storage/storageUnit"
-	"github.com/ElrondNetwork/elrond-go/config"
 )
 
 // GetCacherFromConfig will return the cache config needed for storage unit from a config came from the toml file
-func GetCacherFromConfig(cfg config.CacheConfig) storageUnit.CacheConfig {
+func GetCacherFromConfig(cfg common.CacheConfig) storageUnit.CacheConfig {
 	return storageUnit.CacheConfig{
 		Name:                 cfg.Name,
 		Capacity:             cfg.Capacity,
@@ -19,7 +19,7 @@ func GetCacherFromConfig(cfg config.CacheConfig) storageUnit.CacheConfig {
 }
 
 // GetDBFromConfig will return the db config needed for storage unit from a config came from the toml file
-func GetDBFromConfig(cfg config.DBConfig) storageUnit.DBConfig {
+func GetDBFromConfig(cfg common.DBConfig) storageUnit.DBConfig {
 	return storageUnit.DBConfig{
 		Type:              storageUnit.DBType(cfg.Type),
 		MaxBatchSize:      cfg.MaxBatchSize,

@@ -5,10 +5,7 @@ import (
 	"time"
 
 	"github.com/ElrondNetwork/elrond-go-storage/storage"
-	"github.com/ElrondNetwork/elrond-go/dataRetriever"
 )
-
-var _ dataRetriever.RequestedItemsHandler = (*TimeCache)(nil)
 
 type span struct {
 	timestamp time.Time

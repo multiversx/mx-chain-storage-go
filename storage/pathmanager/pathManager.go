@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/storage"
-	"github.com/ElrondNetwork/elrond-go/common"
 )
 
 var _ storage.PathManagerHandler = (*PathManager)(nil)

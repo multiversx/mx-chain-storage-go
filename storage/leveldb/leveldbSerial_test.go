@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/storage"
 	"github.com/ElrondNetwork/elrond-go-storage/storage/leveldb"
-	"github.com/ElrondNetwork/elrond-go/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -81,16 +81,16 @@ func testSerialDbAllMethodsShouldNotPanic(t *testing.T, closeHandler func(db *le
 	closeHandler(ldb)
 
 	_, err := ldb.Get([]byte("key1"))
-	assert.Equal(t, errors.ErrDBIsClosed, err)
+	assert.Equal(t, common.ErrDBIsClosed, err)
 
 	err = ldb.Has([]byte("key2"))
-	assert.Equal(t, errors.ErrDBIsClosed, err)
+	assert.Equal(t, common.ErrDBIsClosed, err)
 
 	err = ldb.Remove([]byte("key3"))
-	assert.Equal(t, errors.ErrDBIsClosed, err)
+	assert.Equal(t, common.ErrDBIsClosed, err)
 
 	err = ldb.Put([]byte("key4"), []byte("val"))
-	assert.Equal(t, errors.ErrDBIsClosed, err)
+	assert.Equal(t, common.ErrDBIsClosed, err)
 
 	ldb.RangeKeys(func(key []byte, value []byte) bool {
 		require.Fail(t, "should have not called range")

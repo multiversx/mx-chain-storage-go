@@ -3,15 +3,15 @@ package factory
 import (
 	"testing"
 
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/storage/storageUnit"
-	"github.com/ElrondNetwork/elrond-go/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetCacherFromConfig(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.CacheConfig{
+	cfg := common.CacheConfig{
 		Capacity:    100,
 		Shards:      2,
 		Type:        "lru",
@@ -30,7 +30,7 @@ func TestGetCacherFromConfig(t *testing.T) {
 func TestGetDBFromConfig(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.DBConfig{
+	cfg := common.DBConfig{
 		Type:              "lru",
 		MaxBatchSize:      10,
 		BatchDelaySeconds: 2,
