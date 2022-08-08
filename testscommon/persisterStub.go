@@ -1,4 +1,4 @@
-package mock
+package testscommon
 
 // PersisterStub -
 type PersisterStub struct {

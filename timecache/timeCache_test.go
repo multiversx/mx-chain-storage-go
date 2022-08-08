@@ -7,7 +7,7 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
 	"github.com/ElrondNetwork/elrond-go-storage"
-	"github.com/ElrondNetwork/elrond-go-storage/mock"
+	"github.com/ElrondNetwork/elrond-go-storage/testscommon"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -232,7 +232,7 @@ func TestTimeCache_RegisterHandlerShouldWork(t *testing.T) {
 
 	providedKey := "key1"
 	wasCalled := false
-	eh := &mock.EvictionHandlerStub{
+	eh := &testscommon.EvictionHandlerStub{
 		EvictedCalled: func(key []byte) {
 			assert.True(t, bytes.Equal([]byte(providedKey), key))
 			wasCalled = true

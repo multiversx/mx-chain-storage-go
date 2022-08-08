@@ -1,4 +1,4 @@
-package mock
+package testscommon
 
 // AdaptedSizedLruCacheStub --
 type AdaptedSizedLruCacheStub struct {

@@ -7,8 +7,8 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
 	"github.com/ElrondNetwork/elrond-go-storage"
-	storageMock "github.com/ElrondNetwork/elrond-go-storage/mock"
-	"github.com/ElrondNetwork/elrond-go-storage/mock/trieFactory"
+	storageMock "github.com/ElrondNetwork/elrond-go-storage/testscommon"
+	"github.com/ElrondNetwork/elrond-go-storage/testscommon/trieFactory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

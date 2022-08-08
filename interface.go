@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/ElrondNetwork/elrond-go-core/storage"
-	"github.com/ElrondNetwork/elrond-go-storage/common"
 )
 
 // Persister provides storage of data services in a database like construct
@@ -122,13 +121,6 @@ type PersisterFactory interface {
 	IsInterfaceNil() bool
 }
 
-// UnitOpenerHandler defines which actions should be done for opening storage units
-type UnitOpenerHandler interface {
-	OpenDB(dbConfig common.DBConfig, shardID uint32, epoch uint32) (Storer, error)
-	GetMostRecentStorageUnit(config common.DBConfig) (Storer, error)
-	IsInterfaceNil() bool
-}
-
 // DirectoryReaderHandler defines which actions should be done by a directory reader
 type DirectoryReaderHandler interface {
 	ListFilesAsString(directoryPath string) ([]string, error)
@@ -204,7 +196,7 @@ type TimeCacher interface {
 	IsInterfaceNil() bool
 }
 
-// EvictionHandler defines a component which can be registered on TimeCaher
+// EvictionHandler defines a component which can be registered on TimeCacher
 type EvictionHandler interface {
 	Evicted(key []byte)
 }
