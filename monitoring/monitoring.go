@@ -1,4 +1,4 @@
-package elrond_go_storage
+package monitoring
 
 import (
 	"github.com/ElrondNetwork/elrond-go-core/core"

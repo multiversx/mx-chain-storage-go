@@ -14,13 +14,13 @@ import (
 	"github.com/ElrondNetwork/elrond-go-core/hashing/keccak"
 	storageCore "github.com/ElrondNetwork/elrond-go-core/storage"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage"
 	storageCommon "github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/fifocache"
 	"github.com/ElrondNetwork/elrond-go-storage/leveldb"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
 	"github.com/ElrondNetwork/elrond-go-storage/memorydb"
+	"github.com/ElrondNetwork/elrond-go-storage/monitoring"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
@@ -315,7 +315,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 
 // NewCache creates a new cache from a cache config
 func NewCache(config CacheConfig) (types.Cacher, error) {
-	elrond_go_storage.MonitorNewCache(config.Name, config.SizeInBytes)
+	monitoring.MonitorNewCache(config.Name, config.SizeInBytes)
 
 	cacheType := config.Type
 	capacity := config.Capacity

@@ -5,8 +5,8 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core/atomic"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage"
 	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/monitoring"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
@@ -28,7 +28,7 @@ type ImmunityCache struct {
 // NewImmunityCache creates a new cache
 func NewImmunityCache(config CacheConfig) (*ImmunityCache, error) {
 	log.Debug("NewImmunityCache", "config", config.String())
-	elrond_go_storage.MonitorNewCache(config.Name, uint64(config.MaxNumBytes))
+	monitoring.MonitorNewCache(config.Name, uint64(config.MaxNumBytes))
 
 	err := config.Verify()
 	if err != nil {
