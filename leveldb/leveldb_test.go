@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/leveldb"
 	"github.com/stretchr/testify/assert"
@@ -336,13 +335,13 @@ func testDbAllMethodsShouldNotPanic(t *testing.T, closeHandler func(db *leveldb.
 	closeHandler(ldb)
 
 	err := ldb.Put([]byte("key1"), []byte("val1"))
-	require.Equal(t, common.ErrDBIsClosed, err)
+	require.Equal(t, commonErrors.ErrDBIsClosed, err)
 
 	_, err = ldb.Get([]byte("key2"))
-	require.Equal(t, common.ErrDBIsClosed, err)
+	require.Equal(t, commonErrors.ErrDBIsClosed, err)
 
 	err = ldb.Has([]byte("key3"))
-	require.Equal(t, common.ErrDBIsClosed, err)
+	require.Equal(t, commonErrors.ErrDBIsClosed, err)
 
 	ldb.RangeKeys(func(key []byte, value []byte) bool {
 		require.Fail(t, "should have not called range")
@@ -350,7 +349,7 @@ func testDbAllMethodsShouldNotPanic(t *testing.T, closeHandler func(db *leveldb.
 	})
 
 	err = ldb.Remove([]byte("key4"))
-	require.Equal(t, common.ErrDBIsClosed, err)
+	require.Equal(t, commonErrors.ErrDBIsClosed, err)
 }
 
 func TestDB_SpecialValueTest(t *testing.T) {

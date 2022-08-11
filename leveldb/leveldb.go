@@ -10,7 +10,6 @@ import (
 	"time"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -149,7 +148,7 @@ func (s *DB) Put(key, val []byte) error {
 func (s *DB) Get(key []byte) ([]byte, error) {
 	db := s.getDbPointer()
 	if db == nil {
-		return nil, common.ErrDBIsClosed
+		return nil, commonErrors.ErrDBIsClosed
 	}
 
 	if s.batch.IsRemoved(key) {
@@ -176,7 +175,7 @@ func (s *DB) Get(key []byte) ([]byte, error) {
 func (s *DB) Has(key []byte) error {
 	db := s.getDbPointer()
 	if db == nil {
-		return common.ErrDBIsClosed
+		return commonErrors.ErrDBIsClosed
 	}
 
 	if s.batch.IsRemoved(key) {
@@ -218,7 +217,7 @@ func (s *DB) putBatch(b types.Batcher) error {
 
 	db := s.getDbPointer()
 	if db == nil {
-		return common.ErrDBIsClosed
+		return commonErrors.ErrDBIsClosed
 	}
 
 	return db.Write(dbBatch.batch, wopt)
