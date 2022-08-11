@@ -6,9 +6,11 @@ import (
 	"github.com/ElrondNetwork/elrond-go-core/core/atomic"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
 	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
-var _ elrond_go_storage.Cacher = (*ImmunityCache)(nil)
+var _ types.Cacher = (*ImmunityCache)(nil)
 
 var log = logger.GetOrCreate("storage/immunitycache")
 
@@ -58,7 +60,7 @@ func (ic *ImmunityCache) initializeChunksWithLock() {
 func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte) (numNowTotal, numFutureTotal int) {
 	immuneItemsCapacityReached := ic.CountImmune()+len(keys) > int(ic.config.MaxNumItems)
 	if immuneItemsCapacityReached {
-		log.Warn("ImmunityCache.ImmunizeKeys(): will not immunize", "err", elrond_go_storage.ErrImmuneItemsCapacityReached)
+		log.Warn("ImmunityCache.ImmunizeKeys(): will not immunize", "err", commonErrors.ErrImmuneItemsCapacityReached)
 		return
 	}
 
@@ -260,7 +262,7 @@ func (ic *ImmunityCache) UnRegisterHandler(_ string) {
 }
 
 // ForEachItem iterates over the items in the cache
-func (ic *ImmunityCache) ForEachItem(function elrond_go_storage.ForEachItem) {
+func (ic *ImmunityCache) ForEachItem(function types.ForEachItem) {
 	for _, chunk := range ic.getChunksWithLock() {
 		chunk.ForEachItem(function)
 	}

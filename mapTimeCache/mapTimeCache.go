@@ -9,8 +9,9 @@ import (
 	"time"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/timecache"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
 var log = logger.GetOrCreate("storage/maptimecache")
@@ -27,7 +28,7 @@ type ArgMapTimeCacher struct {
 type mapTimeCacher struct {
 	sync.RWMutex
 	dataMap              map[string]interface{}
-	timeCache            elrond_go_storage.TimeCacher
+	timeCache            types.TimeCacher
 	cacheExpiry          time.Duration
 	defaultTimeSpan      time.Duration
 	cancelFunc           func()
@@ -59,10 +60,10 @@ func NewMapTimeCache(arg ArgMapTimeCacher) (*mapTimeCacher, error) {
 
 func checkArg(arg ArgMapTimeCacher) error {
 	if arg.DefaultSpan < minDuration {
-		return elrond_go_storage.ErrInvalidDefaultSpan
+		return commonErrors.ErrInvalidDefaultSpan
 	}
 	if arg.CacheExpiry < minDuration {
-		return elrond_go_storage.ErrInvalidCacheExpiry
+		return commonErrors.ErrInvalidCacheExpiry
 	}
 
 	return nil

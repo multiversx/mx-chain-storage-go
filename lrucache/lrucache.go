@@ -4,18 +4,18 @@ import (
 	"sync"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache/capacity"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 	lru "github.com/hashicorp/golang-lru"
 )
 
-var _ elrond_go_storage.Cacher = (*lruCache)(nil)
+var _ types.Cacher = (*lruCache)(nil)
 
 var log = logger.GetOrCreate("storage/lrucache")
 
 // LRUCache implements a Least Recently Used eviction cache
 type lruCache struct {
-	cache   elrond_go_storage.SizedLRUCacheHandler
+	cache   types.SizedLRUCacheHandler
 	maxsize int
 
 	mutAddedDataHandlers sync.RWMutex

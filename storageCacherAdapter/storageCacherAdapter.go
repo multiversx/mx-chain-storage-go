@@ -7,40 +7,41 @@ import (
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
 	"github.com/ElrondNetwork/elrond-go-core/marshal"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
 var log = logger.GetOrCreate("storageCacherAdapter")
 
 type storageCacherAdapter struct {
-	cacher     elrond_go_storage.AdaptedSizedLRUCache
-	db         elrond_go_storage.Persister
+	cacher     types.AdaptedSizedLRUCache
+	db         types.Persister
 	lock       sync.RWMutex
 	dbIsClosed bool
 
-	storedDataFactory  elrond_go_storage.StoredDataFactory
+	storedDataFactory  types.StoredDataFactory
 	marshalizer        marshal.Marshalizer
 	numValuesInStorage int
 }
 
 // NewStorageCacherAdapter creates a new storageCacherAdapter
 func NewStorageCacherAdapter(
-	cacher elrond_go_storage.AdaptedSizedLRUCache,
-	db elrond_go_storage.Persister,
-	storedDataFactory elrond_go_storage.StoredDataFactory,
+	cacher types.AdaptedSizedLRUCache,
+	db types.Persister,
+	storedDataFactory types.StoredDataFactory,
 	marshalizer marshal.Marshalizer,
 ) (*storageCacherAdapter, error) {
 	if check.IfNil(cacher) {
-		return nil, elrond_go_storage.ErrNilCacher
+		return nil, commonErrors.ErrNilCacher
 	}
 	if check.IfNil(db) {
-		return nil, elrond_go_storage.ErrNilPersister
+		return nil, commonErrors.ErrNilPersister
 	}
 	if check.IfNil(marshalizer) {
-		return nil, elrond_go_storage.ErrNilMarshalizer
+		return nil, commonErrors.ErrNilMarshalizer
 	}
 	if check.IfNil(storedDataFactory) {
-		return nil, elrond_go_storage.ErrNilStoredDataFactory
+		return nil, commonErrors.ErrNilStoredDataFactory
 	}
 
 	return &storageCacherAdapter{
@@ -97,7 +98,7 @@ func (c *storageCacherAdapter) Put(key []byte, value interface{}, sizeInBytes in
 }
 
 func getBytes(data interface{}, marshalizer marshal.Marshalizer) []byte {
-	evictedVal, ok := data.(elrond_go_storage.SerializedStoredData)
+	evictedVal, ok := data.(types.SerializedStoredData)
 	if ok {
 		return evictedVal.GetSerialized()
 	}
@@ -141,7 +142,7 @@ func (c *storageCacherAdapter) Get(key []byte) (interface{}, bool) {
 
 func (c *storageCacherAdapter) getData(serializedData []byte) (interface{}, error) {
 	storedData := c.storedDataFactory.CreateEmpty()
-	data, ok := storedData.(elrond_go_storage.SerializedStoredData)
+	data, ok := storedData.(types.SerializedStoredData)
 	if ok {
 		data.SetSerialized(serializedData)
 		return data, nil

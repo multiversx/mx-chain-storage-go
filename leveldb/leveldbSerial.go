@@ -11,13 +11,14 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core"
 	"github.com/ElrondNetwork/elrond-go-core/core/closing"
-	"github.com/ElrondNetwork/elrond-go-storage"
 	"github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
-var _ elrond_go_storage.Persister = (*SerialDB)(nil)
+var _ types.Persister = (*SerialDB)(nil)
 
 // SerialDB holds a pointer to the leveldb database and the path to where it is stored.
 type SerialDB struct {
@@ -25,7 +26,7 @@ type SerialDB struct {
 	maxBatchSize      int
 	batchDelaySeconds int
 	sizeBatch         int
-	batch             elrond_go_storage.Batcher
+	batch             types.Batcher
 	mutBatch          sync.RWMutex
 	dbAccess          chan serialQueryer
 	cancel            context.CancelFunc
@@ -41,7 +42,7 @@ func NewSerialDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFi
 	}
 
 	if maxOpenFiles < 1 {
-		return nil, elrond_go_storage.ErrInvalidNumOpenFiles
+		return nil, commonErrors.ErrInvalidNumOpenFiles
 	}
 
 	options := &opt.Options{
@@ -147,7 +148,7 @@ func (s *SerialDB) Get(key []byte) ([]byte, error) {
 	s.mutBatch.RLock()
 	if s.batch.IsRemoved(key) {
 		s.mutBatch.RUnlock()
-		return nil, elrond_go_storage.ErrKeyNotFound
+		return nil, commonErrors.ErrKeyNotFound
 	}
 
 	data := s.batch.Get(key)
@@ -171,7 +172,7 @@ func (s *SerialDB) Get(key []byte) ([]byte, error) {
 	close(ch)
 
 	if result.err == leveldb.ErrNotFound {
-		return nil, elrond_go_storage.ErrKeyNotFound
+		return nil, commonErrors.ErrKeyNotFound
 	}
 	if result.err != nil {
 		return nil, result.err
@@ -189,7 +190,7 @@ func (s *SerialDB) Has(key []byte) error {
 	s.mutBatch.RLock()
 	if s.batch.IsRemoved(key) {
 		s.mutBatch.RUnlock()
-		return elrond_go_storage.ErrKeyNotFound
+		return commonErrors.ErrKeyNotFound
 	}
 
 	data := s.batch.Get(key)
@@ -230,7 +231,7 @@ func (s *SerialDB) putBatch() error {
 	dbBatch, ok := s.batch.(*batch)
 	if !ok {
 		s.mutBatch.Unlock()
-		return elrond_go_storage.ErrInvalidBatch
+		return commonErrors.ErrInvalidBatch
 	}
 	s.sizeBatch = 0
 	s.batch = NewBatch()

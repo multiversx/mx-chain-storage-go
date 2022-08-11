@@ -5,17 +5,18 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core"
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
 type peerTimeCache struct {
-	timeCache elrond_go_storage.TimeCacher
+	timeCache types.TimeCacher
 }
 
 // NewPeerTimeCache creates a new peer time cache data structure instance
-func NewPeerTimeCache(timeCache elrond_go_storage.TimeCacher) (*peerTimeCache, error) {
+func NewPeerTimeCache(timeCache types.TimeCacher) (*peerTimeCache, error) {
 	if check.IfNil(timeCache) {
-		return nil, elrond_go_storage.ErrNilTimeCache
+		return nil, commonErrors.ErrNilTimeCache
 	}
 
 	return &peerTimeCache{

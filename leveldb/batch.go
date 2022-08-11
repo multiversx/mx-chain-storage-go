@@ -3,11 +3,11 @@ package leveldb
 import (
 	"sync"
 
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-var _ elrond_go_storage.Batcher = (*batch)(nil)
+var _ types.Batcher = (*batch)(nil)
 
 type batch struct {
 	batch       *leveldb.Batch

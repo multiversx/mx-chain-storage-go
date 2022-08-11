@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/mapTimeCache"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +41,7 @@ func TestNewMapTimeCache(t *testing.T) {
 		arg.DefaultSpan = time.Second - time.Nanosecond
 		cacher, err := mapTimeCache.NewMapTimeCache(arg)
 		assert.Nil(t, cacher)
-		assert.Equal(t, elrond_go_storage.ErrInvalidDefaultSpan, err)
+		assert.Equal(t, commonErrors.ErrInvalidDefaultSpan, err)
 	})
 	t.Run("invalid CacheExpiry should error", func(t *testing.T) {
 		t.Parallel()
@@ -50,7 +50,7 @@ func TestNewMapTimeCache(t *testing.T) {
 		arg.CacheExpiry = time.Second - time.Nanosecond
 		cacher, err := mapTimeCache.NewMapTimeCache(arg)
 		assert.Nil(t, cacher)
-		assert.Equal(t, elrond_go_storage.ErrInvalidCacheExpiry, err)
+		assert.Equal(t, commonErrors.ErrInvalidCacheExpiry, err)
 	})
 	t.Run("should work", func(t *testing.T) {
 		t.Parallel()

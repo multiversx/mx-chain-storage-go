@@ -1,4 +1,4 @@
-package elrond_go_storage
+package types
 
 import (
 	"time"

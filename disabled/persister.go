@@ -1,7 +1,7 @@
 package disabled
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 )
 
 type persister struct{}
@@ -18,12 +18,12 @@ func (p *persister) Put(_, _ []byte) error {
 
 // Get returns nil and ErrKeyNotFound
 func (p *persister) Get(_ []byte) ([]byte, error) {
-	return nil, elrond_go_storage.ErrKeyNotFound
+	return nil, commonErrors.ErrKeyNotFound
 }
 
 // Has returns ErrKeyNotFound
 func (p *persister) Has(_ []byte) error {
-	return elrond_go_storage.ErrKeyNotFound
+	return commonErrors.ErrKeyNotFound
 }
 
 // Close returns nil

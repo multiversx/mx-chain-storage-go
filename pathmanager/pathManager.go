@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ElrondNetwork/elrond-go-storage"
 	"github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
-var _ elrond_go_storage.PathManagerHandler = (*PathManager)(nil)
+var _ types.PathManagerHandler = (*PathManager)(nil)
 
 // PathManager will handle creation of paths for storers
 type PathManager struct {
@@ -20,24 +21,24 @@ type PathManager struct {
 // NewPathManager will return a new instance of PathManager if the provided arguments are fine
 func NewPathManager(pruningPathTemplate string, staticPathTemplate string, databasePath string) (*PathManager, error) {
 	if len(pruningPathTemplate) == 0 {
-		return nil, elrond_go_storage.ErrEmptyPruningPathTemplate
+		return nil, commonErrors.ErrEmptyPruningPathTemplate
 	}
 	if !strings.Contains(pruningPathTemplate, common.PathEpochPlaceholder) ||
 		!strings.Contains(pruningPathTemplate, common.PathShardPlaceholder) ||
 		!strings.Contains(pruningPathTemplate, common.PathIdentifierPlaceholder) {
-		return nil, elrond_go_storage.ErrInvalidPruningPathTemplate
+		return nil, commonErrors.ErrInvalidPruningPathTemplate
 	}
 
 	if len(staticPathTemplate) == 0 {
-		return nil, elrond_go_storage.ErrEmptyStaticPathTemplate
+		return nil, commonErrors.ErrEmptyStaticPathTemplate
 	}
 	if !strings.Contains(staticPathTemplate, common.PathShardPlaceholder) ||
 		!strings.Contains(staticPathTemplate, common.PathIdentifierPlaceholder) {
-		return nil, elrond_go_storage.ErrInvalidStaticPathTemplate
+		return nil, commonErrors.ErrInvalidStaticPathTemplate
 	}
 
 	if len(databasePath) == 0 {
-		return nil, elrond_go_storage.ErrInvalidDatabasePath
+		return nil, commonErrors.ErrInvalidDatabasePath
 	}
 
 	return &PathManager{

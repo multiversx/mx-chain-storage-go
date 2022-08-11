@@ -16,13 +16,15 @@ import (
 	logger "github.com/ElrondNetwork/elrond-go-logger"
 	"github.com/ElrondNetwork/elrond-go-storage"
 	storageCommon "github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/fifocache"
 	"github.com/ElrondNetwork/elrond-go-storage/leveldb"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
 	"github.com/ElrondNetwork/elrond-go-storage/memorydb"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
-var _ elrond_go_storage.Storer = (*Unit)(nil)
+var _ types.Storer = (*Unit)(nil)
 
 // CacheType represents the type of the supported caches
 type CacheType string
@@ -101,8 +103,8 @@ type DBConfig struct {
 // holding the cache and persistence unit
 type Unit struct {
 	lock      sync.RWMutex
-	persister elrond_go_storage.Persister
-	cacher    elrond_go_storage.Cacher
+	persister types.Persister
+	cacher    types.Cacher
 }
 
 // Put adds data to both cache and persistence medium
@@ -128,7 +130,7 @@ func (u *Unit) PutInEpoch(key, data []byte, _ uint32) error {
 
 // GetOldestEpoch will return an error that signals that the oldest epoch fetching is not available
 func (u *Unit) GetOldestEpoch() (uint32, error) {
-	return 0, elrond_go_storage.ErrOldestEpochNotAvailable
+	return 0, commonErrors.ErrOldestEpochNotAvailable
 }
 
 // Close will close unit
@@ -259,12 +261,12 @@ func (u *Unit) IsInterfaceNil() bool {
 
 // NewStorageUnit is the constructor for the storage unit, creating a new storage unit
 // from the given cacher and persister.
-func NewStorageUnit(c elrond_go_storage.Cacher, p elrond_go_storage.Persister) (*Unit, error) {
+func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 	if check.IfNil(p) {
-		return nil, elrond_go_storage.ErrNilPersister
+		return nil, commonErrors.ErrNilPersister
 	}
 	if check.IfNil(c) {
-		return nil, elrond_go_storage.ErrNilCacher
+		return nil, commonErrors.ErrNilCacher
 	}
 
 	sUnit := &Unit{
@@ -277,8 +279,8 @@ func NewStorageUnit(c elrond_go_storage.Cacher, p elrond_go_storage.Persister) (
 
 // NewStorageUnitFromConf creates a new storage unit from a storage unit config
 func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, error) {
-	var cache elrond_go_storage.Cacher
-	var db elrond_go_storage.Persister
+	var cache types.Cacher
+	var db types.Persister
 	var err error
 
 	defer func() {
@@ -288,7 +290,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 	}()
 
 	if dbConf.MaxBatchSize > int(cacheConf.Capacity) {
-		return nil, elrond_go_storage.ErrCacheSizeIsLowerThanBatchSize
+		return nil, commonErrors.ErrCacheSizeIsLowerThanBatchSize
 	}
 
 	cache, err = NewCache(cacheConf)
@@ -312,7 +314,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 }
 
 // NewCache creates a new cache from a cache config
-func NewCache(config CacheConfig) (elrond_go_storage.Cacher, error) {
+func NewCache(config CacheConfig) (types.Cacher, error) {
 	elrond_go_storage.MonitorNewCache(config.Name, config.SizeInBytes)
 
 	cacheType := config.Type
@@ -320,20 +322,20 @@ func NewCache(config CacheConfig) (elrond_go_storage.Cacher, error) {
 	shards := config.Shards
 	sizeInBytes := config.SizeInBytes
 
-	var cacher elrond_go_storage.Cacher
+	var cacher types.Cacher
 	var err error
 
 	switch cacheType {
 	case LRUCache:
 		if sizeInBytes != 0 {
-			return nil, elrond_go_storage.ErrLRUCacheWithProvidedSize
+			return nil, commonErrors.ErrLRUCacheWithProvidedSize
 		}
 
 		cacher, err = lrucache.NewCache(int(capacity))
 	case SizeLRUCache:
 		if sizeInBytes < minimumSizeForLRUCache {
 			return nil, fmt.Errorf("%w, provided %d, minimum %d",
-				elrond_go_storage.ErrLRUCacheInvalidSize,
+				commonErrors.ErrLRUCacheInvalidSize,
 				sizeInBytes,
 				minimumSizeForLRUCache,
 			)
@@ -347,7 +349,7 @@ func NewCache(config CacheConfig) (elrond_go_storage.Cacher, error) {
 		}
 		// add other implementations if required
 	default:
-		return nil, elrond_go_storage.ErrNotSupportedCacheType
+		return nil, commonErrors.ErrNotSupportedCacheType
 	}
 
 	if err != nil {
@@ -367,8 +369,8 @@ type ArgDB struct {
 }
 
 // NewDB creates a new database from database config
-func NewDB(argDB ArgDB) (elrond_go_storage.Persister, error) {
-	var db elrond_go_storage.Persister
+func NewDB(argDB ArgDB) (types.Persister, error) {
+	var db types.Persister
 	var err error
 
 	for i := 0; i < storageCommon.MaxRetriesToCreateDB; i++ {
@@ -380,7 +382,7 @@ func NewDB(argDB ArgDB) (elrond_go_storage.Persister, error) {
 		case MemoryDB:
 			db = memorydb.New()
 		default:
-			return nil, elrond_go_storage.ErrNotSupportedDBType
+			return nil, commonErrors.ErrNotSupportedDBType
 		}
 
 		if err == nil {
@@ -407,6 +409,6 @@ func (h HasherType) NewHasher() (hashing.Hasher, error) {
 	case Fnv:
 		return fnv.NewFnv(), nil
 	default:
-		return nil, elrond_go_storage.ErrNotSupportedHashType
+		return nil, commonErrors.ErrNotSupportedHashType
 	}
 }

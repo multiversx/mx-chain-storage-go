@@ -1,4 +1,4 @@
-package elrond_go_storage
+package commonErrors
 
 import (
 	"errors"

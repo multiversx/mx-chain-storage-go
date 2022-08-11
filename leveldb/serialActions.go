@@ -1,8 +1,8 @@
 package leveldb
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage"
 	"github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
@@ -79,7 +79,7 @@ func (h *hasAct) request(s *SerialDB) {
 		return
 	}
 
-	h.resChan <- elrond_go_storage.ErrKeyNotFound
+	h.resChan <- commonErrors.ErrKeyNotFound
 }
 
 func (h *hasAct) doHasRequest(s *SerialDB) (bool, error) {

@@ -4,7 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
 type span struct {
@@ -19,7 +20,7 @@ type TimeCache struct {
 	mut              sync.RWMutex
 	data             map[string]*span
 	defaultSpan      time.Duration
-	evictionHandlers []elrond_go_storage.EvictionHandler
+	evictionHandlers []types.EvictionHandler
 }
 
 // NewTimeCache creates a new time cache data structure instance
@@ -27,7 +28,7 @@ func NewTimeCache(defaultSpan time.Duration) *TimeCache {
 	return &TimeCache{
 		data:             make(map[string]*span),
 		defaultSpan:      defaultSpan,
-		evictionHandlers: make([]elrond_go_storage.EvictionHandler, 0),
+		evictionHandlers: make([]types.EvictionHandler, 0),
 	}
 }
 
@@ -39,7 +40,7 @@ func (tc *TimeCache) Add(key string) error {
 
 func (tc *TimeCache) add(key string, duration time.Duration) error {
 	if len(key) == 0 {
-		return elrond_go_storage.ErrEmptyKey
+		return commonErrors.ErrEmptyKey
 	}
 
 	tc.mut.Lock()
@@ -63,7 +64,7 @@ func (tc *TimeCache) AddWithSpan(key string, duration time.Duration) error {
 // Also, it will reset the contained timestamp to time.Now
 func (tc *TimeCache) Upsert(key string, duration time.Duration) error {
 	if len(key) == 0 {
-		return elrond_go_storage.ErrEmptyKey
+		return commonErrors.ErrEmptyKey
 	}
 
 	tc.mut.Lock()
@@ -120,7 +121,7 @@ func (tc *TimeCache) Len() int {
 }
 
 // RegisterEvictionHandler adds a handler to the handlers slice
-func (tc *TimeCache) RegisterEvictionHandler(handler elrond_go_storage.EvictionHandler) {
+func (tc *TimeCache) RegisterEvictionHandler(handler types.EvictionHandler) {
 	if handler == nil {
 		return
 	}

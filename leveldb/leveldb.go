@@ -10,13 +10,14 @@ import (
 	"time"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage"
 	"github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
-var _ elrond_go_storage.Persister = (*DB)(nil)
+var _ types.Persister = (*DB)(nil)
 
 // read + write + execute for owner only
 const rwxOwner = 0700
@@ -29,7 +30,7 @@ type DB struct {
 	maxBatchSize      int
 	batchDelaySeconds int
 	sizeBatch         int
-	batch             elrond_go_storage.Batcher
+	batch             types.Batcher
 	mutBatch          sync.RWMutex
 	cancel            context.CancelFunc
 }
@@ -43,7 +44,7 @@ func NewDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFiles in
 	}
 
 	if maxOpenFiles < 1 {
-		return nil, elrond_go_storage.ErrInvalidNumOpenFiles
+		return nil, commonErrors.ErrInvalidNumOpenFiles
 	}
 
 	options := &opt.Options{
@@ -152,7 +153,7 @@ func (s *DB) Get(key []byte) ([]byte, error) {
 	}
 
 	if s.batch.IsRemoved(key) {
-		return nil, elrond_go_storage.ErrKeyNotFound
+		return nil, commonErrors.ErrKeyNotFound
 	}
 
 	data := s.batch.Get(key)
@@ -162,7 +163,7 @@ func (s *DB) Get(key []byte) ([]byte, error) {
 
 	data, err := db.Get(key, nil)
 	if err == leveldb.ErrNotFound {
-		return nil, elrond_go_storage.ErrKeyNotFound
+		return nil, commonErrors.ErrKeyNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -179,7 +180,7 @@ func (s *DB) Has(key []byte) error {
 	}
 
 	if s.batch.IsRemoved(key) {
-		return elrond_go_storage.ErrKeyNotFound
+		return commonErrors.ErrKeyNotFound
 	}
 
 	data := s.batch.Get(key)
@@ -196,19 +197,19 @@ func (s *DB) Has(key []byte) error {
 		return nil
 	}
 
-	return elrond_go_storage.ErrKeyNotFound
+	return commonErrors.ErrKeyNotFound
 }
 
 // CreateBatch returns a batcher to be used for batch writing data to the database
-func (s *DB) createBatch() elrond_go_storage.Batcher {
+func (s *DB) createBatch() types.Batcher {
 	return NewBatch()
 }
 
 // putBatch writes the Batch data into the database
-func (s *DB) putBatch(b elrond_go_storage.Batcher) error {
+func (s *DB) putBatch(b types.Batcher) error {
 	dbBatch, ok := b.(*batch)
 	if !ok {
-		return elrond_go_storage.ErrInvalidBatch
+		return commonErrors.ErrInvalidBatch
 	}
 
 	wopt := &opt.WriteOptions{

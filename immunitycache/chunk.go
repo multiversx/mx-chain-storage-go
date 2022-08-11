@@ -5,7 +5,8 @@ import (
 	"sync"
 
 	"github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
 var emptyStruct struct{}
@@ -114,7 +115,7 @@ func (chunk *immunityChunk) evictItemsNoLock() (numRemoved int, err error) {
 	numRemoved += numRemovedInStep
 
 	if numRemovedInStep == 0 {
-		return 0, elrond_go_storage.ErrFailedCacheEviction
+		return 0, commonErrors.ErrFailedCacheEviction
 	}
 
 	for chunk.isCapacityExceededNoLock() && numRemovedInStep == numToRemoveEachStep {
@@ -268,7 +269,7 @@ func (chunk *immunityChunk) AppendKeys(keysAccumulator [][]byte) [][]byte {
 }
 
 // ForEachItem iterates over the items in the chunk
-func (chunk *immunityChunk) ForEachItem(function elrond_go_storage.ForEachItem) {
+func (chunk *immunityChunk) ForEachItem(function types.ForEachItem) {
 	chunk.mutex.RLock()
 	defer chunk.mutex.RUnlock()
 

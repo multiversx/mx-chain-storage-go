@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
-var _ elrond_go_storage.Persister = (*DB)(nil)
+var _ types.Persister = (*DB)(nil)
 
 // DB represents the memory database storage. It holds a map of key value pairs
 // and a mutex to handle concurrent accesses to the map

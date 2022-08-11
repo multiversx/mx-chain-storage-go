@@ -3,7 +3,7 @@ package testscommon
 import (
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
 // TimeCacheStub -
@@ -12,7 +12,7 @@ type TimeCacheStub struct {
 	UpsertCalled                  func(key string, span time.Duration) error
 	HasCalled                     func(key string) bool
 	SweepCalled                   func()
-	RegisterEvictionHandlerCalled func(handler elrond_go_storage.EvictionHandler)
+	RegisterEvictionHandlerCalled func(handler types.EvictionHandler)
 }
 
 // Add -
@@ -50,7 +50,7 @@ func (tcs *TimeCacheStub) Sweep() {
 }
 
 // RegisterEvictionHandler -
-func (tcs *TimeCacheStub) RegisterEvictionHandler(handler elrond_go_storage.EvictionHandler) {
+func (tcs *TimeCacheStub) RegisterEvictionHandler(handler types.EvictionHandler) {
 	if tcs.RegisterEvictionHandlerCalled != nil {
 		tcs.RegisterEvictionHandlerCalled(handler)
 	}

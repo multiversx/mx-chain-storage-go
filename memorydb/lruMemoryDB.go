@@ -1,16 +1,17 @@
 package memorydb
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
-var _ elrond_go_storage.Persister = (*lruDB)(nil)
+var _ types.Persister = (*lruDB)(nil)
 
 // lruDB represents the memory database storage. It holds a LRU of key value pairs
 // and a mutex to handle concurrent accesses to the map
 type lruDB struct {
-	cacher elrond_go_storage.Cacher
+	cacher types.Cacher
 }
 
 // NewlruDB creates a lruDB according to size
@@ -33,12 +34,12 @@ func (l *lruDB) Put(key, val []byte) error {
 func (l *lruDB) Get(key []byte) ([]byte, error) {
 	val, ok := l.cacher.Get(key)
 	if !ok {
-		return nil, elrond_go_storage.ErrKeyNotFound
+		return nil, commonErrors.ErrKeyNotFound
 	}
 
 	mrsVal, ok := val.([]byte)
 	if !ok {
-		return nil, elrond_go_storage.ErrKeyNotFound
+		return nil, commonErrors.ErrKeyNotFound
 	}
 	return mrsVal, nil
 }
@@ -49,7 +50,7 @@ func (l *lruDB) Has(key []byte) error {
 	if has {
 		return nil
 	}
-	return elrond_go_storage.ErrKeyNotFound
+	return commonErrors.ErrKeyNotFound
 }
 
 // Close closes the files/resources associated to the storage medium

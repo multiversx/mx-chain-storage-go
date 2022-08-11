@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage"
 	"github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/leveldb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -120,7 +120,7 @@ func TestSerialDB_RemoveBeforeTimeoutOK(t *testing.T) {
 	v, err := ldb.Get(key)
 
 	assert.Nil(t, v)
-	assert.Equal(t, elrond_go_storage.ErrKeyNotFound, err)
+	assert.Equal(t, commonErrors.ErrKeyNotFound, err)
 }
 
 func TestSerialDB_RemoveAfterTimeoutOK(t *testing.T) {
@@ -133,7 +133,7 @@ func TestSerialDB_RemoveAfterTimeoutOK(t *testing.T) {
 	v, err := ldb.Get(key)
 
 	assert.Nil(t, v)
-	assert.Equal(t, elrond_go_storage.ErrKeyNotFound, err)
+	assert.Equal(t, commonErrors.ErrKeyNotFound, err)
 }
 
 func TestSerialDB_GetPresent(t *testing.T) {
@@ -173,7 +173,7 @@ func TestSerialDB_HasNotPresent(t *testing.T) {
 	err := ldb.Has(key)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, err, elrond_go_storage.ErrKeyNotFound)
+	assert.Equal(t, err, commonErrors.ErrKeyNotFound)
 }
 
 func TestSerialDB_RemovePresent(t *testing.T) {
@@ -185,7 +185,7 @@ func TestSerialDB_RemovePresent(t *testing.T) {
 	err := ldb.Has(key)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, err, elrond_go_storage.ErrKeyNotFound)
+	assert.Equal(t, err, commonErrors.ErrKeyNotFound)
 }
 
 func TestSerialDB_RemoveNotPresent(t *testing.T) {
@@ -245,7 +245,7 @@ func TestSerialDB_SpecialValueTest(t *testing.T) {
 		require.Nil(t, err)
 
 		recovered, err := ldb.Get(key)
-		assert.Equal(t, elrond_go_storage.ErrKeyNotFound, err)
+		assert.Equal(t, commonErrors.ErrKeyNotFound, err)
 		assert.Nil(t, recovered)
 	})
 	t.Run("operations: put -> remove -> put -> get of 'removed' value", func(t *testing.T) {

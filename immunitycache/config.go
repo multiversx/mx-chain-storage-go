@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 )
 
 const numChunksLowerBound = 1
@@ -27,19 +27,19 @@ type CacheConfig struct {
 // Verify verifies the validity of the configuration
 func (config *CacheConfig) Verify() error {
 	if len(config.Name) == 0 {
-		return fmt.Errorf("%w: config.Name is invalid", elrond_go_storage.ErrInvalidConfig)
+		return fmt.Errorf("%w: config.Name is invalid", commonErrors.ErrInvalidConfig)
 	}
 	if config.NumChunks < numChunksLowerBound || config.NumChunks > numChunksUpperBound {
-		return fmt.Errorf("%w: config.NumChunks is invalid", elrond_go_storage.ErrInvalidConfig)
+		return fmt.Errorf("%w: config.NumChunks is invalid", commonErrors.ErrInvalidConfig)
 	}
 	if config.MaxNumItems < maxNumItemsLowerBound {
-		return fmt.Errorf("%w: config.MaxNumItems is invalid", elrond_go_storage.ErrInvalidConfig)
+		return fmt.Errorf("%w: config.MaxNumItems is invalid", commonErrors.ErrInvalidConfig)
 	}
 	if config.MaxNumBytes < maxNumBytesLowerBound || config.MaxNumBytes > maxNumBytesUpperBound {
-		return fmt.Errorf("%w: config.MaxNumBytes is invalid", elrond_go_storage.ErrInvalidConfig)
+		return fmt.Errorf("%w: config.MaxNumBytes is invalid", commonErrors.ErrInvalidConfig)
 	}
 	if config.NumItemsToPreemptivelyEvict < numItemsToPreemptivelyEvictLowerBound {
-		return fmt.Errorf("%w: config.NumItemsToPreemptivelyEvict is invalid", elrond_go_storage.ErrInvalidConfig)
+		return fmt.Errorf("%w: config.NumItemsToPreemptivelyEvict is invalid", commonErrors.ErrInvalidConfig)
 	}
 
 	return nil

@@ -3,7 +3,7 @@ package memorydb_test
 import (
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
 	"github.com/ElrondNetwork/elrond-go-storage/memorydb"
 	"github.com/stretchr/testify/assert"
 )
@@ -75,7 +75,7 @@ func TestLruDB_HasNotPresent(t *testing.T) {
 
 	err = mdb.Has(key)
 
-	assert.Equal(t, elrond_go_storage.ErrKeyNotFound, err)
+	assert.Equal(t, commonErrors.ErrKeyNotFound, err)
 }
 
 func TestLruDB_DeletePresent(t *testing.T) {
@@ -94,7 +94,7 @@ func TestLruDB_DeletePresent(t *testing.T) {
 
 	err = mdb.Has(key)
 
-	assert.Equal(t, elrond_go_storage.ErrKeyNotFound, err)
+	assert.Equal(t, commonErrors.ErrKeyNotFound, err)
 }
 
 func TestLruDB_DeleteNotPresent(t *testing.T) {

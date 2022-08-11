@@ -1,12 +1,12 @@
 package lrucache
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage"
+	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
 // simpleLRUCacheAdapter provides an adapter between LRUCacheHandler and SizeLRUCacheHandler
 type simpleLRUCacheAdapter struct {
-	elrond_go_storage.LRUCacheHandler
+	types.LRUCacheHandler
 }
 
 // AddSized calls the Add method without the size in bytes parameter
