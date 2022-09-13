@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	storageMock "github.com/ElrondNetwork/elrond-go-storage/testscommon"
 	"github.com/ElrondNetwork/elrond-go-storage/testscommon/trieFactory"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +23,7 @@ func TestNewStorageCacherAdapter_NilCacher(t *testing.T) {
 		&storageMock.MarshalizerMock{},
 	)
 	assert.Nil(t, sca)
-	assert.Equal(t, commonErrors.ErrNilCacher, err)
+	assert.Equal(t, common.ErrNilCacher, err)
 }
 
 func TestNewStorageCacherAdapter_NilDB(t *testing.T) {
@@ -36,7 +36,7 @@ func TestNewStorageCacherAdapter_NilDB(t *testing.T) {
 		&storageMock.MarshalizerMock{},
 	)
 	assert.True(t, check.IfNil(sca))
-	assert.Equal(t, commonErrors.ErrNilPersister, err)
+	assert.Equal(t, common.ErrNilPersister, err)
 }
 
 func TestNewStorageCacherAdapter_NilStoredDataFactory(t *testing.T) {
@@ -49,7 +49,7 @@ func TestNewStorageCacherAdapter_NilStoredDataFactory(t *testing.T) {
 		&storageMock.MarshalizerMock{},
 	)
 	assert.Nil(t, sca)
-	assert.Equal(t, commonErrors.ErrNilStoredDataFactory, err)
+	assert.Equal(t, common.ErrNilStoredDataFactory, err)
 }
 
 func TestNewStorageCacherAdapter_NilMarshalizer(t *testing.T) {
@@ -62,7 +62,7 @@ func TestNewStorageCacherAdapter_NilMarshalizer(t *testing.T) {
 		nil,
 	)
 	assert.Nil(t, sca)
-	assert.Equal(t, commonErrors.ErrNilMarshalizer, err)
+	assert.Equal(t, common.ErrNilMarshalizer, err)
 }
 
 func TestStorageCacherAdapter_Clear(t *testing.T) {

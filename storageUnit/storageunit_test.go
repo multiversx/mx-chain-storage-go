@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
 	"github.com/ElrondNetwork/elrond-go-storage/memorydb"
 	"github.com/ElrondNetwork/elrond-go-storage/storageUnit"
@@ -141,7 +141,7 @@ func TestHasNotPresent(t *testing.T) {
 	err := s.Has(key)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, err, commonErrors.ErrKeyNotFound)
+	assert.Equal(t, err, common.ErrKeyNotFound)
 }
 
 func TestHasNotPresentCache(t *testing.T) {

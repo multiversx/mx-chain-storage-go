@@ -1,8 +1,7 @@
-package commonErrors
+package common
 
 import (
 	"errors"
-	"strings"
 )
 
 // ErrNilPersister is raised when a nil persister is provided
@@ -34,21 +33,6 @@ var ErrEmptyKey = errors.New("key is empty")
 
 // ErrInvalidConfig signals an invalid config
 var ErrInvalidConfig = errors.New("invalid config")
-
-// ErrEmptyPruningPathTemplate signals that an empty path template for pruning storers has been provided
-var ErrEmptyPruningPathTemplate = errors.New("empty path template for pruning storers")
-
-// ErrEmptyStaticPathTemplate signals that an empty path template for static storers has been provided
-var ErrEmptyStaticPathTemplate = errors.New("empty path template for static storers")
-
-// ErrInvalidPruningPathTemplate signals that an invalid path template for pruning storers has been provided
-var ErrInvalidPruningPathTemplate = errors.New("invalid path template for pruning storers")
-
-// ErrInvalidStaticPathTemplate signals that an invalid path template for static storers has been provided
-var ErrInvalidStaticPathTemplate = errors.New("invalid path template for static storers")
-
-// ErrInvalidDatabasePath signals that an invalid database path has been provided
-var ErrInvalidDatabasePath = errors.New("invalid database path")
 
 // ErrOldestEpochNotAvailable signals that fetching the oldest epoch is not available
 var ErrOldestEpochNotAvailable = errors.New("oldest epoch not available")
@@ -100,14 +84,3 @@ var ErrInvalidCacheExpiry = errors.New("invalid cache expiry")
 
 // ErrDBIsClosed is raised when the DB is closed
 var ErrDBIsClosed = errors.New("DB is closed")
-
-// IsNotFoundInStorageErr returns whether an error is a "not found in storage" error.
-// Currently, "item not found" storage errors are untyped (thus not distinguishable from others). E.g. see "pruningStorer.go".
-// As a workaround, we test the error message for a match.
-func IsNotFoundInStorageErr(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	return strings.Contains(err.Error(), "not found")
-}

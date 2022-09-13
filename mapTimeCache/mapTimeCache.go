@@ -9,7 +9,7 @@ import (
 	"time"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/timecache"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
@@ -60,10 +60,10 @@ func NewMapTimeCache(arg ArgMapTimeCacher) (*mapTimeCacher, error) {
 
 func checkArg(arg ArgMapTimeCacher) error {
 	if arg.DefaultSpan < minDuration {
-		return commonErrors.ErrInvalidDefaultSpan
+		return common.ErrInvalidDefaultSpan
 	}
 	if arg.CacheExpiry < minDuration {
-		return commonErrors.ErrInvalidCacheExpiry
+		return common.ErrInvalidCacheExpiry
 	}
 
 	return nil

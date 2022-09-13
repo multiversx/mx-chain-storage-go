@@ -10,7 +10,7 @@ import (
 	"time"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -43,7 +43,7 @@ func NewDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFiles in
 	}
 
 	if maxOpenFiles < 1 {
-		return nil, commonErrors.ErrInvalidNumOpenFiles
+		return nil, common.ErrInvalidNumOpenFiles
 	}
 
 	options := &opt.Options{
@@ -148,11 +148,11 @@ func (s *DB) Put(key, val []byte) error {
 func (s *DB) Get(key []byte) ([]byte, error) {
 	db := s.getDbPointer()
 	if db == nil {
-		return nil, commonErrors.ErrDBIsClosed
+		return nil, common.ErrDBIsClosed
 	}
 
 	if s.batch.IsRemoved(key) {
-		return nil, commonErrors.ErrKeyNotFound
+		return nil, common.ErrKeyNotFound
 	}
 
 	data := s.batch.Get(key)
@@ -162,7 +162,7 @@ func (s *DB) Get(key []byte) ([]byte, error) {
 
 	data, err := db.Get(key, nil)
 	if err == leveldb.ErrNotFound {
-		return nil, commonErrors.ErrKeyNotFound
+		return nil, common.ErrKeyNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -175,11 +175,11 @@ func (s *DB) Get(key []byte) ([]byte, error) {
 func (s *DB) Has(key []byte) error {
 	db := s.getDbPointer()
 	if db == nil {
-		return commonErrors.ErrDBIsClosed
+		return common.ErrDBIsClosed
 	}
 
 	if s.batch.IsRemoved(key) {
-		return commonErrors.ErrKeyNotFound
+		return common.ErrKeyNotFound
 	}
 
 	data := s.batch.Get(key)
@@ -196,7 +196,7 @@ func (s *DB) Has(key []byte) error {
 		return nil
 	}
 
-	return commonErrors.ErrKeyNotFound
+	return common.ErrKeyNotFound
 }
 
 // CreateBatch returns a batcher to be used for batch writing data to the database
@@ -208,7 +208,7 @@ func (s *DB) createBatch() types.Batcher {
 func (s *DB) putBatch(b types.Batcher) error {
 	dbBatch, ok := b.(*batch)
 	if !ok {
-		return commonErrors.ErrInvalidBatch
+		return common.ErrInvalidBatch
 	}
 
 	wopt := &opt.WriteOptions{
@@ -217,7 +217,7 @@ func (s *DB) putBatch(b types.Batcher) error {
 
 	db := s.getDbPointer()
 	if db == nil {
-		return commonErrors.ErrDBIsClosed
+		return common.ErrDBIsClosed
 	}
 
 	return db.Write(dbBatch.batch, wopt)

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,7 +43,7 @@ func TestNewCacheWithSizeInBytes_BadSizeShouldErr(t *testing.T) {
 	c, err := lrucache.NewCacheWithSizeInBytes(0, 100000)
 
 	assert.True(t, check.IfNil(c))
-	assert.Equal(t, commonErrors.ErrCacheSizeInvalid, err)
+	assert.Equal(t, common.ErrCacheSizeInvalid, err)
 }
 
 func TestNewCacheWithSizeInBytes_BadSizeInBytesShouldErr(t *testing.T) {
@@ -52,7 +52,7 @@ func TestNewCacheWithSizeInBytes_BadSizeInBytesShouldErr(t *testing.T) {
 	c, err := lrucache.NewCacheWithSizeInBytes(1, 0)
 
 	assert.True(t, check.IfNil(c))
-	assert.Equal(t, commonErrors.ErrCacheCapacityInvalid, err)
+	assert.Equal(t, common.ErrCacheCapacityInvalid, err)
 }
 
 func TestNewCacheWithSizeInBytes_ShouldWork(t *testing.T) {

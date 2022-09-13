@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
@@ -115,7 +115,7 @@ func (chunk *immunityChunk) evictItemsNoLock() (numRemoved int, err error) {
 	numRemoved += numRemovedInStep
 
 	if numRemovedInStep == 0 {
-		return 0, commonErrors.ErrFailedCacheEviction
+		return 0, common.ErrFailedCacheEviction
 	}
 
 	for chunk.isCapacityExceededNoLock() && numRemovedInStep == numToRemoveEachStep {

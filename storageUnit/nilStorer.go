@@ -2,7 +2,7 @@ package storageUnit
 
 import (
 	storageCore "github.com/ElrondNetwork/elrond-go-core/storage"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 )
 
 // NilStorer resembles a disabled implementation of the Storer interface
@@ -41,7 +41,7 @@ func (ns *NilStorer) PutInEpoch(_, _ []byte, _ uint32) error {
 
 // GetOldestEpoch will return an error that signals that the oldest epoch fetching is not available
 func (ns *NilStorer) GetOldestEpoch() (uint32, error) {
-	return 0, commonErrors.ErrOldestEpochNotAvailable
+	return 0, common.ErrOldestEpochNotAvailable
 }
 
 // Close will do nothing
