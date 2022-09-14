@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +22,7 @@ func TestNewCapacityLRU_WithInvalidSize(t *testing.T) {
 	capacity := int64(1)
 	cache, err := NewCapacityLRU(size, capacity)
 	assert.True(t, check.IfNil(cache))
-	assert.Equal(t, commonErrors.ErrCacheSizeInvalid, err)
+	assert.Equal(t, common.ErrCacheSizeInvalid, err)
 }
 
 func TestNewCapacityLRU_WithInvalidCapacity(t *testing.T) {
@@ -32,7 +32,7 @@ func TestNewCapacityLRU_WithInvalidCapacity(t *testing.T) {
 	capacity := int64(0)
 	cache, err := NewCapacityLRU(size, capacity)
 	assert.Nil(t, cache)
-	assert.Equal(t, commonErrors.ErrCacheCapacityInvalid, err)
+	assert.Equal(t, common.ErrCacheCapacityInvalid, err)
 }
 
 func TestNewCapacityLRU(t *testing.T) {

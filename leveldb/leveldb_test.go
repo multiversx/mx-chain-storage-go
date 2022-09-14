@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/leveldb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -140,7 +140,7 @@ func TestDB_RemoveBeforeTimeoutOK(t *testing.T) {
 
 	v, err := ldb.Get(key)
 	assert.Nil(t, v)
-	assert.Equal(t, commonErrors.ErrKeyNotFound, err)
+	assert.Equal(t, common.ErrKeyNotFound, err)
 }
 
 func TestDB_RemoveAfterTimeoutOK(t *testing.T) {
@@ -155,7 +155,7 @@ func TestDB_RemoveAfterTimeoutOK(t *testing.T) {
 
 	v, err := ldb.Get(key)
 	assert.Nil(t, v)
-	assert.Equal(t, commonErrors.ErrKeyNotFound, err)
+	assert.Equal(t, common.ErrKeyNotFound, err)
 }
 
 func TestDB_GetPresent(t *testing.T) {
@@ -201,7 +201,7 @@ func TestDB_HasNotPresent(t *testing.T) {
 	err := ldb.Has(key)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, err, commonErrors.ErrKeyNotFound)
+	assert.Equal(t, err, common.ErrKeyNotFound)
 }
 
 func TestDB_RemovePresent(t *testing.T) {
@@ -219,7 +219,7 @@ func TestDB_RemovePresent(t *testing.T) {
 	err = ldb.Has(key)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, err, commonErrors.ErrKeyNotFound)
+	assert.Equal(t, err, common.ErrKeyNotFound)
 }
 
 func TestDB_RemoveNotPresent(t *testing.T) {
@@ -335,13 +335,13 @@ func testDbAllMethodsShouldNotPanic(t *testing.T, closeHandler func(db *leveldb.
 	closeHandler(ldb)
 
 	err := ldb.Put([]byte("key1"), []byte("val1"))
-	require.Equal(t, commonErrors.ErrDBIsClosed, err)
+	require.Equal(t, common.ErrDBIsClosed, err)
 
 	_, err = ldb.Get([]byte("key2"))
-	require.Equal(t, commonErrors.ErrDBIsClosed, err)
+	require.Equal(t, common.ErrDBIsClosed, err)
 
 	err = ldb.Has([]byte("key3"))
-	require.Equal(t, commonErrors.ErrDBIsClosed, err)
+	require.Equal(t, common.ErrDBIsClosed, err)
 
 	ldb.RangeKeys(func(key []byte, value []byte) bool {
 		require.Fail(t, "should have not called range")
@@ -349,7 +349,7 @@ func testDbAllMethodsShouldNotPanic(t *testing.T, closeHandler func(db *leveldb.
 	})
 
 	err = ldb.Remove([]byte("key4"))
-	require.Equal(t, commonErrors.ErrDBIsClosed, err)
+	require.Equal(t, common.ErrDBIsClosed, err)
 }
 
 func TestDB_SpecialValueTest(t *testing.T) {
@@ -375,7 +375,7 @@ func TestDB_SpecialValueTest(t *testing.T) {
 		require.Nil(t, err)
 
 		recovered, err := ldb.Get(key)
-		assert.Equal(t, commonErrors.ErrKeyNotFound, err)
+		assert.Equal(t, common.ErrKeyNotFound, err)
 		assert.Nil(t, recovered)
 	})
 	t.Run("operations: put -> remove -> put -> get of 'removed' value", func(t *testing.T) {

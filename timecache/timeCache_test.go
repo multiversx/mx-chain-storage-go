@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/testscommon"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +23,7 @@ func TestTimeCache_EmptyKeyShouldErr(t *testing.T) {
 	err := tc.Add(key)
 
 	_, ok := tc.Value(key)
-	assert.Equal(t, commonErrors.ErrEmptyKey, err)
+	assert.Equal(t, common.ErrEmptyKey, err)
 	assert.False(t, ok)
 }
 
@@ -164,7 +164,7 @@ func TestTimeCache_UpsertEmptyKeyShouldErr(t *testing.T) {
 	tc := NewTimeCache(time.Second)
 	err := tc.Upsert("", time.Second)
 
-	assert.Equal(t, commonErrors.ErrEmptyKey, err)
+	assert.Equal(t, common.ErrEmptyKey, err)
 }
 
 func TestTimeCache_UpsertShouldAddIfMissing(t *testing.T) {

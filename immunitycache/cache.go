@@ -5,7 +5,7 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core/atomic"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/monitoring"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
@@ -60,7 +60,7 @@ func (ic *ImmunityCache) initializeChunksWithLock() {
 func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte) (numNowTotal, numFutureTotal int) {
 	immuneItemsCapacityReached := ic.CountImmune()+len(keys) > int(ic.config.MaxNumItems)
 	if immuneItemsCapacityReached {
-		log.Warn("ImmunityCache.ImmunizeKeys(): will not immunize", "err", commonErrors.ErrImmuneItemsCapacityReached)
+		log.Warn("ImmunityCache.ImmunizeKeys(): will not immunize", "err", common.ErrImmuneItemsCapacityReached)
 		return
 	}
 

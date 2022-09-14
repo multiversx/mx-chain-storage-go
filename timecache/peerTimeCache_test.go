@@ -7,7 +7,7 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core"
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/testscommon"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +17,7 @@ func TestNewPeerTimeCache_NilTimeCacheShouldErr(t *testing.T) {
 
 	ptc, err := NewPeerTimeCache(nil)
 
-	assert.Equal(t, commonErrors.ErrNilTimeCache, err)
+	assert.Equal(t, common.ErrNilTimeCache, err)
 	assert.True(t, check.IfNil(ptc))
 }
 

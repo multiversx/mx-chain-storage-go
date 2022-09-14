@@ -1,7 +1,7 @@
 package memorydb
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
@@ -34,12 +34,12 @@ func (l *lruDB) Put(key, val []byte) error {
 func (l *lruDB) Get(key []byte) ([]byte, error) {
 	val, ok := l.cacher.Get(key)
 	if !ok {
-		return nil, commonErrors.ErrKeyNotFound
+		return nil, common.ErrKeyNotFound
 	}
 
 	mrsVal, ok := val.([]byte)
 	if !ok {
-		return nil, commonErrors.ErrKeyNotFound
+		return nil, common.ErrKeyNotFound
 	}
 	return mrsVal, nil
 }
@@ -50,7 +50,7 @@ func (l *lruDB) Has(key []byte) error {
 	if has {
 		return nil
 	}
-	return commonErrors.ErrKeyNotFound
+	return common.ErrKeyNotFound
 }
 
 // Close closes the files/resources associated to the storage medium

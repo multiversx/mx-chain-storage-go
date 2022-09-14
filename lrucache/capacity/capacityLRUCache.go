@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 )
 
 var log = logger.GetOrCreate("storage/lrucache/capacity")
@@ -32,10 +32,10 @@ type entry struct {
 // NewCapacityLRU constructs an CapacityLRU of the given size with a byte size capacity
 func NewCapacityLRU(size int, byteCapacity int64) (*capacityLRU, error) {
 	if size < 1 {
-		return nil, commonErrors.ErrCacheSizeInvalid
+		return nil, common.ErrCacheSizeInvalid
 	}
 	if byteCapacity < 1 {
-		return nil, commonErrors.ErrCacheCapacityInvalid
+		return nil, common.ErrCacheCapacityInvalid
 	}
 	c := &capacityLRU{
 		size:               size,
@@ -71,7 +71,7 @@ func (c *capacityLRU) addSized(key interface{}, value interface{}, sizeInBytes i
 		log.Error("size LRU cache add error",
 			"key", fmt.Sprintf("%v", key),
 			"value", fmt.Sprintf("%v", value),
-			"error", commonErrors.ErrNegativeSizeInBytes,
+			"error", common.ErrNegativeSizeInBytes,
 		)
 
 		return

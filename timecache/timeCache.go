@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
@@ -40,7 +40,7 @@ func (tc *TimeCache) Add(key string) error {
 
 func (tc *TimeCache) add(key string, duration time.Duration) error {
 	if len(key) == 0 {
-		return commonErrors.ErrEmptyKey
+		return common.ErrEmptyKey
 	}
 
 	tc.mut.Lock()
@@ -64,7 +64,7 @@ func (tc *TimeCache) AddWithSpan(key string, duration time.Duration) error {
 // Also, it will reset the contained timestamp to time.Now
 func (tc *TimeCache) Upsert(key string, duration time.Duration) error {
 	if len(key) == 0 {
-		return commonErrors.ErrEmptyKey
+		return common.ErrEmptyKey
 	}
 
 	tc.mut.Lock()

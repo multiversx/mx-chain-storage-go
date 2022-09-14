@@ -7,7 +7,7 @@ import (
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
 	"github.com/ElrondNetwork/elrond-go-core/marshal"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 )
 
@@ -32,16 +32,16 @@ func NewStorageCacherAdapter(
 	marshalizer marshal.Marshalizer,
 ) (*storageCacherAdapter, error) {
 	if check.IfNil(cacher) {
-		return nil, commonErrors.ErrNilCacher
+		return nil, common.ErrNilCacher
 	}
 	if check.IfNil(db) {
-		return nil, commonErrors.ErrNilPersister
+		return nil, common.ErrNilPersister
 	}
 	if check.IfNil(marshalizer) {
-		return nil, commonErrors.ErrNilMarshalizer
+		return nil, common.ErrNilMarshalizer
 	}
 	if check.IfNil(storedDataFactory) {
-		return nil, commonErrors.ErrNilStoredDataFactory
+		return nil, common.ErrNilStoredDataFactory
 	}
 
 	return &storageCacherAdapter{

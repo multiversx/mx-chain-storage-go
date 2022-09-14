@@ -107,14 +107,6 @@ type StorerWithPutInEpoch interface {
 	SetEpochForPutOperation(epoch uint32)
 }
 
-// PathManagerHandler defines which actions should be done for generating paths for databases directories
-type PathManagerHandler interface {
-	PathForEpoch(shardId string, epoch uint32, identifier string) string
-	PathForStatic(shardId string, identifier string) string
-	DatabasePath() string
-	IsInterfaceNil() bool
-}
-
 // PersisterFactory defines which actions should be done for creating a persister
 type PersisterFactory interface {
 	Create(path string) (Persister, error)

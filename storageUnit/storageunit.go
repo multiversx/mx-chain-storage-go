@@ -14,8 +14,7 @@ import (
 	"github.com/ElrondNetwork/elrond-go-core/hashing/keccak"
 	storageCore "github.com/ElrondNetwork/elrond-go-core/storage"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	storageCommon "github.com/ElrondNetwork/elrond-go-storage/common"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/fifocache"
 	"github.com/ElrondNetwork/elrond-go-storage/leveldb"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
@@ -62,6 +61,12 @@ const (
 )
 
 const minimumSizeForLRUCache = 1024
+
+// MaxRetriesToCreateDB represents the maximum number of times to try to create DB if it failed
+const MaxRetriesToCreateDB = 10
+
+// SleepTimeBetweenCreateDBRetries represents the number of seconds to sleep between DB creates
+const SleepTimeBetweenCreateDBRetries = 5 * time.Second
 
 // UnitConfig holds the configurable elements of the storage unit
 type UnitConfig struct {
@@ -130,7 +135,7 @@ func (u *Unit) PutInEpoch(key, data []byte, _ uint32) error {
 
 // GetOldestEpoch will return an error that signals that the oldest epoch fetching is not available
 func (u *Unit) GetOldestEpoch() (uint32, error) {
-	return 0, commonErrors.ErrOldestEpochNotAvailable
+	return 0, common.ErrOldestEpochNotAvailable
 }
 
 // Close will close unit
@@ -263,10 +268,10 @@ func (u *Unit) IsInterfaceNil() bool {
 // from the given cacher and persister.
 func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 	if check.IfNil(p) {
-		return nil, commonErrors.ErrNilPersister
+		return nil, common.ErrNilPersister
 	}
 	if check.IfNil(c) {
-		return nil, commonErrors.ErrNilCacher
+		return nil, common.ErrNilCacher
 	}
 
 	sUnit := &Unit{
@@ -290,7 +295,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 	}()
 
 	if dbConf.MaxBatchSize > int(cacheConf.Capacity) {
-		return nil, commonErrors.ErrCacheSizeIsLowerThanBatchSize
+		return nil, common.ErrCacheSizeIsLowerThanBatchSize
 	}
 
 	cache, err = NewCache(cacheConf)
@@ -328,14 +333,14 @@ func NewCache(config CacheConfig) (types.Cacher, error) {
 	switch cacheType {
 	case LRUCache:
 		if sizeInBytes != 0 {
-			return nil, commonErrors.ErrLRUCacheWithProvidedSize
+			return nil, common.ErrLRUCacheWithProvidedSize
 		}
 
 		cacher, err = lrucache.NewCache(int(capacity))
 	case SizeLRUCache:
 		if sizeInBytes < minimumSizeForLRUCache {
 			return nil, fmt.Errorf("%w, provided %d, minimum %d",
-				commonErrors.ErrLRUCacheInvalidSize,
+				common.ErrLRUCacheInvalidSize,
 				sizeInBytes,
 				minimumSizeForLRUCache,
 			)
@@ -349,7 +354,7 @@ func NewCache(config CacheConfig) (types.Cacher, error) {
 		}
 		// add other implementations if required
 	default:
-		return nil, commonErrors.ErrNotSupportedCacheType
+		return nil, common.ErrNotSupportedCacheType
 	}
 
 	if err != nil {
@@ -373,7 +378,7 @@ func NewDB(argDB ArgDB) (types.Persister, error) {
 	var db types.Persister
 	var err error
 
-	for i := 0; i < storageCommon.MaxRetriesToCreateDB; i++ {
+	for i := 0; i < MaxRetriesToCreateDB; i++ {
 		switch argDB.DBType {
 		case LvlDB:
 			db, err = leveldb.NewDB(argDB.Path, argDB.BatchDelaySeconds, argDB.MaxBatchSize, argDB.MaxOpenFiles)
@@ -382,7 +387,7 @@ func NewDB(argDB ArgDB) (types.Persister, error) {
 		case MemoryDB:
 			db = memorydb.New()
 		default:
-			return nil, commonErrors.ErrNotSupportedDBType
+			return nil, common.ErrNotSupportedDBType
 		}
 
 		if err == nil {
@@ -390,7 +395,7 @@ func NewDB(argDB ArgDB) (types.Persister, error) {
 		}
 
 		// TODO: extract this in a parameter and inject it
-		time.Sleep(storageCommon.SleepTimeBetweenCreateDBRetries)
+		time.Sleep(SleepTimeBetweenCreateDBRetries)
 	}
 	if err != nil {
 		return nil, err
@@ -409,6 +414,6 @@ func (h HasherType) NewHasher() (hashing.Hasher, error) {
 	case Fnv:
 		return fnv.NewFnv(), nil
 	default:
-		return nil, commonErrors.ErrNotSupportedHashType
+		return nil, common.ErrNotSupportedHashType
 	}
 }

@@ -11,7 +11,7 @@ import (
 
 	"github.com/ElrondNetwork/elrond-go-core/core"
 	"github.com/ElrondNetwork/elrond-go-core/core/closing"
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -41,7 +41,7 @@ func NewSerialDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFi
 	}
 
 	if maxOpenFiles < 1 {
-		return nil, commonErrors.ErrInvalidNumOpenFiles
+		return nil, common.ErrInvalidNumOpenFiles
 	}
 
 	options := &opt.Options{
@@ -125,7 +125,7 @@ func (s *SerialDB) updateBatchWithIncrement() error {
 // Put adds the value to the (key, val) storage medium
 func (s *SerialDB) Put(key, val []byte) error {
 	if s.isClosed() {
-		return commonErrors.ErrDBIsClosed
+		return common.ErrDBIsClosed
 	}
 
 	s.mutBatch.RLock()
@@ -141,13 +141,13 @@ func (s *SerialDB) Put(key, val []byte) error {
 // Get returns the value associated to the key
 func (s *SerialDB) Get(key []byte) ([]byte, error) {
 	if s.isClosed() {
-		return nil, commonErrors.ErrDBIsClosed
+		return nil, common.ErrDBIsClosed
 	}
 
 	s.mutBatch.RLock()
 	if s.batch.IsRemoved(key) {
 		s.mutBatch.RUnlock()
-		return nil, commonErrors.ErrKeyNotFound
+		return nil, common.ErrKeyNotFound
 	}
 
 	data := s.batch.Get(key)
@@ -171,7 +171,7 @@ func (s *SerialDB) Get(key []byte) ([]byte, error) {
 	close(ch)
 
 	if result.err == leveldb.ErrNotFound {
-		return nil, commonErrors.ErrKeyNotFound
+		return nil, common.ErrKeyNotFound
 	}
 	if result.err != nil {
 		return nil, result.err
@@ -183,13 +183,13 @@ func (s *SerialDB) Get(key []byte) ([]byte, error) {
 // Has returns nil if the given key is present in the persistence medium
 func (s *SerialDB) Has(key []byte) error {
 	if s.isClosed() {
-		return commonErrors.ErrDBIsClosed
+		return common.ErrDBIsClosed
 	}
 
 	s.mutBatch.RLock()
 	if s.batch.IsRemoved(key) {
 		s.mutBatch.RUnlock()
-		return commonErrors.ErrKeyNotFound
+		return common.ErrKeyNotFound
 	}
 
 	data := s.batch.Get(key)
@@ -220,7 +220,7 @@ func (s *SerialDB) tryWriteInDbAccessChan(req serialQueryer) error {
 	case s.dbAccess <- req:
 		return nil
 	case <-s.closer.ChanClose():
-		return commonErrors.ErrDBIsClosed
+		return common.ErrDBIsClosed
 	}
 }
 
@@ -230,7 +230,7 @@ func (s *SerialDB) putBatch() error {
 	dbBatch, ok := s.batch.(*batch)
 	if !ok {
 		s.mutBatch.Unlock()
-		return commonErrors.ErrInvalidBatch
+		return common.ErrInvalidBatch
 	}
 	s.sizeBatch = 0
 	s.batch = NewBatch()
@@ -270,7 +270,7 @@ func (s *SerialDB) Close() error {
 // Remove removes the data associated to the given key
 func (s *SerialDB) Remove(key []byte) error {
 	if s.isClosed() {
-		return commonErrors.ErrDBIsClosed
+		return common.ErrDBIsClosed
 	}
 
 	s.mutBatch.Lock()

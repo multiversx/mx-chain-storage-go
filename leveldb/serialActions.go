@@ -1,7 +1,7 @@
 package leveldb
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage/common/commonErrors"
+	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
@@ -36,7 +36,7 @@ func (p *putBatchAct) request(s *SerialDB) {
 func (p *putBatchAct) doPutRequest(s *SerialDB) error {
 	db := s.getDbPointer()
 	if db == nil {
-		return commonErrors.ErrDBIsClosed
+		return common.ErrDBIsClosed
 	}
 
 	wopt := &opt.WriteOptions{
@@ -59,7 +59,7 @@ func (g *getAct) request(s *SerialDB) {
 func (g *getAct) doGetRequest(s *SerialDB) ([]byte, error) {
 	db := s.getDbPointer()
 	if db == nil {
-		return nil, commonErrors.ErrDBIsClosed
+		return nil, common.ErrDBIsClosed
 	}
 
 	return db.Get(g.key, nil)
@@ -78,13 +78,13 @@ func (h *hasAct) request(s *SerialDB) {
 		return
 	}
 
-	h.resChan <- commonErrors.ErrKeyNotFound
+	h.resChan <- common.ErrKeyNotFound
 }
 
 func (h *hasAct) doHasRequest(s *SerialDB) (bool, error) {
 	db := s.getDbPointer()
 	if db == nil {
-		return false, commonErrors.ErrDBIsClosed
+		return false, common.ErrDBIsClosed
 	}
 
 	return db.Has(h.key, nil)
