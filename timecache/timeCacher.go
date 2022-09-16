@@ -10,7 +10,7 @@ import (
 	"github.com/ElrondNetwork/elrond-go-storage/common"
 )
 
-var log = logger.GetOrCreate("storage/maptimecache")
+var log = logger.GetOrCreate("storage/timecache")
 
 const minDuration = time.Second
 
