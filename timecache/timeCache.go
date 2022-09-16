@@ -6,16 +6,6 @@ import (
 	"github.com/ElrondNetwork/elrond-go-storage/common"
 )
 
-// RequestedItemsHandler can determine if a certain key has or not been requested
-type RequestedItemsHandler interface {
-	Add(key string) error
-	Has(key string) bool
-	Sweep()
-	IsInterfaceNil() bool
-}
-
-var _ RequestedItemsHandler = (*TimeCache)(nil)
-
 // TimeCache can retain an amount of string keys for a defined period of time
 // sweeping (clean-up) is triggered each time a new item is added or a key is present in the time cache
 // This data structure is concurrent safe.

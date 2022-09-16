@@ -184,7 +184,6 @@ type TimeCacher interface {
 	Upsert(key string, span time.Duration) error
 	Has(key string) bool
 	Sweep()
-	RegisterEvictionHandler(handler EvictionHandler)
 	IsInterfaceNil() bool
 }
 
