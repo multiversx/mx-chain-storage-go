@@ -16,13 +16,15 @@ var log = logger.GetOrCreate("storage/immunitycache")
 
 const hospitalityWarnThreshold = -10000
 const hospitalityUpperLimit = 10000
+const capacityReachedWarningPeriod = 100
 
 // ImmunityCache is a cache-like structure
 type ImmunityCache struct {
-	config      CacheConfig
-	chunks      []*immunityChunk
-	hospitality atomic.Counter
-	mutex       sync.RWMutex
+	config                        CacheConfig
+	chunks                        []*immunityChunk
+	hospitality                   atomic.Counter
+	numCapacityReachedOccurrences atomic.Counter
+	mutex                         sync.RWMutex
 }
 
 // NewImmunityCache creates a new cache
@@ -60,9 +62,12 @@ func (ic *ImmunityCache) initializeChunksWithLock() {
 func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte) (numNowTotal, numFutureTotal int) {
 	immuneItemsCapacityReached := ic.CountImmune()+len(keys) > int(ic.config.MaxNumItems)
 	if immuneItemsCapacityReached {
-		log.Warn("ImmunityCache.ImmunizeKeys(): will not immunize", "err", common.ErrImmuneItemsCapacityReached)
+		logLevel := ic.decideLogLevelOnCapacityReached()
+		log.Log(logLevel, "ImmunityCache.ImmunizeKeys(): will not immunize", "err", common.ErrImmuneItemsCapacityReached)
 		return
 	}
+
+	ic.forgetCapacityHadBeenReachedInThePast()
 
 	groups := ic.groupKeysByChunk(keys)
 
@@ -75,6 +80,20 @@ func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte) (numNowTotal, numFutureTota
 	}
 
 	return
+}
+
+func (ic *ImmunityCache) decideLogLevelOnCapacityReached() logger.LogLevel {
+	ic.numCapacityReachedOccurrences.Increment()
+
+	if ic.numCapacityReachedOccurrences.GetUint64()%capacityReachedWarningPeriod == 0 {
+		return logger.LogWarning
+	}
+
+	return logger.LogDebug
+}
+
+func (ic *ImmunityCache) forgetCapacityHadBeenReachedInThePast() {
+	ic.numCapacityReachedOccurrences.Reset()
 }
 
 func (ic *ImmunityCache) groupKeysByChunk(keys [][]byte) map[uint32][][]byte {
