@@ -83,13 +83,13 @@ func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte) (numNowTotal, numFutureTota
 }
 
 func (ic *ImmunityCache) decideLogLevelOnCapacityReached() logger.LogLevel {
-	ic.numCapacityReachedOccurrences.Increment()
-
+	logLevel := logger.LogDebug
 	if ic.numCapacityReachedOccurrences.GetUint64()%capacityReachedWarningPeriod == 0 {
-		return logger.LogWarning
+		logLevel = logger.LogWarning
 	}
 
-	return logger.LogDebug
+	ic.numCapacityReachedOccurrences.Increment()
+	return logLevel
 }
 
 func (ic *ImmunityCache) forgetCapacityHadBeenReachedInThePast() {
