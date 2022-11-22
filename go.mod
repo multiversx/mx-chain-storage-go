@@ -4,11 +4,11 @@ go 1.15
 
 require (
 	github.com/ElrondNetwork/concurrent-map v0.1.3
-	github.com/ElrondNetwork/elrond-go-core v1.1.18
-	github.com/ElrondNetwork/elrond-go-logger v1.0.7
+	github.com/ElrondNetwork/elrond-go-core v1.1.26-0.20221122132700-01ef9fc95877
+	github.com/ElrondNetwork/elrond-go-logger v1.0.10-0.20221122135106-8930f8cd9e46
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/stretchr/testify v1.7.1
-	github.com/syndtr/goleveldb v1.0.1-0.20190318030020-c3a204f8e965
+	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
 
 require (
