@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+	logger "github.com/ElrondNetwork/elrond-go-logger"
 	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -307,6 +308,32 @@ func TestImmunityCache_CloseDoesNotErr(t *testing.T) {
 
 	err := cache.Close()
 	assert.Nil(t, err)
+}
+
+func TestImmunityCache_DecideLogLevelOnCapacityReached(t *testing.T) {
+	cache := newCacheToTest(1, 4, 1000)
+
+	for i := 0; i < capacityReachedWarningPeriod*42; i++ {
+		actualLogLevel := cache.decideLogLevelOnCapacityReached()
+		expectedLogLevel := logger.LogDebug
+
+		if i%capacityReachedWarningPeriod == 0 {
+			expectedLogLevel = logger.LogWarning
+		}
+
+		require.Equal(t, uint64(i+1), cache.numCapacityReachedOccurrences.GetUint64())
+		require.Equal(t, expectedLogLevel, actualLogLevel, fmt.Sprintf("for %d", i))
+	}
+}
+
+func TestImmunityCache_ForgetCapacityHadBeenReachedInThePast(t *testing.T) {
+	cache := newCacheToTest(1, 4, 1000)
+
+	cache.numCapacityReachedOccurrences.Increment()
+	require.Equal(t, uint64(1), cache.numCapacityReachedOccurrences.GetUint64())
+
+	cache.forgetCapacityHadBeenReachedInThePast()
+	require.Equal(t, uint64(0), cache.numCapacityReachedOccurrences.GetUint64())
 }
 
 func newCacheToTest(numChunks uint32, maxNumItems uint32, numMaxBytes uint32) *ImmunityCache {
