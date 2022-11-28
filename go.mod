@@ -4,8 +4,8 @@ go 1.17
 
 require (
 	github.com/ElrondNetwork/concurrent-map v0.1.3
-	github.com/ElrondNetwork/elrond-go-core v1.1.26-0.20221123085822-f43d6bc3f56c
-	github.com/ElrondNetwork/elrond-go-logger v1.0.10-0.20221123090326-b29b6e6dc1f7
+	github.com/ElrondNetwork/elrond-go-core v1.1.26
+	github.com/ElrondNetwork/elrond-go-logger v1.0.10
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/stretchr/testify v1.7.1
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
