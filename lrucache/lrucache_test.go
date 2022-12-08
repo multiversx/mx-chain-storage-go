@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ElrondNetwork/elrond-go-core/core/check"
+	"github.com/ElrondNetwork/elrond-go-core/storage"
 	"github.com/ElrondNetwork/elrond-go-storage/common"
 	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
 	"github.com/stretchr/testify/assert"
@@ -417,4 +418,32 @@ func TestLRUCache_CloseShouldNotErr(t *testing.T) {
 
 	err := c.Close()
 	assert.Nil(t, err)
+}
+
+type cacheWrapper struct {
+	c storage.Cacher
+}
+
+func newCacheWrapper() *cacheWrapper {
+	wrapper := &cacheWrapper{}
+	wrapper.c, _ = lrucache.NewCacheWithEviction(2, wrapper.onEvict)
+
+	return wrapper
+}
+
+func (wrapper *cacheWrapper) onEvict(_ interface{}, _ interface{}) {
+	_ = wrapper.c.Len()
+}
+
+func TestLruCache_LenDuringEviction(t *testing.T) {
+	t.Parallel()
+
+	key0 := []byte("key 0")
+	key1 := []byte("key 1")
+	key2 := []byte("key 2")
+
+	wrapper := newCacheWrapper()
+	wrapper.c.Put(key0, struct{}{}, 0)
+	wrapper.c.Put(key1, struct{}{}, 0)
+	wrapper.c.Put(key2, struct{}{}, 0)
 }
