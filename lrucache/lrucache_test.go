@@ -438,12 +438,24 @@ func (wrapper *cacheWrapper) onEvict(_ interface{}, _ interface{}) {
 func TestLruCache_LenDuringEviction(t *testing.T) {
 	t.Parallel()
 
-	key0 := []byte("key 0")
 	key1 := []byte("key 1")
 	key2 := []byte("key 2")
+	key0 := []byte("key 0")
 
-	wrapper := newCacheWrapper()
-	wrapper.c.Put(key0, struct{}{}, 0)
-	wrapper.c.Put(key1, struct{}{}, 0)
-	wrapper.c.Put(key2, struct{}{}, 0)
+	chTestDone := make(chan struct{})
+
+	go func() {
+		wrapper := newCacheWrapper()
+		wrapper.c.Put(key0, struct{}{}, 0)
+		wrapper.c.Put(key1, struct{}{}, 0)
+		wrapper.c.Put(key2, struct{}{}, 0)
+
+		close(chTestDone)
+	}()
+
+	select {
+	case <-chTestDone:
+	case <-time.After(time.Second):
+		assert.Fail(t, "test failed, deadlock occurred")
+	}
 }
