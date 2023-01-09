@@ -3,7 +3,7 @@ package types
 import (
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-core/storage"
+	"github.com/multiversx/mx-chain-core-go/storage"
 )
 
 // Persister provides storage of data services in a database like construct

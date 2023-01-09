@@ -3,11 +3,11 @@ package immunitycache
 import (
 	"sync"
 
-	"github.com/ElrondNetwork/elrond-go-core/core/atomic"
-	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/common"
-	"github.com/ElrondNetwork/elrond-go-storage/monitoring"
-	"github.com/ElrondNetwork/elrond-go-storage/types"
+	"github.com/multiversx/mx-chain-core-go/core/atomic"
+	"github.com/multiversx/mx-chain-go-storage/common"
+	"github.com/multiversx/mx-chain-go-storage/monitoring"
+	"github.com/multiversx/mx-chain-go-storage/types"
+	logger "github.com/multiversx/mx-chain-logger-go"
 )
 
 var _ types.Cacher = (*ImmunityCache)(nil)

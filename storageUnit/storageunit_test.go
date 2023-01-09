@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common"
-	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
-	"github.com/ElrondNetwork/elrond-go-storage/memorydb"
-	"github.com/ElrondNetwork/elrond-go-storage/storageUnit"
+	"github.com/multiversx/mx-chain-go-storage/common"
+	"github.com/multiversx/mx-chain-go-storage/lrucache"
+	"github.com/multiversx/mx-chain-go-storage/memorydb"
+	"github.com/multiversx/mx-chain-go-storage/storageUnit"
 	"github.com/stretchr/testify/assert"
 )
 

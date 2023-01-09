@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/multiversx/mx-chain-go-storage/common"
 )
 
 type entry struct {

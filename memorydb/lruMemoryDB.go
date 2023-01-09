@@ -1,9 +1,9 @@
 package memorydb
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage/common"
-	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
-	"github.com/ElrondNetwork/elrond-go-storage/types"
+	"github.com/multiversx/mx-chain-go-storage/common"
+	"github.com/multiversx/mx-chain-go-storage/lrucache"
+	"github.com/multiversx/mx-chain-go-storage/types"
 )
 
 var _ types.Persister = (*lruDB)(nil)

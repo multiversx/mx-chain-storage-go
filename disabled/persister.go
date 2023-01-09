@@ -1,7 +1,7 @@
 package disabled
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/multiversx/mx-chain-go-storage/common"
 )
 
 type persister struct{}

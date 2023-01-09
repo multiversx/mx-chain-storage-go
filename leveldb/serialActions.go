@@ -1,7 +1,7 @@
 package leveldb
 
 import (
-	"github.com/ElrondNetwork/elrond-go-storage/common"
+	"github.com/multiversx/mx-chain-go-storage/common"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
