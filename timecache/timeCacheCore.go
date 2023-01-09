@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/multiversx/mx-chain-go-storage/common"
+	"github.com/multiversx/mx-chain-storage-go/common"
 )
 
 type entry struct {

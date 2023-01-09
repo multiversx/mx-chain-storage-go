@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
-	"github.com/multiversx/mx-chain-go-storage/common"
-	storageMock "github.com/multiversx/mx-chain-go-storage/testscommon"
-	"github.com/multiversx/mx-chain-go-storage/testscommon/trieFactory"
+	"github.com/multiversx/mx-chain-storage-go/common"
+	storageMock "github.com/multiversx/mx-chain-storage-go/testscommon"
+	"github.com/multiversx/mx-chain-storage-go/testscommon/trieFactory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

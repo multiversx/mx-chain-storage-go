@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/multiversx/mx-chain-go-storage/types"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 var _ types.Persister = (*DB)(nil)

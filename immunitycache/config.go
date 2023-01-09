@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/multiversx/mx-chain-core-go/core"
-	"github.com/multiversx/mx-chain-go-storage/common"
+	"github.com/multiversx/mx-chain-storage-go/common"
 )
 
 const numChunksLowerBound = 1

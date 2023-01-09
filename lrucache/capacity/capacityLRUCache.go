@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/multiversx/mx-chain-go-storage/common"
 	logger "github.com/multiversx/mx-chain-logger-go"
+	"github.com/multiversx/mx-chain-storage-go/common"
 )
 
 var log = logger.GetOrCreate("storage/lrucache/capacity")

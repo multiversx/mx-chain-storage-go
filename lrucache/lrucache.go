@@ -4,9 +4,9 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/multiversx/mx-chain-go-storage/lrucache/capacity"
-	"github.com/multiversx/mx-chain-go-storage/types"
 	logger "github.com/multiversx/mx-chain-logger-go"
+	"github.com/multiversx/mx-chain-storage-go/lrucache/capacity"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 var _ types.Cacher = (*lruCache)(nil)
