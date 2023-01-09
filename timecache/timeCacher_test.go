@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common"
-	"github.com/ElrondNetwork/elrond-go-storage/timecache"
+	"github.com/multiversx/mx-chain-go-storage/common"
+	"github.com/multiversx/mx-chain-go-storage/timecache"
 	"github.com/stretchr/testify/assert"
 )
 
