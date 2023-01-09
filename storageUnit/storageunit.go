@@ -13,14 +13,14 @@ import (
 	"github.com/multiversx/mx-chain-core-go/hashing/fnv"
 	"github.com/multiversx/mx-chain-core-go/hashing/keccak"
 	storageCore "github.com/multiversx/mx-chain-core-go/storage"
-	"github.com/multiversx/mx-chain-go-storage/common"
-	"github.com/multiversx/mx-chain-go-storage/fifocache"
-	"github.com/multiversx/mx-chain-go-storage/leveldb"
-	"github.com/multiversx/mx-chain-go-storage/lrucache"
-	"github.com/multiversx/mx-chain-go-storage/memorydb"
-	"github.com/multiversx/mx-chain-go-storage/monitoring"
-	"github.com/multiversx/mx-chain-go-storage/types"
 	logger "github.com/multiversx/mx-chain-logger-go"
+	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/fifocache"
+	"github.com/multiversx/mx-chain-storage-go/leveldb"
+	"github.com/multiversx/mx-chain-storage-go/lrucache"
+	"github.com/multiversx/mx-chain-storage-go/memorydb"
+	"github.com/multiversx/mx-chain-storage-go/monitoring"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 var _ types.Storer = (*Unit)(nil)

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/multiversx/mx-chain-go-storage/common"
-	"github.com/multiversx/mx-chain-go-storage/timecache"
+	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/timecache"
 	"github.com/stretchr/testify/assert"
 )
 

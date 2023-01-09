@@ -3,7 +3,7 @@ package timecache
 import (
 	"time"
 
-	"github.com/multiversx/mx-chain-go-storage/common"
+	"github.com/multiversx/mx-chain-storage-go/common"
 )
 
 // TimeCache can retain an amount of string keys for a defined period of time

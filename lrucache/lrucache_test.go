@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
-	"github.com/multiversx/mx-chain-go-storage/common"
-	"github.com/multiversx/mx-chain-go-storage/lrucache"
+	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/lrucache"
 	"github.com/stretchr/testify/assert"
 )
 

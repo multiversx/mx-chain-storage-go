@@ -1,4 +1,4 @@
-module github.com/multiversx/mx-chain-go-storage
+module github.com/multiversx/mx-chain-storage-go
 
 go 1.17
 

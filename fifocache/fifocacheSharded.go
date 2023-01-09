@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	cmap "github.com/multiversx/concurrent-map"
-	"github.com/multiversx/mx-chain-go-storage/types"
 	logger "github.com/multiversx/mx-chain-logger-go"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 var _ types.Cacher = (*FIFOShardedCache)(nil)

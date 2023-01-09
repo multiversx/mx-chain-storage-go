@@ -1,7 +1,7 @@
 package leveldb
 
 import (
-	"github.com/multiversx/mx-chain-go-storage/common"
+	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
