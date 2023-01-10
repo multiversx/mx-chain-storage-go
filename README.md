@@ -1,2 +1,2 @@
-# elrond-go-storage
-elrond-go components for storage and caching
+# mx-chain-storage-go
+mx-chain-go components for storage and caching
