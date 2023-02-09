@@ -217,8 +217,8 @@ type CustomDatabaseRemoverHandler interface {
 	IsInterfaceNil() bool
 }
 
-// PersisterIDProvider defines what a component which is able to provide persister id per key should do
-type PersisterIDProvider interface {
+// ShardIDProvider defines what a component which is able to provide persister id per key should do
+type ShardIDProvider interface {
 	ComputeId(key []byte) uint32
 	NumberOfShards() uint32
 	GetShardIDs() []uint32

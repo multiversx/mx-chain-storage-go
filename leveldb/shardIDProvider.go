@@ -5,8 +5,6 @@ import (
 	"math"
 )
 
-// TODO: add unit tests
-
 const bitsPerByte = 8
 
 // ErrInvalidNumberOfShards signals that an invalid number of shards was passed to the sharding registry

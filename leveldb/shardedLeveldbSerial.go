@@ -15,11 +15,11 @@ var ErrNilIDProvider = errors.New("nil id provider")
 
 type shardedPersister struct {
 	persisters map[uint32]*SerialDB
-	idProvider types.PersisterIDProvider
+	idProvider types.ShardIDProvider
 }
 
 // NewShardedPersister will created a new sharded persister
-func NewShardedPersister(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFilesPerShard int, idProvider types.PersisterIDProvider) (*shardedPersister, error) {
+func NewShardedPersister(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFilesPerShard int, idProvider types.ShardIDProvider) (*shardedPersister, error) {
 	if check.IfNil(idProvider) {
 		return nil, ErrNilIDProvider
 	}
