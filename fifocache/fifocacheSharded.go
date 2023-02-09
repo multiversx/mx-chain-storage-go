@@ -3,9 +3,9 @@ package fifocache
 import (
 	"sync"
 
-	cmap "github.com/ElrondNetwork/concurrent-map"
-	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/types"
+	cmap "github.com/multiversx/concurrent-map"
+	logger "github.com/multiversx/mx-chain-logger-go"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 var _ types.Cacher = (*FIFOShardedCache)(nil)

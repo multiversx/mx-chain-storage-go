@@ -5,10 +5,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-storage/common"
-	storageMock "github.com/ElrondNetwork/elrond-go-storage/testscommon"
-	"github.com/ElrondNetwork/elrond-go-storage/testscommon/trieFactory"
+	"github.com/multiversx/mx-chain-core-go/core/check"
+	"github.com/multiversx/mx-chain-storage-go/common"
+	storageMock "github.com/multiversx/mx-chain-storage-go/testscommon"
+	"github.com/multiversx/mx-chain-storage-go/testscommon/trieFactory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

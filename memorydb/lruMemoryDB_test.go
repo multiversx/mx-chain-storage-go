@@ -3,8 +3,8 @@ package memorydb_test
 import (
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common"
-	"github.com/ElrondNetwork/elrond-go-storage/memorydb"
+	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/memorydb"
 	"github.com/stretchr/testify/assert"
 )
 

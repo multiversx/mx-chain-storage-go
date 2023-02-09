@@ -3,7 +3,7 @@ package leveldb
 import (
 	"sync"
 
-	"github.com/ElrondNetwork/elrond-go-storage/types"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

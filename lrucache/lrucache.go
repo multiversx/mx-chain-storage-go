@@ -3,10 +3,10 @@ package lrucache
 import (
 	"sync"
 
-	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-storage/lrucache/capacity"
-	"github.com/ElrondNetwork/elrond-go-storage/types"
 	lru "github.com/hashicorp/golang-lru"
+	logger "github.com/multiversx/mx-chain-logger-go"
+	"github.com/multiversx/mx-chain-storage-go/lrucache/capacity"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 var _ types.Cacher = (*lruCache)(nil)

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-go-storage/common"
-	"github.com/ElrondNetwork/elrond-go-storage/leveldb"
+	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/leveldb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

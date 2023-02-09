@@ -1,7 +1,7 @@
 package immunitycache
 
 import (
-	"github.com/ElrondNetwork/elrond-go-core/core/atomic"
+	"github.com/multiversx/mx-chain-core-go/core/atomic"
 )
 
 type cacheItem struct {
