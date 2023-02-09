@@ -7,16 +7,10 @@ import (
 	"testing"
 	"time"
 
-<<<<<<< HEAD
-	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-core/storage"
-	"github.com/ElrondNetwork/elrond-go-storage/common"
-	"github.com/ElrondNetwork/elrond-go-storage/lrucache"
-=======
 	"github.com/multiversx/mx-chain-core-go/core/check"
+	"github.com/multiversx/mx-chain-core-go/storage"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
->>>>>>> main
 	"github.com/stretchr/testify/assert"
 )
 
