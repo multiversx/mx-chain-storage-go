@@ -3,7 +3,6 @@ package leveldb_test
 import (
 	"crypto/rand"
 	"fmt"
-	"math/big"
 	"sync"
 	"testing"
 
@@ -130,9 +129,6 @@ func BenchmarkPersister8milAllKeys(b *testing.B) {
 	})
 }
 
-type persister interface {
-}
-
 func createPersister(path string, id string) (types.Persister, error) {
 	switch id {
 	case singleID:
@@ -164,13 +160,6 @@ func createAndPopulatePersister(path string, id string, entries map[string][]byt
 	}
 
 	return nil
-}
-
-func benchmarkPersisterOneKey(b *testing.B, key []byte, path string, id string) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		getKey(b, key, path, id)
-	}
 }
 
 func benchmarkPersister(
@@ -214,22 +203,6 @@ func getKeys(
 	wg.Wait()
 }
 
-func getKey(
-	b *testing.B,
-	key []byte,
-	path string,
-	id string,
-) {
-	db := createPersisterWithTimerControl(b, path, id)
-
-	defer func() {
-		closePersisterWithTimerControl(b, db)
-	}()
-
-	_, err := db.Get(key)
-	require.Nil(b, err)
-}
-
 func createPersisterWithTimerControl(b *testing.B, path, id string) types.Persister {
 	b.StopTimer()
 	db, err := createPersister(path, id)
@@ -260,12 +233,6 @@ func generateKeys(numKeys int) (map[string][]byte, []string) {
 	}
 
 	return entries, keys
-}
-
-func randInt(min int, max int) int {
-	dd := int64(max - min)
-	vv, _ := rand.Int(rand.Reader, big.NewInt(dd))
-	return min + int(vv.Int64())
 }
 
 func generateRandomByteArray(size int) []byte {
