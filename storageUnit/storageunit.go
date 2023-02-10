@@ -46,9 +46,10 @@ var log = logger.GetOrCreate("storage/storageUnit")
 // LvlDB currently the only supported DBs
 // More to be added
 const (
-	LvlDB       DBType = "LvlDB"
-	LvlDBSerial DBType = "LvlDBSerial"
-	MemoryDB    DBType = "MemoryDB"
+	LvlDB              DBType = "LvlDB"
+	LvlDBSerial        DBType = "LvlDBSerial"
+	ShardedLvlDBSerial DBType = "ShardedLvlDBSerial"
+	MemoryDB           DBType = "MemoryDB"
 )
 
 const (
