@@ -25,7 +25,7 @@ const (
 	shardedID = "sharded"
 )
 
-func BenchmarkPersister1milAllKeys(b *testing.B) {
+func BenchmarkPersister1milGetAllKeys(b *testing.B) {
 	entries, keys := generateKeys(_1Mil)
 
 	persisterPath := b.TempDir()
@@ -44,7 +44,7 @@ func BenchmarkPersister1milAllKeys(b *testing.B) {
 	})
 }
 
-func BenchmarkPersister1mil10kKeys(b *testing.B) {
+func BenchmarkPersister1milGet10kKeys(b *testing.B) {
 	entries, keys := generateKeys(_1Mil)
 
 	persisterPath := b.TempDir()
@@ -61,7 +61,7 @@ func BenchmarkPersister1mil10kKeys(b *testing.B) {
 	})
 }
 
-func BenchmarkPersister1mil100kKeys(b *testing.B) {
+func BenchmarkPersister1milGet100kKeys(b *testing.B) {
 	entries, keys := generateKeys(_1Mil)
 
 	persisterPath := b.TempDir()
@@ -78,7 +78,7 @@ func BenchmarkPersister1mil100kKeys(b *testing.B) {
 	})
 }
 
-func BenchmarkPersister2milAllKeys(b *testing.B) {
+func BenchmarkPersister2milGetAllKeys(b *testing.B) {
 	entries, keys := generateKeys(_2Mil)
 
 	persisterPath := b.TempDir()
@@ -95,7 +95,7 @@ func BenchmarkPersister2milAllKeys(b *testing.B) {
 	})
 }
 
-func BenchmarkPersister4milAllKeys(b *testing.B) {
+func BenchmarkPersister4milGetAllKeys(b *testing.B) {
 	entries, keys := generateKeys(_4Mil)
 
 	persisterPath := b.TempDir()
@@ -112,7 +112,7 @@ func BenchmarkPersister4milAllKeys(b *testing.B) {
 	})
 }
 
-func BenchmarkPersister8milAllKeys(b *testing.B) {
+func BenchmarkPersister8milGetAllKeys(b *testing.B) {
 	entries, keys := generateKeys(_8Mil)
 
 	persisterPath := b.TempDir()
@@ -132,13 +132,24 @@ func BenchmarkPersister8milAllKeys(b *testing.B) {
 func createPersister(path string, id string) (types.Persister, error) {
 	switch id {
 	case singleID:
-		return leveldb.NewSerialDB(path, 2, 1000, 10)
+		return leveldb.NewSerialDB(path, 2, _1Mil, 10)
 	case shardedID:
 		shardCoordinator, _ := leveldb.NewShardIDProvider(numShards)
-		return leveldb.NewShardedPersister(path, 2, 1000, 10, shardCoordinator)
+		return leveldb.NewShardedPersister(path, 2, _1Mil, 10, shardCoordinator)
 	default:
 		return nil, fmt.Errorf("failed to create persister: invalid id type")
 	}
+}
+
+func populatePersister(db types.Persister, entries map[string][]byte) error {
+	for key, val := range entries {
+		err := db.Put([]byte(key), val)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func createAndPopulatePersister(path string, id string, entries map[string][]byte) error {
@@ -147,11 +158,9 @@ func createAndPopulatePersister(path string, id string, entries map[string][]byt
 		return err
 	}
 
-	for key, val := range entries {
-		err = db.Put([]byte(key), val)
-		if err != nil {
-			return err
-		}
+	err = populatePersister(db, entries)
+	if err != nil {
+		return err
 	}
 
 	err = db.Close()
