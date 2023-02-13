@@ -25,6 +25,74 @@ const (
 	shardedID = "sharded"
 )
 
+func BenchmarkPersisterPutAllKeys(b *testing.B) {
+	b.Run("1 mil keys", func(b *testing.B) {
+		putKeysBenchmarkByNumKeys(b, _1Mil)
+	})
+	b.Run("2 mil keys", func(b *testing.B) {
+		putKeysBenchmarkByNumKeys(b, _1Mil)
+	})
+	b.Run("4 mil keys", func(b *testing.B) {
+		putKeysBenchmarkByNumKeys(b, _1Mil)
+	})
+}
+
+func putKeysBenchmarkByNumKeys(
+	b *testing.B,
+	numKeys int,
+) {
+	entries, _ := generateKeys(numKeys)
+
+	persisterPath := b.TempDir()
+	singleDB, err := createPersister(persisterPath, singleID)
+	require.Nil(b, err)
+	defer singleDB.Close()
+
+	shardedPersisterPath := b.TempDir()
+	shardedDB, err := createPersister(shardedPersisterPath, shardedID)
+	require.Nil(b, err)
+	defer shardedDB.Close()
+
+	b.Run("persister", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			putKeys(b, singleDB, entries)
+		}
+	})
+
+	b.Run("sharded persister", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			putKeys(b, shardedDB, entries)
+		}
+	})
+}
+
+func putKeys(
+	b *testing.B,
+	db types.Persister,
+	entries map[string][]byte,
+) {
+	defer func() {
+		closePersisterWithTimerControl(b, db)
+	}()
+
+	maxRoutines := make(chan struct{}, 400)
+	wg := sync.WaitGroup{}
+	wg.Add(len(entries))
+
+	for key, val := range entries {
+		maxRoutines <- struct{}{}
+		go func(key, val []byte) {
+			err := db.Put(key, val)
+			require.Nil(b, err)
+
+			<-maxRoutines
+			wg.Done()
+		}([]byte(key), val)
+	}
+
+	wg.Wait()
+}
+
 func BenchmarkPersister1milGetAllKeys(b *testing.B) {
 	entries, keys := generateKeys(_1Mil)
 
