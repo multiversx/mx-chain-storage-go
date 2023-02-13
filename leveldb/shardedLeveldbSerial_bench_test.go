@@ -30,10 +30,10 @@ func BenchmarkPersisterPutAllKeys(b *testing.B) {
 		putKeysBenchmarkByNumKeys(b, _1Mil)
 	})
 	b.Run("2 mil keys", func(b *testing.B) {
-		putKeysBenchmarkByNumKeys(b, _1Mil)
+		putKeysBenchmarkByNumKeys(b, _2Mil)
 	})
 	b.Run("4 mil keys", func(b *testing.B) {
-		putKeysBenchmarkByNumKeys(b, _1Mil)
+		putKeysBenchmarkByNumKeys(b, _4Mil)
 	})
 }
 
@@ -94,7 +94,7 @@ func BenchmarkPersisterCopyAllKeys(b *testing.B) {
 		copyKeysBenchmarkByNumKeys(b, _1Mil)
 	})
 	b.Run("2 mil keys", func(b *testing.B) {
-		copyKeysBenchmarkByNumKeys(b, _1Mil)
+		copyKeysBenchmarkByNumKeys(b, _2Mil)
 	})
 }
 
