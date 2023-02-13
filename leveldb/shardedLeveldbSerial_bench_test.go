@@ -71,10 +71,6 @@ func putKeys(
 	db types.Persister,
 	entries map[string][]byte,
 ) {
-	defer func() {
-		closePersisterWithTimerControl(b, db)
-	}()
-
 	maxRoutines := make(chan struct{}, 400)
 	wg := sync.WaitGroup{}
 	wg.Add(len(entries))
@@ -83,6 +79,80 @@ func putKeys(
 		maxRoutines <- struct{}{}
 		go func(key, val []byte) {
 			err := db.Put(key, val)
+			require.Nil(b, err)
+
+			<-maxRoutines
+			wg.Done()
+		}([]byte(key), val)
+	}
+
+	wg.Wait()
+}
+
+func BenchmarkPersisterCopyAllKeys(b *testing.B) {
+	b.Run("1 mil keys", func(b *testing.B) {
+		copyKeysBenchmarkByNumKeys(b, _1Mil)
+	})
+	b.Run("2 mil keys", func(b *testing.B) {
+		copyKeysBenchmarkByNumKeys(b, _1Mil)
+	})
+}
+
+func copyKeysBenchmarkByNumKeys(b *testing.B, numKeys int) {
+	entries, _ := generateKeys(_1Mil)
+
+	persisterPath := b.TempDir()
+	singleDB, err := createPersister(persisterPath, singleID)
+	require.Nil(b, err)
+	err = populatePersister(singleDB, entries)
+	require.Nil(b, err)
+	defer singleDB.Close()
+
+	shardedPersisterPath := b.TempDir()
+	shardedDB, err := createPersister(shardedPersisterPath, shardedID)
+	require.Nil(b, err)
+	err = populatePersister(shardedDB, entries)
+	require.Nil(b, err)
+	defer shardedDB.Close()
+
+	singleDBNew, err := createPersister(b.TempDir(), singleID)
+	require.Nil(b, err)
+	defer singleDB.Close()
+
+	shardedDBNew, err := createPersister(b.TempDir(), shardedID)
+	require.Nil(b, err)
+	defer shardedDB.Close()
+
+	b.Run("persister", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyKeys(b, entries, singleDB, singleDBNew)
+		}
+	})
+
+	b.Run("sharded persister", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyKeys(b, entries, shardedDB, shardedDBNew)
+		}
+	})
+}
+
+func copyKeys(
+	b *testing.B,
+	entries map[string][]byte,
+	oldDB types.Persister,
+	newDB types.Persister,
+) {
+	maxRoutines := make(chan struct{}, 400)
+	wg := sync.WaitGroup{}
+	wg.Add(len(entries))
+
+	for key, val := range entries {
+		maxRoutines <- struct{}{}
+		go func(key, val []byte) {
+			_, err := oldDB.Get(key)
+			require.Nil(b, err)
+
+			err = newDB.Put(key, val)
 			require.Nil(b, err)
 
 			<-maxRoutines
