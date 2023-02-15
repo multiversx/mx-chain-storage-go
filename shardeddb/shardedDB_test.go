@@ -1,9 +1,10 @@
-package leveldb_test
+package shardeddb_test
 
 import (
 	"testing"
 
-	"github.com/multiversx/mx-chain-storage-go/leveldb"
+	"github.com/multiversx/mx-chain-storage-go/shardeddb"
+	"github.com/multiversx/mx-chain-storage-go/storageUnit"
 	"github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/stretchr/testify/require"
 )
@@ -15,16 +16,16 @@ func TestNewShardedPersister(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
-		db, err := leveldb.NewShardedPersister(dir, 2, 10, 10, nil)
+		db, err := shardeddb.NewShardedPersister(storageUnit.LvlDBSerial, dir, 2, 10, 10, nil)
 		require.Nil(t, db)
-		require.Equal(t, leveldb.ErrNilIDProvider, err)
+		require.Equal(t, shardeddb.ErrNilIDProvider, err)
 	})
 
 	t.Run("should work", func(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
-		db, err := leveldb.NewShardedPersister(dir, 2, 10, 10, &testscommon.ShardIDProviderStub{})
+		db, err := shardeddb.NewShardedPersister(storageUnit.LvlDBSerial, dir, 2, 10, 10, &testscommon.ShardIDProviderStub{})
 		require.NotNil(t, db)
 		require.Nil(t, err)
 	})
@@ -33,8 +34,11 @@ func TestNewShardedPersister(t *testing.T) {
 func TestShardedPersister_Operations(t *testing.T) {
 	t.Parallel()
 
+	idProvider, err := shardeddb.NewShardIDProvider(4)
+	require.Nil(t, err)
+
 	dir := t.TempDir()
-	db, err := createPersister(dir, shardedID)
+	db, err := shardeddb.NewShardedPersister(storageUnit.LvlDBSerial, dir, 2, 10, 10, idProvider)
 	require.Nil(t, err)
 
 	_ = db.Put([]byte("aaa"), []byte("aaaval"))
@@ -44,7 +48,7 @@ func TestShardedPersister_Operations(t *testing.T) {
 	err = db.Close()
 	require.Nil(t, err)
 
-	db2, err := createPersister(dir, shardedID)
+	db2, err := shardeddb.NewShardedPersister(storageUnit.LvlDBSerial, dir, 2, 10, 10, idProvider)
 	require.Nil(t, err)
 
 	_, err = db2.Get([]byte("aaa"))

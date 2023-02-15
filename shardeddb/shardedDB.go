@@ -1,10 +1,13 @@
-package leveldb
+package shardeddb
 
 import (
 	"errors"
 	"fmt"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
+	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/leveldb"
+	"github.com/multiversx/mx-chain-storage-go/storageUnit"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
@@ -14,20 +17,20 @@ var _ types.Persister = (*shardedPersister)(nil)
 var ErrNilIDProvider = errors.New("nil id provider")
 
 type shardedPersister struct {
-	persisters map[uint32]*SerialDB
+	persisters map[uint32]types.Persister
 	idProvider types.ShardIDProvider
 }
 
 // NewShardedPersister will created a new sharded persister
-func NewShardedPersister(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFilesPerShard int, idProvider types.ShardIDProvider) (*shardedPersister, error) {
+func NewShardedPersister(dbType storageUnit.DBType, path string, batchDelaySeconds int, maxBatchSize int, maxOpenFilesPerShard int, idProvider types.ShardIDProvider) (*shardedPersister, error) {
 	if check.IfNil(idProvider) {
 		return nil, ErrNilIDProvider
 	}
 
-	persisters := make(map[uint32]*SerialDB)
+	persisters := make(map[uint32]types.Persister)
 	for _, shardID := range idProvider.GetShardIDs() {
 		newPath := updatePathWithShardID(path, shardID)
-		db, err := NewSerialDB(newPath, batchDelaySeconds, maxBatchSize, maxOpenFilesPerShard)
+		db, err := createDB(storageUnit.DBType(dbType), newPath, batchDelaySeconds, maxBatchSize, maxOpenFilesPerShard)
 		if err != nil {
 			return nil, err
 		}
@@ -38,6 +41,17 @@ func NewShardedPersister(path string, batchDelaySeconds int, maxBatchSize int, m
 		persisters: persisters,
 		idProvider: idProvider,
 	}, nil
+}
+
+func createDB(dbType storageUnit.DBType, path string, batchDelaySeconds int, maxBatchSize int, maxOpenFilesPerShard int) (types.Persister, error) {
+	switch dbType {
+	case storageUnit.LvlDB:
+		return leveldb.NewDB(path, batchDelaySeconds, maxBatchSize, maxOpenFilesPerShard)
+	case storageUnit.LvlDBSerial:
+		return leveldb.NewSerialDB(path, batchDelaySeconds, maxBatchSize, maxOpenFilesPerShard)
+	default:
+		return nil, common.ErrNotSupportedDBType
+	}
 }
 
 func updatePathWithShardID(path string, shardID uint32) string {
