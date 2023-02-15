@@ -41,7 +41,7 @@ func NewShardedPersister(path string, batchDelaySeconds int, maxBatchSize int, m
 }
 
 func updatePathWithShardID(path string, shardID uint32) string {
-	return fmt.Sprintf("%s_%d", path, shardID)
+	return fmt.Sprintf("%s/%d", path, shardID)
 }
 
 func (s *shardedPersister) computeID(key []byte) uint32 {
