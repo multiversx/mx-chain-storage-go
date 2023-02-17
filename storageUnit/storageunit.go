@@ -52,6 +52,14 @@ const (
 	MemoryDB           DBType = "MemoryDB"
 )
 
+// ShardIDProviderType represents the type for the supported shard id provider
+type ShardIDProviderType string
+
+// Shard id provider types that are currently supported
+const (
+	BinarySplit ShardIDProviderType = "BinarySplit"
+)
+
 const (
 	// Keccak is the string representation of the keccak hashing function
 	Keccak HasherType = "Keccak"
