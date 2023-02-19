@@ -1,4 +1,4 @@
-package shardeddb
+package sharded
 
 import (
 	"errors"
