@@ -92,6 +92,7 @@ type Storer interface {
 	RemoveFromCurrentEpoch(key []byte) error
 	Remove(key []byte) error
 	ClearCache()
+	ClearStorage() error
 	DestroyUnit() error
 	GetFromEpoch(key []byte, epoch uint32) ([]byte, error)
 	GetBulkFromEpoch(keys [][]byte, epoch uint32) ([]storage.KeyValuePair, error)

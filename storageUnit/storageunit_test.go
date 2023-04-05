@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/multiversx/mx-chain-storage-go/common"
@@ -11,6 +12,7 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/memorydb"
 	"github.com/multiversx/mx-chain-storage-go/storageUnit"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func logError(err error) {
@@ -19,12 +21,20 @@ func logError(err error) {
 	}
 }
 
+var testArgsNewDB = storageUnit.ArgDB{
+	DBType:            "LvlDBSerial",
+	Path:              "path",
+	BatchDelaySeconds: 10,
+	MaxBatchSize:      10,
+	MaxOpenFiles:      10,
+}
+
 func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 	mdb := memorydb.New()
 	cache, err2 := lrucache.NewCache(cSize)
 	assert.Nil(tb, err2, "no error expected but got %s", err2)
 
-	sUnit, err := storageUnit.NewStorageUnit(cache, mdb)
+	sUnit, err := storageUnit.NewStorageUnit(cache, mdb, testArgsNewDB)
 	assert.Nil(tb, err, "failed to create storage unit")
 
 	return sUnit
@@ -35,7 +45,7 @@ func TestStorageUnitNilPersister(t *testing.T) {
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
 
-	_, err := storageUnit.NewStorageUnit(cache, nil)
+	_, err := storageUnit.NewStorageUnit(cache, nil, testArgsNewDB)
 
 	assert.NotNil(t, err, "expected failure")
 }
@@ -43,7 +53,7 @@ func TestStorageUnitNilPersister(t *testing.T) {
 func TestStorageUnitNilCacher(t *testing.T) {
 	mdb := memorydb.New()
 
-	_, err1 := storageUnit.NewStorageUnit(nil, mdb)
+	_, err1 := storageUnit.NewStorageUnit(nil, mdb, testArgsNewDB)
 	assert.NotNil(t, err1, "expected failure")
 }
 
@@ -53,7 +63,7 @@ func TestStorageUnit(t *testing.T) {
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
 
-	_, err := storageUnit.NewStorageUnit(cache, mdb)
+	_, err := storageUnit.NewStorageUnit(cache, mdb, testArgsNewDB)
 	assert.Nil(t, err, "did not expect failure")
 }
 
@@ -386,6 +396,102 @@ func TestNewStorageUnit_ShouldWorkLvlDB(t *testing.T) {
 const (
 	valuesInDb = 100000
 )
+
+func TestStorageUnit_ClearStorage(t *testing.T) {
+	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
+		Capacity: 10,
+		Type:     storageUnit.LRUCache,
+	}, storageUnit.DBConfig{
+		FilePath:          t.TempDir(),
+		Type:              storageUnit.LvlDB,
+		BatchDelaySeconds: 1,
+		MaxBatchSize:      1,
+		MaxOpenFiles:      10,
+	})
+	require.NoError(t, err)
+
+	testKey, testVal := []byte("key"), []byte("val")
+	err = storer.Put(testKey, testVal)
+	require.NoError(t, err)
+
+	res, err := storer.Get(testKey)
+	require.NoError(t, err)
+	require.Equal(t, testVal, res)
+
+	err = storer.ClearStorage()
+	require.NoError(t, err)
+
+	res, err = storer.Get(testKey)
+	require.Equal(t, common.ErrKeyNotFound, err)
+	require.Nil(t, res)
+}
+
+func TestStorageUnit_ConcurrentOperations(t *testing.T) {
+	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
+		Capacity: 10,
+		Type:     storageUnit.LRUCache,
+	}, storageUnit.DBConfig{
+		FilePath:          t.TempDir(),
+		Type:              storageUnit.LvlDB,
+		BatchDelaySeconds: 1,
+		MaxBatchSize:      1,
+		MaxOpenFiles:      10,
+	})
+	require.NoError(t, err)
+
+	numOperations := 10_000
+	wg := sync.WaitGroup{}
+	wg.Add(numOperations)
+
+	for i := 0; i < numOperations; i++ {
+		go func(idx int) {
+			modRes := idx & 16
+			modResKey := []byte(fmt.Sprintf("%d", modRes))
+			switch modRes {
+			case 0:
+				storer.ClearCache()
+			case 1:
+				errClearStorage := storer.ClearStorage()
+				require.NoError(t, errClearStorage)
+			case 2:
+				errClose := storer.Close()
+				require.NoError(t, errClose)
+			case 3:
+				errDestroyUnit := storer.DestroyUnit()
+				require.NoError(t, errDestroyUnit)
+			case 4:
+				_, _ = storer.Get(modResKey)
+			case 5:
+				_, _ = storer.GetBulkFromEpoch([][]byte{modResKey, modResKey}, 0)
+			case 6:
+				_, _ = storer.GetFromEpoch(modResKey, 0)
+			case 7:
+				_, _ = storer.GetOldestEpoch()
+			case 8:
+				_ = storer.Has(modResKey)
+			case 9:
+				storer.IsInterfaceNil()
+			case 10:
+				_ = storer.Put(modResKey, modResKey)
+			case 11:
+				_ = storer.PutInEpoch(modResKey, modResKey, 0)
+			case 12:
+				storer.RangeKeys(func(key []byte, value []byte) bool {
+					return true
+				})
+			case 13:
+				_ = storer.Remove(modResKey)
+			case 14:
+				_ = storer.RemoveFromCurrentEpoch(modResKey)
+			case 15:
+				_, _ = storer.SearchFirst(modResKey)
+			}
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
+}
 
 func BenchmarkStorageUnit_Put(b *testing.B) {
 	b.StopTimer()

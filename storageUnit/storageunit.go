@@ -110,6 +110,7 @@ type Unit struct {
 	lock      sync.RWMutex
 	persister types.Persister
 	cacher    types.Cacher
+	argsNewDB ArgDB
 }
 
 // Put adds data to both cache and persistence medium
@@ -259,6 +260,27 @@ func (u *Unit) DestroyUnit() error {
 	return u.persister.Destroy()
 }
 
+// ClearStorage will clean the storer by removing the database and creating a new one at the same location
+func (u *Unit) ClearStorage() error {
+	u.lock.Lock()
+	defer u.lock.Unlock()
+
+	err := u.persister.Close()
+	if err != nil {
+		return err
+	}
+
+	err = u.persister.DestroyClosed()
+	if err != nil {
+		return err
+	}
+
+	u.ClearCache()
+
+	u.persister, err = NewDB(u.argsNewDB)
+	return err
+}
+
 // IsInterfaceNil returns true if there is no value under the interface
 func (u *Unit) IsInterfaceNil() bool {
 	return u == nil
@@ -266,7 +288,7 @@ func (u *Unit) IsInterfaceNil() bool {
 
 // NewStorageUnit is the constructor for the storage unit, creating a new storage unit
 // from the given cacher and persister.
-func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
+func NewStorageUnit(c types.Cacher, p types.Persister, argsNewDB ArgDB) (*Unit, error) {
 	if check.IfNil(p) {
 		return nil, common.ErrNilPersister
 	}
@@ -277,6 +299,7 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 	sUnit := &Unit{
 		persister: p,
 		cacher:    c,
+		argsNewDB: argsNewDB,
 	}
 
 	return sUnit, nil
@@ -312,7 +335,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 		return nil, err
 	}
 
-	return NewStorageUnit(cache, db)
+	return NewStorageUnit(cache, db, argDB)
 }
 
 // NewCache creates a new cache from a cache config
