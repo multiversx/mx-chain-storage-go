@@ -73,6 +73,11 @@ func (ns *NilStorer) Remove(_ []byte) error {
 func (ns *NilStorer) ClearCache() {
 }
 
+// ClearStorage returns nil
+func (ns *NilStorer) ClearStorage() error {
+	return nil
+}
+
 // DestroyUnit will do nothing
 func (ns *NilStorer) DestroyUnit() error {
 	return nil
