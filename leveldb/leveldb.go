@@ -70,8 +70,9 @@ func NewDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFiles in
 	sw.Stop(openLevelDBFunction)
 
 	bldb := &baseLevelDb{
-		db:   db,
-		path: path,
+		db:      db,
+		path:    path,
+		options: options,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -253,6 +254,25 @@ func (s *DB) Close() error {
 	}
 
 	return nil
+}
+
+// Clear will destroy the database and create it again
+func (s *DB) Clear() error {
+	err := s.Close()
+	if err != nil {
+		return err
+	}
+
+	err = s.DestroyClosed()
+	if err != nil {
+		return err
+	}
+
+	s.mutDb.Lock()
+	s.db, err = openLevelDB(s.path, s.options)
+	s.mutDb.Unlock()
+
+	return err
 }
 
 // Remove removes the data associated to the given key

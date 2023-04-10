@@ -6,6 +6,7 @@ type PersisterStub struct {
 	GetCalled           func(key []byte) ([]byte, error)
 	HasCalled           func(key []byte) error
 	CloseCalled         func() error
+	ClearCalled         func() error
 	RemoveCalled        func(key []byte) error
 	DestroyCalled       func() error
 	DestroyClosedCalled func() error
@@ -43,6 +44,15 @@ func (p *PersisterStub) Has(key []byte) error {
 func (p *PersisterStub) Close() error {
 	if p.CloseCalled != nil {
 		return p.CloseCalled()
+	}
+
+	return nil
+}
+
+// Clear -
+func (p *PersisterStub) Clear() error {
+	if p.ClearCalled != nil {
+		return p.ClearCalled()
 	}
 
 	return nil

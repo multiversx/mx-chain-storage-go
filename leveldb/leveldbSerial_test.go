@@ -3,6 +3,7 @@ package leveldb_test
 import (
 	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
@@ -211,6 +212,64 @@ func TestSerialDB_CloseTwice(t *testing.T) {
 	err := ldb.Close()
 
 	assert.Nil(t, err)
+}
+
+func TestSerialDB_Clear(t *testing.T) {
+	ldb := createSerialLevelDb(t, 10, 1, 10)
+
+	testKey, testVal := []byte("key"), []byte("value")
+	_ = ldb.Put(testKey, testVal)
+
+	res, err := ldb.Get(testKey)
+	assert.Equal(t, testVal, res)
+	assert.Nil(t, err)
+
+	err = ldb.Clear()
+	assert.Nil(t, err)
+}
+
+func TestSerialDB_ConcurrentOperations(t *testing.T) {
+	ldb := createSerialLevelDb(t, 1, 10, 10)
+
+	numOps := 30
+	wg := sync.WaitGroup{}
+	wg.Add(numOps)
+
+	for i := 0; i < numOps; i++ {
+		go func(idx int) {
+			modRes := idx % 10
+			testKey := []byte(fmt.Sprintf("%d", modRes))
+			testVal := testKey
+			switch modRes {
+			case 0:
+				_ = ldb.Clear()
+			case 1:
+				_ = ldb.Close()
+			case 2:
+				_ = ldb.Destroy()
+			case 3:
+				_ = ldb.DestroyClosed()
+			case 4:
+				_, _ = ldb.Get(testKey)
+			case 5:
+				_ = ldb.Has(testKey)
+			case 6:
+				ldb.IsInterfaceNil()
+			case 7:
+				_ = ldb.Put(testKey, testVal)
+			case 8:
+				ldb.RangeKeys(func(key []byte, value []byte) bool {
+					return true
+				})
+			case 9:
+				_ = ldb.Remove(testKey)
+			}
+
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
 }
 
 func TestSerialDB_Destroy(t *testing.T) {

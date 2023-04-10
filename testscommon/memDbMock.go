@@ -95,6 +95,16 @@ func (s *MemDbMock) DestroyClosed() error {
 	return nil
 }
 
+// Clear -
+func (s *MemDbMock) Clear() error {
+	s.mutx.Lock()
+	defer s.mutx.Unlock()
+
+	s.db = make(map[string][]byte)
+
+	return nil
+}
+
 // RangeKeys will iterate over all contained (key, value) pairs calling the handler for each pair
 func (s *MemDbMock) RangeKeys(handler func(key []byte, value []byte) bool) {
 	if handler == nil {

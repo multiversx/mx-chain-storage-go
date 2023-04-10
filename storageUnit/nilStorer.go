@@ -73,8 +73,8 @@ func (ns *NilStorer) Remove(_ []byte) error {
 func (ns *NilStorer) ClearCache() {
 }
 
-// ClearStorage returns nil
-func (ns *NilStorer) ClearStorage() error {
+// Clear returns nil
+func (ns *NilStorer) Clear() error {
 	return nil
 }
 

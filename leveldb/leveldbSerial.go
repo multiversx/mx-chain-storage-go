@@ -65,8 +65,9 @@ func NewSerialDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFi
 	sw.Stop(openLevelDBFunction)
 
 	bldb := &baseLevelDb{
-		db:   db,
-		path: path,
+		db:      db,
+		path:    path,
+		options: options,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -315,6 +316,25 @@ func (s *SerialDB) DestroyClosed() error {
 	if err != nil {
 		log.Error("error destroy closed", "error", err, "path", s.path)
 	}
+	return err
+}
+
+// Clear will destroy the database and create it again
+func (s *SerialDB) Clear() error {
+	err := s.Close()
+	if err != nil {
+		return err
+	}
+
+	err = s.DestroyClosed()
+	if err != nil {
+		return err
+	}
+
+	s.mutDb.Lock()
+	s.db, err = openLevelDB(s.path, s.options)
+	s.mutDb.Unlock()
+
 	return err
 }
 

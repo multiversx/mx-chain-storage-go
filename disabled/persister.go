@@ -46,6 +46,11 @@ func (p *persister) DestroyClosed() error {
 	return nil
 }
 
+// Clear returns nil
+func (p *persister) Clear() error {
+	return nil
+}
+
 // RangeKeys does nothing
 func (p *persister) RangeKeys(_ func(key []byte, val []byte) bool) {}
 

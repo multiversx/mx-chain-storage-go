@@ -74,9 +74,10 @@ func openOneTime(path string, options *opt.Options) (*leveldb.DB, error) {
 }
 
 type baseLevelDb struct {
-	mutDb sync.RWMutex
-	path  string
-	db    *leveldb.DB
+	mutDb   sync.RWMutex
+	path    string
+	options *opt.Options
+	db      *leveldb.DB
 }
 
 func (bldb *baseLevelDb) getDbPointer() *leveldb.DB {

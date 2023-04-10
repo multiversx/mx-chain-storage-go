@@ -89,6 +89,16 @@ func (s *DB) Destroy() error {
 	return nil
 }
 
+// Clear will clear the internal map
+func (s *DB) Clear() error {
+	s.mutx.Lock()
+	defer s.mutx.Unlock()
+
+	s.db = make(map[string][]byte)
+
+	return nil
+}
+
 // RangeKeys will iterate over all contained (key, value) pairs calling the provided handler
 func (s *DB) RangeKeys(handler func(key []byte, value []byte) bool) {
 	if handler == nil {

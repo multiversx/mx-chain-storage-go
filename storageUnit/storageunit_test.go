@@ -397,7 +397,7 @@ const (
 	valuesInDb = 100000
 )
 
-func TestStorageUnit_ClearStorage(t *testing.T) {
+func TestStorageUnit_Clear(t *testing.T) {
 	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
 		Capacity: 10,
 		Type:     storageUnit.LRUCache,
@@ -418,7 +418,7 @@ func TestStorageUnit_ClearStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testVal, res)
 
-	err = storer.ClearStorage()
+	err = storer.Clear()
 	require.NoError(t, err)
 
 	res, err = storer.Get(testKey)
@@ -451,7 +451,7 @@ func TestStorageUnit_ConcurrentOperations(t *testing.T) {
 			case 0:
 				storer.ClearCache()
 			case 1:
-				errClearStorage := storer.ClearStorage()
+				errClearStorage := storer.Clear()
 				require.NoError(t, errClearStorage)
 			case 2:
 				errClose := storer.Close()

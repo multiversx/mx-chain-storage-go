@@ -59,6 +59,13 @@ func (l *lruDB) Close() error {
 	return nil
 }
 
+// Clear will clean the cacher
+func (l *lruDB) Clear() error {
+	l.cacher.Clear()
+
+	return nil
+}
+
 // Remove removes the data associated to the given key
 func (l *lruDB) Remove(key []byte) error {
 	l.cacher.Remove(key)

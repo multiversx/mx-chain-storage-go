@@ -260,24 +260,18 @@ func (u *Unit) DestroyUnit() error {
 	return u.persister.Destroy()
 }
 
-// ClearStorage will clean the storer by removing the database and creating a new one at the same location
-func (u *Unit) ClearStorage() error {
+// Clear will clean the storer by removing the database and creating a new one at the same location
+func (u *Unit) Clear() error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
-	err := u.persister.Close()
-	if err != nil {
-		return err
-	}
-
-	err = u.persister.DestroyClosed()
+	err := u.persister.Clear()
 	if err != nil {
 		return err
 	}
 
 	u.ClearCache()
 
-	u.persister, err = NewDB(u.argsNewDB)
 	return err
 }
 
