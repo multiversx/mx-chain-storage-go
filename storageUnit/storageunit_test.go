@@ -21,20 +21,12 @@ func logError(err error) {
 	}
 }
 
-var testArgsNewDB = storageUnit.ArgDB{
-	DBType:            "LvlDBSerial",
-	Path:              "path",
-	BatchDelaySeconds: 10,
-	MaxBatchSize:      10,
-	MaxOpenFiles:      10,
-}
-
 func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 	mdb := memorydb.New()
 	cache, err2 := lrucache.NewCache(cSize)
 	assert.Nil(tb, err2, "no error expected but got %s", err2)
 
-	sUnit, err := storageUnit.NewStorageUnit(cache, mdb, testArgsNewDB)
+	sUnit, err := storageUnit.NewStorageUnit(cache, mdb)
 	assert.Nil(tb, err, "failed to create storage unit")
 
 	return sUnit
@@ -45,7 +37,7 @@ func TestStorageUnitNilPersister(t *testing.T) {
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
 
-	_, err := storageUnit.NewStorageUnit(cache, nil, testArgsNewDB)
+	_, err := storageUnit.NewStorageUnit(cache, nil)
 
 	assert.NotNil(t, err, "expected failure")
 }
@@ -53,7 +45,7 @@ func TestStorageUnitNilPersister(t *testing.T) {
 func TestStorageUnitNilCacher(t *testing.T) {
 	mdb := memorydb.New()
 
-	_, err1 := storageUnit.NewStorageUnit(nil, mdb, testArgsNewDB)
+	_, err1 := storageUnit.NewStorageUnit(nil, mdb)
 	assert.NotNil(t, err1, "expected failure")
 }
 
@@ -63,7 +55,7 @@ func TestStorageUnit(t *testing.T) {
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
 
-	_, err := storageUnit.NewStorageUnit(cache, mdb, testArgsNewDB)
+	_, err := storageUnit.NewStorageUnit(cache, mdb)
 	assert.Nil(t, err, "did not expect failure")
 }
 

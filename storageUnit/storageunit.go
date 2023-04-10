@@ -110,7 +110,6 @@ type Unit struct {
 	lock      sync.RWMutex
 	persister types.Persister
 	cacher    types.Cacher
-	argsNewDB ArgDB
 }
 
 // Put adds data to both cache and persistence medium
@@ -282,7 +281,7 @@ func (u *Unit) IsInterfaceNil() bool {
 
 // NewStorageUnit is the constructor for the storage unit, creating a new storage unit
 // from the given cacher and persister.
-func NewStorageUnit(c types.Cacher, p types.Persister, argsNewDB ArgDB) (*Unit, error) {
+func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 	if check.IfNil(p) {
 		return nil, common.ErrNilPersister
 	}
@@ -293,7 +292,6 @@ func NewStorageUnit(c types.Cacher, p types.Persister, argsNewDB ArgDB) (*Unit, 
 	sUnit := &Unit{
 		persister: p,
 		cacher:    c,
-		argsNewDB: argsNewDB,
 	}
 
 	return sUnit, nil
@@ -329,7 +327,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 		return nil, err
 	}
 
-	return NewStorageUnit(cache, db, argDB)
+	return NewStorageUnit(cache, db)
 }
 
 // NewCache creates a new cache from a cache config
