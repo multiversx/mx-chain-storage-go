@@ -373,3 +373,53 @@ func TestFIFOShardedCache_CacherRegisterHasOrAddAddedDataHandlerNotAddedShouldNo
 
 	assert.Equal(t, 1, len(c.AddedDataHandlers()))
 }
+
+func TestFifoShardedCache_ConcurrentOperation(t *testing.T) {
+	fifoCacher, _ := fifocache.NewShardedCache(10000, 3)
+
+	numOperations := 10_000
+	wg := sync.WaitGroup{}
+	wg.Add(numOperations)
+	for i := 0; i < numOperations; i++ {
+		go func(idx int) {
+			switch idx % 16 {
+			case 0:
+				fifoCacher.AddedDataHandlers()
+			case 1:
+				fifoCacher.Clear()
+			case 2:
+				_ = fifoCacher.Close()
+			case 3:
+				fifoCacher.Get([]byte("sameKey"))
+			case 4:
+				fifoCacher.Has([]byte("sameKey"))
+			case 5:
+				fifoCacher.HasOrAdd([]byte("sameKey"), []byte("sameVal"), 10)
+			case 6:
+				fifoCacher.IsInterfaceNil()
+			case 7:
+				fifoCacher.Keys()
+			case 8:
+				fifoCacher.Len()
+			case 9:
+				fifoCacher.MaxSize()
+			case 10:
+				fifoCacher.Peek([]byte("sameKey"))
+			case 11:
+				fifoCacher.Put([]byte("sameKey"), []byte("sameVal"), 10)
+			case 12:
+				fifoCacher.RegisterHandler(func(key []byte, value interface{}) {}, "id")
+			case 13:
+				fifoCacher.Remove([]byte("sameKey"))
+			case 14:
+				fifoCacher.SizeInBytesContained()
+			case 15:
+				fifoCacher.UnRegisterHandler("id")
+			}
+
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
+}
