@@ -10,10 +10,18 @@ import (
 func TestNewShardIDProvider(t *testing.T) {
 	t.Parallel()
 
-	t.Run("invalid number of shards", func(t *testing.T) {
+	t.Run("invalid number of shards, zero", func(t *testing.T) {
 		t.Parallel()
 
 		ip, err := sharded.NewShardIDProvider(0)
+		require.Nil(t, ip)
+		require.Equal(t, sharded.ErrInvalidNumberOfShards, err)
+	})
+
+	t.Run("invalid number of shards, negative number", func(t *testing.T) {
+		t.Parallel()
+
+		ip, err := sharded.NewShardIDProvider(-1)
 		require.Nil(t, ip)
 		require.Equal(t, sharded.ErrInvalidNumberOfShards, err)
 	})
@@ -30,18 +38,18 @@ func TestNewShardIDProvider(t *testing.T) {
 func TestNumberOfShards(t *testing.T) {
 	t.Parallel()
 
-	numShards := uint32(4)
+	numShards := int32(4)
 
 	ip, err := sharded.NewShardIDProvider(numShards)
 	require.Nil(t, err)
 
-	require.Equal(t, numShards, ip.NumberOfShards())
+	require.Equal(t, uint32(numShards), ip.NumberOfShards())
 }
 
 func TestGetShardIDs(t *testing.T) {
 	t.Parallel()
 
-	ip, err := sharded.NewShardIDProvider(uint32(4))
+	ip, err := sharded.NewShardIDProvider(int32(4))
 	require.Nil(t, err)
 
 	expShardIDs := []uint32{0, 1, 2, 3}
@@ -54,7 +62,7 @@ func TestComputeId(t *testing.T) {
 	t.Run("4 shards", func(t *testing.T) {
 		t.Parallel()
 
-		ip, err := sharded.NewShardIDProvider(uint32(4))
+		ip, err := sharded.NewShardIDProvider(int32(4))
 		require.Nil(t, err)
 
 		require.Equal(t, uint32(0), ip.ComputeId([]byte{0}))
@@ -66,7 +74,7 @@ func TestComputeId(t *testing.T) {
 	t.Run("5 shards", func(t *testing.T) {
 		t.Parallel()
 
-		ip, err := sharded.NewShardIDProvider(uint32(5))
+		ip, err := sharded.NewShardIDProvider(int32(5))
 		require.Nil(t, err)
 
 		require.Equal(t, uint32(0), ip.ComputeId([]byte{0}))
