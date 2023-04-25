@@ -51,11 +51,33 @@ func TestGetShardIDs(t *testing.T) {
 func TestComputeId(t *testing.T) {
 	t.Parallel()
 
-	ip, err := sharded.NewShardIDProvider(uint32(4))
-	require.Nil(t, err)
+	t.Run("4 shards", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t, uint32(0), ip.ComputeId([]byte{0}))
-	require.Equal(t, uint32(1), ip.ComputeId([]byte{1}))
-	require.Equal(t, uint32(2), ip.ComputeId([]byte{2}))
-	require.Equal(t, uint32(3), ip.ComputeId([]byte{3}))
+		ip, err := sharded.NewShardIDProvider(uint32(4))
+		require.Nil(t, err)
+
+		require.Equal(t, uint32(0), ip.ComputeId([]byte{0}))
+		require.Equal(t, uint32(1), ip.ComputeId([]byte{1}))
+		require.Equal(t, uint32(2), ip.ComputeId([]byte{2}))
+		require.Equal(t, uint32(3), ip.ComputeId([]byte{3}))
+	})
+
+	t.Run("5 shards", func(t *testing.T) {
+		t.Parallel()
+
+		ip, err := sharded.NewShardIDProvider(uint32(5))
+		require.Nil(t, err)
+
+		require.Equal(t, uint32(0), ip.ComputeId([]byte{0}))
+		require.Equal(t, uint32(1), ip.ComputeId([]byte{1}))
+		require.Equal(t, uint32(2), ip.ComputeId([]byte{2}))
+		require.Equal(t, uint32(3), ip.ComputeId([]byte{3}))
+		require.Equal(t, uint32(4), ip.ComputeId([]byte{4}))
+		require.Equal(t, uint32(1), ip.ComputeId([]byte{5}))
+		require.Equal(t, uint32(2), ip.ComputeId([]byte{6}))
+		require.Equal(t, uint32(3), ip.ComputeId([]byte{7}))
+		require.Equal(t, uint32(0), ip.ComputeId([]byte{8}))
+		require.Equal(t, uint32(1), ip.ComputeId([]byte{9}))
+	})
 }

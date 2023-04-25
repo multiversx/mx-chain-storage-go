@@ -3,20 +3,28 @@ package sharded_test
 import (
 	"testing"
 
+	"github.com/multiversx/mx-chain-storage-go/leveldb"
 	"github.com/multiversx/mx-chain-storage-go/sharded"
-	"github.com/multiversx/mx-chain-storage-go/storageUnit"
 	"github.com/multiversx/mx-chain-storage-go/testscommon"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewShardedPersister(t *testing.T) {
 	t.Parallel()
 
+	t.Run("nil persister creator", func(t *testing.T) {
+		t.Parallel()
+
+		db, err := sharded.NewShardedPersister(nil, &testscommon.ShardIDProviderStub{})
+		require.Nil(t, db)
+		require.Equal(t, sharded.ErrNilPersisterCreator, err)
+	})
+
 	t.Run("nil id provider", func(t *testing.T) {
 		t.Parallel()
 
-		dir := t.TempDir()
-		db, err := sharded.NewShardedPersister(storageUnit.LvlDBSerial, dir, 2, 10, 10, nil)
+		db, err := sharded.NewShardedPersister(&testscommon.PersisterCreatorStub{}, nil)
 		require.Nil(t, db)
 		require.Equal(t, sharded.ErrNilIDProvider, err)
 	})
@@ -25,7 +33,15 @@ func TestNewShardedPersister(t *testing.T) {
 		t.Parallel()
 
 		dir := t.TempDir()
-		db, err := sharded.NewShardedPersister(storageUnit.LvlDBSerial, dir, 2, 10, 10, &testscommon.ShardIDProviderStub{})
+		persisterCreator := &testscommon.PersisterCreatorStub{
+			CreateBasePersisterCalled: func(path string) (types.Persister, error) {
+				return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+			},
+			GetBasePathCalled: func() string {
+				return dir
+			},
+		}
+		db, err := sharded.NewShardedPersister(persisterCreator, &testscommon.ShardIDProviderStub{})
 		require.NotNil(t, db)
 		require.Nil(t, err)
 	})
@@ -38,7 +54,15 @@ func TestShardedPersister_Operations(t *testing.T) {
 	require.Nil(t, err)
 
 	dir := t.TempDir()
-	db, err := sharded.NewShardedPersister(storageUnit.LvlDBSerial, dir, 2, 10, 10, idProvider)
+	persisterCreator := &testscommon.PersisterCreatorStub{
+		CreateBasePersisterCalled: func(path string) (types.Persister, error) {
+			return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+		},
+		GetBasePathCalled: func() string {
+			return dir
+		},
+	}
+	db, err := sharded.NewShardedPersister(persisterCreator, idProvider)
 	require.Nil(t, err)
 
 	_ = db.Put([]byte("aaa"), []byte("aaaval"))
@@ -48,7 +72,7 @@ func TestShardedPersister_Operations(t *testing.T) {
 	err = db.Close()
 	require.Nil(t, err)
 
-	db2, err := sharded.NewShardedPersister(storageUnit.LvlDBSerial, dir, 2, 10, 10, idProvider)
+	db2, err := sharded.NewShardedPersister(persisterCreator, idProvider)
 	require.Nil(t, err)
 
 	_, err = db2.Get([]byte("aaa"))

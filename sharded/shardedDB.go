@@ -5,9 +5,6 @@ import (
 	"fmt"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
-	"github.com/multiversx/mx-chain-storage-go/common"
-	"github.com/multiversx/mx-chain-storage-go/leveldb"
-	"github.com/multiversx/mx-chain-storage-go/storageUnit"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
@@ -16,21 +13,28 @@ var _ types.Persister = (*shardedPersister)(nil)
 // ErrNilIDProvider signals that a nil id provider was provided
 var ErrNilIDProvider = errors.New("nil id provider")
 
+// ErrNilPersisterCreator signals that a nil persister creator was provided
+var ErrNilPersisterCreator = errors.New("nil persister creator")
+
 type shardedPersister struct {
 	persisters map[uint32]types.Persister
 	idProvider types.ShardIDProvider
 }
 
 // NewShardedPersister will created a new sharded persister
-func NewShardedPersister(dbType storageUnit.DBType, path string, batchDelaySeconds int, maxBatchSize int, maxOpenFilesPerShard int, idProvider types.ShardIDProvider) (*shardedPersister, error) {
+func NewShardedPersister(persisterCreator types.PersisterCreator, idProvider types.ShardIDProvider) (*shardedPersister, error) {
+	if check.IfNil(persisterCreator) {
+		return nil, ErrNilPersisterCreator
+	}
 	if check.IfNil(idProvider) {
 		return nil, ErrNilIDProvider
 	}
 
 	persisters := make(map[uint32]types.Persister)
+	basePath := persisterCreator.GetBasePath()
 	for _, shardID := range idProvider.GetShardIDs() {
-		newPath := updatePathWithShardID(path, shardID)
-		db, err := createDB(storageUnit.DBType(dbType), newPath, batchDelaySeconds, maxBatchSize, maxOpenFilesPerShard)
+		newPath := updatePathWithShardID(basePath, shardID)
+		db, err := persisterCreator.CreateBasePersister(newPath)
 		if err != nil {
 			return nil, err
 		}
@@ -41,17 +45,6 @@ func NewShardedPersister(dbType storageUnit.DBType, path string, batchDelaySecon
 		persisters: persisters,
 		idProvider: idProvider,
 	}, nil
-}
-
-func createDB(dbType storageUnit.DBType, path string, batchDelaySeconds int, maxBatchSize int, maxOpenFilesPerShard int) (types.Persister, error) {
-	switch dbType {
-	case storageUnit.LvlDB:
-		return leveldb.NewDB(path, batchDelaySeconds, maxBatchSize, maxOpenFilesPerShard)
-	case storageUnit.LvlDBSerial:
-		return leveldb.NewSerialDB(path, batchDelaySeconds, maxBatchSize, maxOpenFilesPerShard)
-	default:
-		return nil, common.ErrNotSupportedDBType
-	}
 }
 
 func updatePathWithShardID(path string, shardID uint32) string {
