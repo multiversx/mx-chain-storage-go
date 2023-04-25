@@ -16,7 +16,16 @@ func TestNewShardedPersister(t *testing.T) {
 	t.Run("nil persister creator", func(t *testing.T) {
 		t.Parallel()
 
-		db, err := sharded.NewShardedPersister(nil, &testscommon.ShardIDProviderStub{})
+		db, err := sharded.NewShardedPersister("", &testscommon.PersisterCreatorStub{}, &testscommon.ShardIDProviderStub{})
+		require.Nil(t, db)
+		require.Equal(t, sharded.ErrInvalidPath, err)
+	})
+
+	t.Run("nil persister creator", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		db, err := sharded.NewShardedPersister(dir, nil, &testscommon.ShardIDProviderStub{})
 		require.Nil(t, db)
 		require.Equal(t, sharded.ErrNilPersisterCreator, err)
 	})
@@ -24,7 +33,8 @@ func TestNewShardedPersister(t *testing.T) {
 	t.Run("nil id provider", func(t *testing.T) {
 		t.Parallel()
 
-		db, err := sharded.NewShardedPersister(&testscommon.PersisterCreatorStub{}, nil)
+		dir := t.TempDir()
+		db, err := sharded.NewShardedPersister(dir, &testscommon.PersisterCreatorStub{}, nil)
 		require.Nil(t, db)
 		require.Equal(t, sharded.ErrNilIDProvider, err)
 	})
@@ -37,11 +47,8 @@ func TestNewShardedPersister(t *testing.T) {
 			CreateBasePersisterCalled: func(path string) (types.Persister, error) {
 				return leveldb.NewSerialDB(path, 2, _1Mil, 10)
 			},
-			GetBasePathCalled: func() string {
-				return dir
-			},
 		}
-		db, err := sharded.NewShardedPersister(persisterCreator, &testscommon.ShardIDProviderStub{})
+		db, err := sharded.NewShardedPersister(dir, persisterCreator, &testscommon.ShardIDProviderStub{})
 		require.NotNil(t, db)
 		require.Nil(t, err)
 	})
@@ -58,11 +65,8 @@ func TestShardedPersister_Operations(t *testing.T) {
 		CreateBasePersisterCalled: func(path string) (types.Persister, error) {
 			return leveldb.NewSerialDB(path, 2, _1Mil, 10)
 		},
-		GetBasePathCalled: func() string {
-			return dir
-		},
 	}
-	db, err := sharded.NewShardedPersister(persisterCreator, idProvider)
+	db, err := sharded.NewShardedPersister(dir, persisterCreator, idProvider)
 	require.Nil(t, err)
 
 	_ = db.Put([]byte("aaa"), []byte("aaaval"))
@@ -72,7 +76,7 @@ func TestShardedPersister_Operations(t *testing.T) {
 	err = db.Close()
 	require.Nil(t, err)
 
-	db2, err := sharded.NewShardedPersister(persisterCreator, idProvider)
+	db2, err := sharded.NewShardedPersister(dir, persisterCreator, idProvider)
 	require.Nil(t, err)
 
 	_, err = db2.Get([]byte("aaa"))

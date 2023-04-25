@@ -228,6 +228,5 @@ type ShardIDProvider interface {
 // PersisterCreator defines the behavour of a component which is able to create a persister
 type PersisterCreator interface {
 	CreateBasePersister(path string) (Persister, error)
-	GetBasePath() string
 	IsInterfaceNil() bool
 }

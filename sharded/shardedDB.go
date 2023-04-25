@@ -10,6 +10,9 @@ import (
 
 var _ types.Persister = (*shardedPersister)(nil)
 
+// ErrInvalidPath signals that an invalid path has been provided
+var ErrInvalidPath = errors.New("invalid path")
+
 // ErrNilIDProvider signals that a nil id provider was provided
 var ErrNilIDProvider = errors.New("nil id provider")
 
@@ -22,7 +25,10 @@ type shardedPersister struct {
 }
 
 // NewShardedPersister will created a new sharded persister
-func NewShardedPersister(persisterCreator types.PersisterCreator, idProvider types.ShardIDProvider) (*shardedPersister, error) {
+func NewShardedPersister(path string, persisterCreator types.PersisterCreator, idProvider types.ShardIDProvider) (*shardedPersister, error) {
+	if len(path) == 0 {
+		return nil, ErrInvalidPath
+	}
 	if check.IfNil(persisterCreator) {
 		return nil, ErrNilPersisterCreator
 	}
@@ -31,9 +37,8 @@ func NewShardedPersister(persisterCreator types.PersisterCreator, idProvider typ
 	}
 
 	persisters := make(map[uint32]types.Persister)
-	basePath := persisterCreator.GetBasePath()
 	for _, shardID := range idProvider.GetShardIDs() {
-		newPath := updatePathWithShardID(basePath, shardID)
+		newPath := updatePathWithShardID(path, shardID)
 		db, err := persisterCreator.CreateBasePersister(newPath)
 		if err != nil {
 			return nil, err

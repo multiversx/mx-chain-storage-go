@@ -5,7 +5,6 @@ import "github.com/multiversx/mx-chain-storage-go/types"
 // PersisterCreatorStub -
 type PersisterCreatorStub struct {
 	CreateBasePersisterCalled func(path string) (types.Persister, error)
-	GetBasePathCalled         func() string
 }
 
 // CreateBasePersister -
@@ -15,15 +14,6 @@ func (stub *PersisterCreatorStub) CreateBasePersister(path string) (types.Persis
 	}
 
 	return nil, nil
-}
-
-// GetBasePath -
-func (stub *PersisterCreatorStub) GetBasePath() string {
-	if stub.GetBasePathCalled != nil {
-		return stub.GetBasePathCalled()
-	}
-
-	return ""
 }
 
 // IsInterfaceNil -

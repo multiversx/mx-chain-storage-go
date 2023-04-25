@@ -281,7 +281,7 @@ func createPersister(path string, id string) (types.Persister, error) {
 			},
 		}
 
-		return sharded.NewShardedPersister(persisterCreator, shardCoordinator)
+		return sharded.NewShardedPersister(path, persisterCreator, shardCoordinator)
 	default:
 		return nil, fmt.Errorf("failed to create persister: invalid id type")
 	}
