@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-const minNumOfShards = 1
+const minNumOfShards = 2
 const bitsPerByte = 8
 
 // ErrInvalidNumberOfShards signals that an invalid number of shards was passed to the sharding registry
