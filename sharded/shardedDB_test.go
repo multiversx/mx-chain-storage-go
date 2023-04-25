@@ -13,7 +13,7 @@ import (
 func TestNewShardedPersister(t *testing.T) {
 	t.Parallel()
 
-	t.Run("nil persister creator", func(t *testing.T) {
+	t.Run("empty path should error", func(t *testing.T) {
 		t.Parallel()
 
 		db, err := sharded.NewShardedPersister("", &testscommon.PersisterCreatorStub{}, &testscommon.ShardIDProviderStub{})
