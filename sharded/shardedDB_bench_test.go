@@ -1,4 +1,4 @@
-package leveldb_test
+package sharded_test
 
 import (
 	"crypto/rand"
@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/multiversx/mx-chain-storage-go/leveldb"
+	"github.com/multiversx/mx-chain-storage-go/sharded"
+	"github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/require"
 )
@@ -272,8 +274,14 @@ func createPersister(path string, id string) (types.Persister, error) {
 	case singleID:
 		return leveldb.NewSerialDB(path, 2, _1Mil, 10)
 	case shardedID:
-		shardCoordinator, _ := leveldb.NewShardIDProvider(numShards)
-		return leveldb.NewShardedPersister(path, 2, _1Mil, 10, shardCoordinator)
+		shardCoordinator, _ := sharded.NewShardIDProvider(numShards)
+		persisterCreator := &testscommon.PersisterCreatorStub{
+			CreateBasePersisterCalled: func(path string) (types.Persister, error) {
+				return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+			},
+		}
+
+		return sharded.NewShardedPersister(path, persisterCreator, shardCoordinator)
 	default:
 		return nil, fmt.Errorf("failed to create persister: invalid id type")
 	}

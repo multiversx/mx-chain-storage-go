@@ -34,7 +34,7 @@ type DBType string
 // HasherType represents the type of the supported hash functions
 type HasherType string
 
-// LRUCache is currently the only supported Cache type
+// Cache types that are currently supported
 const (
 	LRUCache         CacheType = "LRU"
 	SizeLRUCache     CacheType = "SizeLRU"
@@ -43,13 +43,19 @@ const (
 
 var log = logger.GetOrCreate("storage/storageUnit")
 
-// LvlDB currently the only supported DBs
-// More to be added
+// DB types that are currently supported
 const (
-	LvlDB              DBType = "LvlDB"
-	LvlDBSerial        DBType = "LvlDBSerial"
-	ShardedLvlDBSerial DBType = "ShardedLvlDBSerial"
-	MemoryDB           DBType = "MemoryDB"
+	LvlDB       DBType = "LvlDB"
+	LvlDBSerial DBType = "LvlDBSerial"
+	MemoryDB    DBType = "MemoryDB"
+)
+
+// ShardIDProviderType represents the type for the supported shard id provider
+type ShardIDProviderType string
+
+// Shard id provider types that are currently supported
+const (
+	BinarySplit ShardIDProviderType = "BinarySplit"
 )
 
 const (

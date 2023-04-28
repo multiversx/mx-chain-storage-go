@@ -1,10 +1,11 @@
-package leveldb
+package sharded
 
 import (
 	"errors"
 	"math"
 )
 
+const minNumOfShards = 2
 const bitsPerByte = 8
 
 // ErrInvalidNumberOfShards signals that an invalid number of shards was passed to the sharding registry
@@ -18,13 +19,13 @@ type shardIDProvider struct {
 }
 
 // NewShardIDProvider will create a new shard ID provider component
-func NewShardIDProvider(numOfShards uint32) (*shardIDProvider, error) {
-	if numOfShards == 0 {
+func NewShardIDProvider(numOfShards int32) (*shardIDProvider, error) {
+	if numOfShards < minNumOfShards {
 		return nil, ErrInvalidNumberOfShards
 	}
 
 	sp := &shardIDProvider{
-		numOfShards: numOfShards,
+		numOfShards: uint32(numOfShards),
 	}
 	sp.calculateMasks()
 	sp.calculateBytesNeeded()

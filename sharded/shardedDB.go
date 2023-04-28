@@ -1,4 +1,4 @@
-package leveldb
+package sharded
 
 import (
 	"errors"
@@ -10,24 +10,36 @@ import (
 
 var _ types.Persister = (*shardedPersister)(nil)
 
+// ErrInvalidPath signals that an invalid path has been provided
+var ErrInvalidPath = errors.New("invalid path")
+
 // ErrNilIDProvider signals that a nil id provider was provided
 var ErrNilIDProvider = errors.New("nil id provider")
 
+// ErrNilPersisterCreator signals that a nil persister creator was provided
+var ErrNilPersisterCreator = errors.New("nil persister creator")
+
 type shardedPersister struct {
-	persisters map[uint32]*SerialDB
+	persisters map[uint32]types.Persister
 	idProvider types.ShardIDProvider
 }
 
 // NewShardedPersister will created a new sharded persister
-func NewShardedPersister(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFilesPerShard int, idProvider types.ShardIDProvider) (*shardedPersister, error) {
+func NewShardedPersister(path string, persisterCreator types.PersisterCreator, idProvider types.ShardIDProvider) (*shardedPersister, error) {
+	if len(path) == 0 {
+		return nil, ErrInvalidPath
+	}
+	if check.IfNil(persisterCreator) {
+		return nil, ErrNilPersisterCreator
+	}
 	if check.IfNil(idProvider) {
 		return nil, ErrNilIDProvider
 	}
 
-	persisters := make(map[uint32]*SerialDB)
+	persisters := make(map[uint32]types.Persister)
 	for _, shardID := range idProvider.GetShardIDs() {
 		newPath := updatePathWithShardID(path, shardID)
-		db, err := NewSerialDB(newPath, batchDelaySeconds, maxBatchSize, maxOpenFilesPerShard)
+		db, err := persisterCreator.CreateBasePersister(newPath)
 		if err != nil {
 			return nil, err
 		}
@@ -41,7 +53,7 @@ func NewShardedPersister(path string, batchDelaySeconds int, maxBatchSize int, m
 }
 
 func updatePathWithShardID(path string, shardID uint32) string {
-	return fmt.Sprintf("%s_%d", path, shardID)
+	return fmt.Sprintf("%s/%d", path, shardID)
 }
 
 func (s *shardedPersister) computeID(key []byte) uint32 {
