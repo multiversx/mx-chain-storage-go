@@ -152,7 +152,10 @@ func (s *DB) updateBatchWithIncrement() error {
 
 // Put adds the value to the (key, val) storage medium
 func (s *DB) Put(key, val []byte) error {
+	s.mutBatch.RLock()
 	err := s.batch.Put(key, val)
+	s.mutBatch.RUnlock()
+
 	if err != nil {
 		return err
 	}

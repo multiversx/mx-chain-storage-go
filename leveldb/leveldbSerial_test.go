@@ -3,6 +3,7 @@ package leveldb_test
 import (
 	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
@@ -314,4 +315,46 @@ func BenchmarkSerialDB_SpecialValueTest(b *testing.B) {
 			_, _ = ldb.Get(testKey)
 		}
 	})
+}
+
+func TestSerialDB_ConcurrentOperations(t *testing.T) {
+	ldb := createSerialLevelDb(t, 1, 10, 10)
+
+	numOps := 300
+	wg := sync.WaitGroup{}
+	wg.Add(numOps)
+
+	for i := 0; i < numOps; i++ {
+		go func(idx int) {
+			modRes := idx % 9
+			testKey := []byte(fmt.Sprintf("%d", modRes))
+			testVal := testKey
+			switch modRes {
+			case 0:
+				_ = ldb.Close()
+			case 1:
+				_ = ldb.Destroy()
+			case 2:
+				_ = ldb.DestroyClosed()
+			case 3:
+				_, _ = ldb.Get(testKey)
+			case 4:
+				_ = ldb.Has(testKey)
+			case 5:
+				ldb.IsInterfaceNil()
+			case 6:
+				_ = ldb.Put(testKey, testVal)
+			case 7:
+				ldb.RangeKeys(func(key []byte, value []byte) bool {
+					return true
+				})
+			case 8:
+				_ = ldb.Remove(testKey)
+			}
+
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
 }
