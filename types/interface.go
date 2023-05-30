@@ -216,3 +216,17 @@ type CustomDatabaseRemoverHandler interface {
 	ShouldRemove(dbIdentifier string, epoch uint32) bool
 	IsInterfaceNil() bool
 }
+
+// ShardIDProvider defines what a component which is able to provide persister id per key should do
+type ShardIDProvider interface {
+	ComputeId(key []byte) uint32
+	NumberOfShards() uint32
+	GetShardIDs() []uint32
+	IsInterfaceNil() bool
+}
+
+// PersisterCreator defines the behavour of a component which is able to create a persister
+type PersisterCreator interface {
+	CreateBasePersister(path string) (Persister, error)
+	IsInterfaceNil() bool
+}
