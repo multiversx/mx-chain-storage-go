@@ -7,8 +7,8 @@ require (
 	github.com/multiversx/concurrent-map v0.1.4
 	github.com/multiversx/mx-chain-core-go v1.1.30
 	github.com/multiversx/mx-chain-logger-go v1.0.11
-	github.com/stretchr/testify v1.7.1
-	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/stretchr/testify v1.7.2
+	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d
 )
 
 require (
@@ -23,5 +23,5 @@ require (
 	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
