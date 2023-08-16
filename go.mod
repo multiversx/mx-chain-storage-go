@@ -1,12 +1,12 @@
 module github.com/multiversx/mx-chain-storage-go
 
-go 1.17
+go 1.20
 
 require (
 	github.com/hashicorp/golang-lru v0.6.0
 	github.com/multiversx/concurrent-map v0.1.4
-	github.com/multiversx/mx-chain-core-go v1.2.5
-	github.com/multiversx/mx-chain-logger-go v1.0.11
+	github.com/multiversx/mx-chain-core-go v1.2.13-0.20230816090241-133da66033a9
+	github.com/multiversx/mx-chain-logger-go v1.0.13-0.20230816094710-e4e216ffef4e
 	github.com/stretchr/testify v1.7.1
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
