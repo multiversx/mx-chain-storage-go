@@ -29,6 +29,8 @@ type TxCache struct {
 	sweepingMutex             sync.Mutex
 	sweepingListOfSenders     []*txListForSender
 	mutTxOperation            sync.Mutex
+	mutEvictionHandlers       sync.RWMutex
+	evictionHandlers          []func(txHash []byte)
 }
 
 // NewTxCache creates a new transaction cache
@@ -51,11 +53,12 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	scoreComputerObj := newDefaultScoreComputer(txFeeHelper)
 
 	txCache := &TxCache{
-		name:            config.Name,
-		txListBySender:  newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
-		txByHash:        newTxByHashMap(numChunks),
-		config:          config,
-		evictionJournal: evictionJournal{},
+		name:             config.Name,
+		txListBySender:   newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
+		txByHash:         newTxByHashMap(numChunks),
+		config:           config,
+		evictionJournal:  evictionJournal{},
+		evictionHandlers: make([]func(txHash []byte), 0),
 	}
 
 	txCache.initSweepable()
@@ -88,6 +91,7 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 
 	if len(evicted) > 0 {
 		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
+		go cache.notifyEvictionHandlers(evicted)
 		cache.txByHash.RemoveTxsBulk(evicted)
 	}
 
@@ -166,6 +170,8 @@ func (cache *TxCache) doAfterSelection() {
 
 // RemoveTxByHash removes tx by hash
 func (cache *TxCache) RemoveTxByHash(txHash []byte) bool {
+	go cache.notifyEvictionHandlers([][]byte{txHash})
+
 	cache.mutTxOperation.Lock()
 	defer cache.mutTxOperation.Unlock()
 
@@ -296,6 +302,30 @@ func (cache *TxCache) Keys() [][]byte {
 func (cache *TxCache) MaxSize() int {
 	// TODO: Should be analyzed if the returned value represents the max size of one cache in sharded cache configuration
 	return int(cache.config.CountThreshold)
+}
+
+// RegisterEvictionHandler registers a handler which will be called when a tx is evicted from cache
+func (cache *TxCache) RegisterEvictionHandler(handler func(hash []byte)) error {
+	if handler == nil {
+		return common.ErrNilEvictionHandler
+	}
+
+	cache.mutEvictionHandlers.Lock()
+	cache.evictionHandlers = append(cache.evictionHandlers, handler)
+	cache.mutEvictionHandlers.Unlock()
+
+	return nil
+}
+
+// notifyEvictionHandlers will be called on a separate go routine
+func (cache *TxCache) notifyEvictionHandlers(txHashes [][]byte) {
+	cache.mutEvictionHandlers.RLock()
+	for _, handler := range cache.evictionHandlers {
+		for _, txHash := range txHashes {
+			handler(txHash)
+		}
+	}
+	cache.mutEvictionHandlers.RUnlock()
 }
 
 // RegisterHandler is not implemented

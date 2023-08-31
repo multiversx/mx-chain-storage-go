@@ -1,6 +1,9 @@
 package txcache
 
 import (
+	"sync"
+
+	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/immunitycache"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -10,7 +13,9 @@ var _ types.Cacher = (*CrossTxCache)(nil)
 // CrossTxCache holds cross-shard transactions (where destination == me)
 type CrossTxCache struct {
 	*immunitycache.ImmunityCache
-	config ConfigDestinationMe
+	config              ConfigDestinationMe
+	mutEvictionHandlers sync.RWMutex
+	evictionHandlers    []func(txHash []byte)
 }
 
 // NewCrossTxCache creates a new transactions cache
@@ -93,7 +98,11 @@ func (cache *CrossTxCache) Peek(key []byte) (value interface{}, ok bool) {
 
 // RemoveTxByHash removes tx by hash
 func (cache *CrossTxCache) RemoveTxByHash(txHash []byte) bool {
-	return cache.RemoveWithResult(txHash)
+	ok := cache.RemoveWithResult(txHash)
+	if ok {
+		cache.notifyEvictionHandlers(txHash)
+	}
+	return ok
 }
 
 // ForEachTransaction iterates over the transactions in the cache
@@ -113,6 +122,28 @@ func (cache *CrossTxCache) ForEachTransaction(function ForEachTransaction) {
 // thus does not handle nonces, nonce gaps etc.
 func (cache *CrossTxCache) GetTransactionsPoolForSender(_ string) []*WrappedTransaction {
 	return make([]*WrappedTransaction, 0)
+}
+
+// RegisterEvictionHandler registers a handler which will be called when a tx is evicted from cache
+func (cache *CrossTxCache) RegisterEvictionHandler(handler func(hash []byte)) error {
+	if handler == nil {
+		return common.ErrNilEvictionHandler
+	}
+
+	cache.mutEvictionHandlers.Lock()
+	cache.evictionHandlers = append(cache.evictionHandlers, handler)
+	cache.mutEvictionHandlers.Unlock()
+
+	return nil
+}
+
+// notifyEvictionHandlers will be called on a separate go routine
+func (cache *CrossTxCache) notifyEvictionHandlers(txHash []byte) {
+	cache.mutEvictionHandlers.RLock()
+	for _, handler := range cache.evictionHandlers {
+		handler(txHash)
+	}
+	cache.mutEvictionHandlers.RUnlock()
 }
 
 // IsInterfaceNil returns true if there is no value under the interface

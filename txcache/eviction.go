@@ -69,6 +69,7 @@ func (cache *TxCache) areThereTooManyTxs() bool {
 
 // This is called concurrently by two goroutines: the eviction one and the sweeping one
 func (cache *TxCache) doEvictItems(txsToEvict [][]byte, sendersToEvict []string) (countTxs uint32, countSenders uint32) {
+	go cache.notifyEvictionHandlers(txsToEvict)
 	countTxs = cache.txByHash.RemoveTxsBulk(txsToEvict)
 	countSenders = cache.txListBySender.RemoveSendersBulk(sendersToEvict)
 	return
