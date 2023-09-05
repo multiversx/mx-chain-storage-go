@@ -1,11 +1,13 @@
 package txcache
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -543,12 +545,20 @@ func TestTxCache_TransactionIsAdded_EvenWhenInternalMapsAreInconsistent(t *testi
 func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *testing.T) {
 	cache := newUnconstrainedCacheToTest()
 
+	handlerCalls := uint32(0)
+	evictionHandlerWG := sync.WaitGroup{}
+	_ = cache.RegisterEvictionHandler(func(hash []byte) {
+		atomic.AddUint32(&handlerCalls, 1)
+		evictionHandlerWG.Done()
+	})
+
 	// A lot of routines concur to add & remove THE FIRST transaction of a sender
 	for try := 0; try < 100; try++ {
 		var wg sync.WaitGroup
 
 		for i := 0; i < 50; i++ {
 			wg.Add(1)
+			evictionHandlerWG.Add(1)
 			go func() {
 				cache.AddTx(createTx([]byte("alice-x"), "alice", 42))
 				_ = cache.RemoveTxByHash([]byte("alice-x"))
@@ -590,6 +600,7 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 
 		for i := 0; i < 50; i++ {
 			wg.Add(1)
+			evictionHandlerWG.Add(1)
 			go func() {
 				cache.AddTx(createTx([]byte("alice-x"), "alice", 42))
 				_ = cache.RemoveTxByHash([]byte("alice-x"))
@@ -624,6 +635,47 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 	}
 
 	cache.Clear()
+
+	evictionHandlerWG.Wait()
+	require.Equal(t, uint32(10000), atomic.LoadUint32(&handlerCalls))
+}
+
+func TestTxCache_RegisterEvictionHandler(t *testing.T) {
+	t.Parallel()
+
+	cache := newUnconstrainedCacheToTest()
+
+	cache.AddTx(createTx([]byte("hash-1"), "alice", 1))
+	cache.AddTx(createTx([]byte("hash-2"), "alice", 2))
+
+	err := cache.RegisterEvictionHandler(nil)
+	require.Equal(t, common.ErrNilEvictionHandler, err)
+
+	cnt := 0
+	err = cache.RegisterEvictionHandler(func(hash []byte) {
+		cnt++
+		switch cnt {
+		case 1:
+			require.True(t, bytes.Equal([]byte("hash-1"), hash))
+		case 2:
+			require.True(t, bytes.Equal([]byte("hash-2"), hash))
+		default:
+			require.Fail(t, "should have not been called")
+		}
+	})
+	require.NoError(t, err)
+
+	removed := cache.RemoveTxByHash([]byte("hash-1"))
+	require.True(t, removed)
+	cache.Remove([]byte("hash-2"))
+
+	foundTx, ok := cache.GetByTxHash([]byte("hash-1"))
+	require.False(t, ok)
+	require.Nil(t, foundTx)
+
+	foundTx, ok = cache.GetByTxHash([]byte("hash-2"))
+	require.False(t, ok)
+	require.Nil(t, foundTx)
 }
 
 func newUnconstrainedCacheToTest() *TxCache {

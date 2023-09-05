@@ -1,10 +1,12 @@
 package txcache
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"testing"
 
+	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,6 +57,44 @@ func TestCrossTxCache_Get(t *testing.T) {
 	require.Nil(t, xTx)
 
 	require.Equal(t, make([]*WrappedTransaction, 0), cache.GetTransactionsPoolForSender(""))
+}
+
+func TestCrossTxCache_RegisterEvictionHandler(t *testing.T) {
+	t.Parallel()
+
+	cache := newCrossTxCacheToTest(1, 8, math.MaxUint16)
+
+	cache.addTestTx("hash-1")
+	cache.addTestTx("hash-2")
+
+	err := cache.RegisterEvictionHandler(nil)
+	require.Equal(t, common.ErrNilEvictionHandler, err)
+
+	cnt := 0
+	err = cache.RegisterEvictionHandler(func(hash []byte) {
+		cnt++
+		switch cnt {
+		case 1:
+			require.True(t, bytes.Equal([]byte("hash-1"), hash))
+		case 2:
+			require.True(t, bytes.Equal([]byte("hash-2"), hash))
+		default:
+			require.Fail(t, "should have not been called")
+		}
+	})
+	require.NoError(t, err)
+
+	removed := cache.RemoveTxByHash([]byte("hash-1"))
+	require.True(t, removed)
+	cache.Remove([]byte("hash-2"))
+
+	foundTx, ok := cache.GetByTxHash([]byte("hash-1"))
+	require.False(t, ok)
+	require.Nil(t, foundTx)
+
+	foundTx, ok = cache.GetByTxHash([]byte("hash-2"))
+	require.False(t, ok)
+	require.Nil(t, foundTx)
 }
 
 func newCrossTxCacheToTest(numChunks uint32, maxNumItems uint32, numMaxBytes uint32) *CrossTxCache {
