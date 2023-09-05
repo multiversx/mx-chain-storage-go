@@ -651,23 +651,29 @@ func TestTxCache_RegisterEvictionHandler(t *testing.T) {
 	err := cache.RegisterEvictionHandler(nil)
 	require.Equal(t, common.ErrNilEvictionHandler, err)
 
-	cnt := 0
+	ch := make(chan uint32)
+	cnt := uint32(0)
 	err = cache.RegisterEvictionHandler(func(hash []byte) {
-		cnt++
-		switch cnt {
-		case 1:
-			require.True(t, bytes.Equal([]byte("hash-1"), hash))
-		case 2:
-			require.True(t, bytes.Equal([]byte("hash-2"), hash))
-		default:
-			require.Fail(t, "should have not been called")
-		}
+		atomic.AddUint32(&cnt, 1)
+		require.True(t, bytes.Equal([]byte("hash-1"), hash) || bytes.Equal([]byte("hash-2"), hash))
+		ch <- atomic.LoadUint32(&cnt)
 	})
 	require.NoError(t, err)
 
 	removed := cache.RemoveTxByHash([]byte("hash-1"))
 	require.True(t, removed)
 	cache.Remove([]byte("hash-2"))
+	for {
+		chCnt := uint32(0)
+		select {
+		case chCnt = <-ch:
+		case <-time.After(time.Second):
+			require.Fail(t, "timeout")
+		}
+		if chCnt == 2 {
+			break
+		}
+	}
 
 	foundTx, ok := cache.GetByTxHash([]byte("hash-1"))
 	require.False(t, ok)
