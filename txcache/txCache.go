@@ -1,6 +1,7 @@
 package txcache
 
 import (
+	"context"
 	"sync"
 
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
@@ -14,6 +15,7 @@ var _ types.Cacher = (*TxCache)(nil)
 
 // TxCache represents a cache-like structure (it has a fixed capacity and implements an eviction mechanism) for holding transactions
 type TxCache struct {
+	*baseTxCache
 	name                      string
 	txListBySender            *txListBySenderMap
 	txByHash                  *txByHashMap
@@ -29,8 +31,6 @@ type TxCache struct {
 	sweepingMutex             sync.Mutex
 	sweepingListOfSenders     []*txListForSender
 	mutTxOperation            sync.Mutex
-	mutEvictionHandlers       sync.RWMutex
-	evictionHandlers          []func(txHash []byte)
 }
 
 // NewTxCache creates a new transaction cache
@@ -53,13 +53,18 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	scoreComputerObj := newDefaultScoreComputer(txFeeHelper)
 
 	txCache := &TxCache{
-		name:             config.Name,
-		txListBySender:   newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
-		txByHash:         newTxByHashMap(numChunks),
-		config:           config,
-		evictionJournal:  evictionJournal{},
-		evictionHandlers: make([]func(txHash []byte), 0),
+		baseTxCache: &baseTxCache{
+			evictionHandlers:   make([]func(txHash []byte), 0),
+			evictionWorkerPool: NewWorkerPool(numOfEvictionWorkers),
+		},
+		name:            config.Name,
+		txListBySender:  newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
+		txByHash:        newTxByHashMap(numChunks),
+		config:          config,
+		evictionJournal: evictionJournal{},
 	}
+
+	txCache.evictionWorkerPool.StartWorkingEvictedHashes(context.Background(), txCache.notifyEvictionHandlers)
 
 	txCache.initSweepable()
 	return txCache, nil
@@ -91,7 +96,7 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 
 	if len(evicted) > 0 {
 		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
-		go cache.notifyEvictionHandlers(evicted)
+		cache.evictionWorkerPool.AddEvictedHashes(evicted)
 		cache.txByHash.RemoveTxsBulk(evicted)
 	}
 
@@ -170,7 +175,7 @@ func (cache *TxCache) doAfterSelection() {
 
 // RemoveTxByHash removes tx by hash
 func (cache *TxCache) RemoveTxByHash(txHash []byte) bool {
-	go cache.notifyEvictionHandlers([][]byte{txHash})
+	cache.evictionWorkerPool.AddEvictedHashes([][]byte{txHash})
 
 	cache.mutTxOperation.Lock()
 	defer cache.mutTxOperation.Unlock()
@@ -318,12 +323,10 @@ func (cache *TxCache) RegisterEvictionHandler(handler func(hash []byte)) error {
 }
 
 // notifyEvictionHandlers will be called on a separate go routine
-func (cache *TxCache) notifyEvictionHandlers(txHashes [][]byte) {
+func (cache *TxCache) notifyEvictionHandlers(txHash []byte) {
 	cache.mutEvictionHandlers.RLock()
 	for _, handler := range cache.evictionHandlers {
-		for _, txHash := range txHashes {
-			handler(txHash)
-		}
+		handler(txHash)
 	}
 	cache.mutEvictionHandlers.RUnlock()
 }

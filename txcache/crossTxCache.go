@@ -1,9 +1,8 @@
 package txcache
 
 import (
-	"sync"
+	"context"
 
-	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/immunitycache"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -13,9 +12,8 @@ var _ types.Cacher = (*CrossTxCache)(nil)
 // CrossTxCache holds cross-shard transactions (where destination == me)
 type CrossTxCache struct {
 	*immunitycache.ImmunityCache
-	config              ConfigDestinationMe
-	mutEvictionHandlers sync.RWMutex
-	evictionHandlers    []func(txHash []byte)
+	*baseTxCache
+	config ConfigDestinationMe
 }
 
 // NewCrossTxCache creates a new transactions cache
@@ -42,8 +40,14 @@ func NewCrossTxCache(config ConfigDestinationMe) (*CrossTxCache, error) {
 
 	cache := CrossTxCache{
 		ImmunityCache: immunityCache,
-		config:        config,
+		baseTxCache: &baseTxCache{
+			evictionHandlers:   make([]func(txHash []byte), 0),
+			evictionWorkerPool: NewWorkerPool(numOfEvictionWorkers),
+		},
+		config: config,
 	}
+
+	cache.evictionWorkerPool.StartWorkingEvictedHashes(context.Background(), cache.notifyEvictionHandlers)
 
 	return &cache, nil
 }
@@ -100,7 +104,7 @@ func (cache *CrossTxCache) Peek(key []byte) (value interface{}, ok bool) {
 func (cache *CrossTxCache) RemoveTxByHash(txHash []byte) bool {
 	ok := cache.RemoveWithResult(txHash)
 	if ok {
-		go cache.notifyEvictionHandlers(txHash)
+		cache.evictionWorkerPool.AddEvictedHashes([][]byte{txHash})
 	}
 	return ok
 }
@@ -122,28 +126,6 @@ func (cache *CrossTxCache) ForEachTransaction(function ForEachTransaction) {
 // thus does not handle nonces, nonce gaps etc.
 func (cache *CrossTxCache) GetTransactionsPoolForSender(_ string) []*WrappedTransaction {
 	return make([]*WrappedTransaction, 0)
-}
-
-// RegisterEvictionHandler registers a handler which will be called when a tx is evicted from cache
-func (cache *CrossTxCache) RegisterEvictionHandler(handler func(hash []byte)) error {
-	if handler == nil {
-		return common.ErrNilEvictionHandler
-	}
-
-	cache.mutEvictionHandlers.Lock()
-	cache.evictionHandlers = append(cache.evictionHandlers, handler)
-	cache.mutEvictionHandlers.Unlock()
-
-	return nil
-}
-
-// notifyEvictionHandlers will be called on a separate go routine
-func (cache *CrossTxCache) notifyEvictionHandlers(txHash []byte) {
-	cache.mutEvictionHandlers.RLock()
-	for _, handler := range cache.evictionHandlers {
-		handler(txHash)
-	}
-	cache.mutEvictionHandlers.RUnlock()
 }
 
 // IsInterfaceNil returns true if there is no value under the interface
