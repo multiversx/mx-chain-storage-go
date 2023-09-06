@@ -1,9 +1,9 @@
 package txcache
 
 import (
-	"context"
 	"sync"
 
+	"github.com/gammazero/workerpool"
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
 	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-storage-go/common"
@@ -51,11 +51,10 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	senderConstraintsObj := config.getSenderConstraints()
 	txFeeHelper := newFeeComputationHelper(txGasHandler.MinGasPrice(), txGasHandler.MinGasLimit(), txGasHandler.MinGasPriceForProcessing())
 	scoreComputerObj := newDefaultScoreComputer(txFeeHelper)
-
 	txCache := &TxCache{
 		baseTxCache: &baseTxCache{
 			evictionHandlers:   make([]func(txHash []byte), 0),
-			evictionWorkerPool: NewWorkerPool(numOfEvictionWorkers),
+			evictionWorkerPool: workerpool.New(maxNumOfEvictionWorkers),
 		},
 		name:            config.Name,
 		txListBySender:  newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
@@ -63,8 +62,6 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 		config:          config,
 		evictionJournal: evictionJournal{},
 	}
-
-	txCache.evictionWorkerPool.StartWorkingEvictedHashes(context.Background(), txCache.notifyEvictionHandlers)
 
 	txCache.initSweepable()
 	return txCache, nil
@@ -96,7 +93,9 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 
 	if len(evicted) > 0 {
 		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
-		cache.evictionWorkerPool.AddEvictedHashes(evicted)
+		cache.evictionWorkerPool.Submit(func() {
+			cache.notifyEvictionHandlers(evicted)
+		})
 		cache.txByHash.RemoveTxsBulk(evicted)
 	}
 
@@ -175,7 +174,9 @@ func (cache *TxCache) doAfterSelection() {
 
 // RemoveTxByHash removes tx by hash
 func (cache *TxCache) RemoveTxByHash(txHash []byte) bool {
-	cache.evictionWorkerPool.AddEvictedHashes([][]byte{txHash})
+	cache.evictionWorkerPool.Submit(func() {
+		cache.notifyEvictionHandlers([][]byte{txHash})
+	})
 
 	cache.mutTxOperation.Lock()
 	defer cache.mutTxOperation.Unlock()
@@ -309,28 +310,6 @@ func (cache *TxCache) MaxSize() int {
 	return int(cache.config.CountThreshold)
 }
 
-// RegisterEvictionHandler registers a handler which will be called when a tx is evicted from cache
-func (cache *TxCache) RegisterEvictionHandler(handler func(hash []byte)) error {
-	if handler == nil {
-		return common.ErrNilEvictionHandler
-	}
-
-	cache.mutEvictionHandlers.Lock()
-	cache.evictionHandlers = append(cache.evictionHandlers, handler)
-	cache.mutEvictionHandlers.Unlock()
-
-	return nil
-}
-
-// notifyEvictionHandlers will be called on a separate go routine
-func (cache *TxCache) notifyEvictionHandlers(txHash []byte) {
-	cache.mutEvictionHandlers.RLock()
-	for _, handler := range cache.evictionHandlers {
-		handler(txHash)
-	}
-	cache.mutEvictionHandlers.RUnlock()
-}
-
 // RegisterHandler is not implemented
 func (cache *TxCache) RegisterHandler(func(key []byte, value interface{}), string) {
 	log.Error("TxCache.RegisterHandler is not implemented")
@@ -351,8 +330,9 @@ func (cache *TxCache) NotifyAccountNonce(accountKey []byte, nonce uint64) {
 func (cache *TxCache) ImmunizeTxsAgainstEviction(_ [][]byte) {
 }
 
-// Close does nothing for this cacher implementation
+// Close closes the eviction worker pool
 func (cache *TxCache) Close() error {
+	cache.evictionWorkerPool.Stop()
 	return nil
 }
 

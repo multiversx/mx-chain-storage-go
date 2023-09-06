@@ -1,17 +1,16 @@
 package txcache
 
 import (
-	"context"
 	"sync"
 
 	"github.com/multiversx/mx-chain-storage-go/common"
 )
 
-const numOfEvictionWorkers = uint32(5)
+const maxNumOfEvictionWorkers = 5
 
 type evictionWorkerPool interface {
-	StartWorkingEvictedHashes(ctx context.Context, handler func([]byte))
-	AddEvictedHashes(hashes [][]byte)
+	Stop()
+	Submit(task func())
 }
 
 type baseTxCache struct {
@@ -34,10 +33,12 @@ func (cache *baseTxCache) RegisterEvictionHandler(handler func(hash []byte)) err
 }
 
 // notifyEvictionHandlers will be called on a separate go routine
-func (cache *baseTxCache) notifyEvictionHandlers(txHash []byte) {
+func (cache *baseTxCache) notifyEvictionHandlers(txHashes [][]byte) {
 	cache.mutEvictionHandlers.RLock()
 	for _, handler := range cache.evictionHandlers {
-		handler(txHash)
+		for _, txHash := range txHashes {
+			handler(txHash)
+		}
 	}
 	cache.mutEvictionHandlers.RUnlock()
 }

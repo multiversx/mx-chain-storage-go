@@ -13,6 +13,7 @@ import (
 
 func TestCrossTxCache_DoImmunizeTxsAgainstEviction(t *testing.T) {
 	cache := newCrossTxCacheToTest(1, 8, math.MaxUint16)
+	defer func() { require.Nil(t, cache.Close()) }()
 
 	cache.addTestTxs("a", "b", "c", "d")
 	numNow, numFuture := cache.ImmunizeKeys(hashesAsBytes([]string{"a", "b", "e", "f"}))
@@ -29,6 +30,7 @@ func TestCrossTxCache_DoImmunizeTxsAgainstEviction(t *testing.T) {
 
 func TestCrossTxCache_Get(t *testing.T) {
 	cache := newCrossTxCacheToTest(1, 8, math.MaxUint16)
+	defer func() { require.Nil(t, cache.Close()) }()
 
 	cache.addTestTxs("a", "b", "c", "d")
 	a, ok := cache.GetByTxHash([]byte("a"))
@@ -64,6 +66,7 @@ func TestCrossTxCache_RegisterEvictionHandler(t *testing.T) {
 	t.Parallel()
 
 	cache := newCrossTxCacheToTest(1, 8, math.MaxUint16)
+	defer func() { require.Nil(t, cache.Close()) }()
 
 	cache.addTestTx("hash-1")
 

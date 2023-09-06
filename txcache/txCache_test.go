@@ -42,6 +42,7 @@ func Test_NewTxCache(t *testing.T) {
 	cache, err := NewTxCache(config, txGasHandler)
 	require.Nil(t, err)
 	require.NotNil(t, cache)
+	require.Nil(t, cache.Close())
 
 	badConfig := config
 	badConfig.Name = ""
@@ -107,6 +108,7 @@ func Test_AddTx(t *testing.T) {
 
 func Test_AddNilTx_DoesNothing(t *testing.T) {
 	cache := newUnconstrainedCacheToTest()
+	defer func() { require.Nil(t, cache.Close()) }()
 
 	txHash := []byte("hash-1")
 
@@ -135,6 +137,7 @@ func Test_AddTx_AppliesSizeConstraintsPerSenderForNumTransactions(t *testing.T) 
 	require.Equal(t, []string{"tx-alice-1", "tx-alice-2", "tx-alice-3"}, cache.getHashesForSender("alice"))
 	require.Equal(t, []string{"tx-bob-1", "tx-bob-2"}, cache.getHashesForSender("bob"))
 	require.True(t, cache.areInternalMapsConsistent())
+	require.Nil(t, cache.Close())
 }
 
 func Test_AddTx_AppliesSizeConstraintsPerSenderForNumBytes(t *testing.T) {
@@ -155,6 +158,7 @@ func Test_AddTx_AppliesSizeConstraintsPerSenderForNumBytes(t *testing.T) {
 	require.Equal(t, []string{"tx-alice-1", "tx-alice-2", "tx-alice-3"}, cache.getHashesForSender("alice"))
 	require.Equal(t, []string{"tx-bob-1", "tx-bob-2"}, cache.getHashesForSender("bob"))
 	require.True(t, cache.areInternalMapsConsistent())
+	require.Nil(t, cache.Close())
 }
 
 func Test_RemoveByTxHash(t *testing.T) {
@@ -438,6 +442,7 @@ func Test_AddWithEviction_UniformDistributionOfTxsPerSender(t *testing.T) {
 		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
 		CountPerSenderThreshold:       math.MaxUint32,
 	}
+	require.Nil(t, cache.Close())
 
 	// 100 * 1000
 	cache, err = NewTxCache(config, txGasHandler)
@@ -446,6 +451,7 @@ func Test_AddWithEviction_UniformDistributionOfTxsPerSender(t *testing.T) {
 
 	addManyTransactionsWithUniformDistribution(cache, 100, 1000)
 	require.LessOrEqual(t, cache.CountTx(), uint64(250000))
+	require.Nil(t, cache.Close())
 }
 
 func Test_NotImplementedFunctions(t *testing.T) {
