@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core"
-	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-core-go/core/closing"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/types"
@@ -26,14 +25,11 @@ type SerialDB struct {
 	maxBatchSize      int
 	batchDelaySeconds int
 	sizeBatch         int
-
-	accessBatch  types.Batcher
-	writingBatch types.Batcher
-	mutBatch     sync.RWMutex
-
-	dbAccess chan serialQueryer
-	cancel   context.CancelFunc
-	closer   core.SafeCloser
+	batch             types.Batcher
+	mutBatch          sync.RWMutex
+	dbAccess          chan serialQueryer
+	cancel            context.CancelFunc
+	closer            core.SafeCloser
 }
 
 // NewSerialDB is a constructor for the leveldb persister
@@ -84,7 +80,7 @@ func NewSerialDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFi
 		closer:            closing.NewSafeChanCloser(),
 	}
 
-	dbStore.accessBatch = NewBatch()
+	dbStore.batch = NewBatch()
 
 	go dbStore.batchTimeoutHandle(ctx)
 	go dbStore.processLoop(ctx)
@@ -146,7 +142,7 @@ func (s *SerialDB) Put(key, val []byte) error {
 	}
 
 	s.mutBatch.RLock()
-	err := s.accessBatch.Put(key, val)
+	err := s.batch.Put(key, val)
 	s.mutBatch.RUnlock()
 	if err != nil {
 		return err
@@ -162,12 +158,12 @@ func (s *SerialDB) Get(key []byte) ([]byte, error) {
 	}
 
 	s.mutBatch.RLock()
-	if s.isRemoved(key) {
+	if s.batch.IsRemoved(key) {
 		s.mutBatch.RUnlock()
 		return nil, common.ErrKeyNotFound
 	}
 
-	data := s.getFromBatches(key)
+	data := s.batch.Get(key)
 	s.mutBatch.RUnlock()
 
 	if data != nil {
@@ -204,12 +200,12 @@ func (s *SerialDB) Has(key []byte) error {
 	}
 
 	s.mutBatch.RLock()
-	if s.isRemoved(key) {
+	if s.batch.IsRemoved(key) {
 		s.mutBatch.RUnlock()
 		return common.ErrKeyNotFound
 	}
 
-	data := s.getFromBatches(key)
+	data := s.batch.Get(key)
 	s.mutBatch.RUnlock()
 
 	if data != nil {
@@ -232,30 +228,6 @@ func (s *SerialDB) Has(key []byte) error {
 	return result
 }
 
-func (s *SerialDB) isRemoved(key []byte) bool {
-	if s.accessBatch.IsRemoved(key) {
-		return true
-	}
-	if check.IfNil(s.writingBatch) {
-		return false
-	}
-
-	return s.writingBatch.IsRemoved(key)
-}
-
-func (s *SerialDB) getFromBatches(key []byte) []byte {
-	// start testing the access batch as it will contain the most up-to-date variant
-	data := s.accessBatch.Get(key)
-	if data != nil {
-		return data
-	}
-	if check.IfNil(s.writingBatch) {
-		return nil
-	}
-
-	return s.writingBatch.Get(key)
-}
-
 func (s *SerialDB) tryWriteInDbAccessChan(req serialQueryer) error {
 	select {
 	case s.dbAccess <- req:
@@ -268,20 +240,13 @@ func (s *SerialDB) tryWriteInDbAccessChan(req serialQueryer) error {
 // putBatch writes the Batch data into the database
 func (s *SerialDB) putBatch() error {
 	s.mutBatch.Lock()
-	if !check.IfNil(s.writingBatch) {
-		s.mutBatch.Unlock()
-		return nil
-	}
-
-	s.writingBatch = s.accessBatch
-
-	dbBatch, ok := s.writingBatch.(*batch)
+	dbBatch, ok := s.batch.(*batch)
 	if !ok {
 		s.mutBatch.Unlock()
 		return common.ErrInvalidBatch
 	}
 	s.sizeBatch = 0
-	s.accessBatch = NewBatch()
+	s.batch = NewBatch()
 	s.mutBatch.Unlock()
 
 	ch := make(chan error)
@@ -296,10 +261,6 @@ func (s *SerialDB) putBatch() error {
 	}
 	result := <-ch
 	close(ch)
-
-	s.mutBatch.Lock()
-	s.writingBatch = nil
-	s.mutBatch.Unlock()
 
 	return result
 }
@@ -326,7 +287,7 @@ func (s *SerialDB) Remove(key []byte) error {
 	}
 
 	s.mutBatch.Lock()
-	_ = s.accessBatch.Delete(key)
+	_ = s.batch.Delete(key)
 	s.mutBatch.Unlock()
 
 	return s.updateBatchWithIncrement()
