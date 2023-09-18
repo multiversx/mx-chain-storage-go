@@ -35,10 +35,12 @@ func (cache *baseTxCache) RegisterEvictionHandler(handler func(hash []byte)) err
 // notifyEvictionHandlers will be called on a separate go routine
 func (cache *baseTxCache) notifyEvictionHandlers(txHashes [][]byte) {
 	cache.mutEvictionHandlers.RLock()
-	for _, handler := range cache.evictionHandlers {
+	handlers := cache.evictionHandlers
+	cache.mutEvictionHandlers.RUnlock()
+
+	for _, handler := range handlers {
 		for _, txHash := range txHashes {
 			handler(txHash)
 		}
 	}
-	cache.mutEvictionHandlers.RUnlock()
 }
