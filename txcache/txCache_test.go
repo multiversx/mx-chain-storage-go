@@ -14,6 +14,7 @@ import (
 	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -553,9 +554,11 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 
 	handlerCalls := uint32(0)
 	evictionHandlerWG := sync.WaitGroup{}
-	_ = cache.RegisterEvictionHandler(func(hash []byte) {
-		atomic.AddUint32(&handlerCalls, 1)
-		evictionHandlerWG.Done()
+	_ = cache.RegisterEvictionHandler(&testscommon.EvictionNotifierStub{
+		NotifyEvictionCalled: func(hash []byte) {
+			atomic.AddUint32(&handlerCalls, 1)
+			evictionHandlerWG.Done()
+		},
 	})
 
 	// A lot of routines concur to add & remove THE FIRST transaction of a sender
@@ -659,10 +662,12 @@ func TestTxCache_RegisterEvictionHandler(t *testing.T) {
 
 	ch := make(chan uint32)
 	cnt := uint32(0)
-	err = cache.RegisterEvictionHandler(func(hash []byte) {
-		atomic.AddUint32(&cnt, 1)
-		require.True(t, bytes.Equal([]byte("hash-1"), hash) || bytes.Equal([]byte("hash-2"), hash))
-		ch <- atomic.LoadUint32(&cnt)
+	err = cache.RegisterEvictionHandler(&testscommon.EvictionNotifierStub{
+		NotifyEvictionCalled: func(hash []byte) {
+			atomic.AddUint32(&cnt, 1)
+			require.True(t, bytes.Equal([]byte("hash-1"), hash) || bytes.Equal([]byte("hash-2"), hash))
+			ch <- atomic.LoadUint32(&cnt)
+		},
 	})
 	require.NoError(t, err)
 

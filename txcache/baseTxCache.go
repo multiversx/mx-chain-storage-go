@@ -3,7 +3,9 @@ package txcache
 import (
 	"sync"
 
+	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 const maxNumOfEvictionWorkers = 5
@@ -15,13 +17,13 @@ type evictionWorkerPool interface {
 
 type baseTxCache struct {
 	mutEvictionHandlers sync.RWMutex
-	evictionHandlers    []func(txHash []byte)
+	evictionHandlers    []types.EvictionNotifier
 	evictionWorkerPool  evictionWorkerPool
 }
 
 // RegisterEvictionHandler registers a handler which will be called when a tx is evicted from cache
-func (cache *baseTxCache) RegisterEvictionHandler(handler func(hash []byte)) error {
-	if handler == nil {
+func (cache *baseTxCache) RegisterEvictionHandler(handler types.EvictionNotifier) error {
+	if check.IfNil(handler) {
 		return common.ErrNilEvictionHandler
 	}
 
@@ -35,12 +37,13 @@ func (cache *baseTxCache) RegisterEvictionHandler(handler func(hash []byte)) err
 // notifyEvictionHandlers will be called on a separate go routine
 func (cache *baseTxCache) notifyEvictionHandlers(txHashes [][]byte) {
 	cache.mutEvictionHandlers.RLock()
-	handlers := cache.evictionHandlers
+	handlers := make([]types.EvictionNotifier, len(cache.evictionHandlers))
+	copy(handlers, cache.evictionHandlers)
 	cache.mutEvictionHandlers.RUnlock()
 
 	for _, handler := range handlers {
 		for _, txHash := range txHashes {
-			handler(txHash)
+			handler.NotifyEviction(txHash)
 		}
 	}
 }

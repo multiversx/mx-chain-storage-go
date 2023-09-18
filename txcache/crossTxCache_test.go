@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/stretchr/testify/require"
 )
 
@@ -74,9 +75,11 @@ func TestCrossTxCache_RegisterEvictionHandler(t *testing.T) {
 	require.Equal(t, common.ErrNilEvictionHandler, err)
 
 	ch := make(chan struct{})
-	err = cache.RegisterEvictionHandler(func(hash []byte) {
-		require.True(t, bytes.Equal([]byte("hash-1"), hash))
-		ch <- struct{}{}
+	err = cache.RegisterEvictionHandler(&testscommon.EvictionNotifierStub{
+		NotifyEvictionCalled: func(hash []byte) {
+			require.True(t, bytes.Equal([]byte("hash-1"), hash))
+			ch <- struct{}{}
+		},
 	})
 	require.NoError(t, err)
 

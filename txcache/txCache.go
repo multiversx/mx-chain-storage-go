@@ -53,7 +53,7 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	scoreComputerObj := newDefaultScoreComputer(txFeeHelper)
 	txCache := &TxCache{
 		baseTxCache: &baseTxCache{
-			evictionHandlers:   make([]func(txHash []byte), 0),
+			evictionHandlers:   make([]types.EvictionNotifier, 0),
 			evictionWorkerPool: workerpool.New(maxNumOfEvictionWorkers),
 		},
 		name:            config.Name,
