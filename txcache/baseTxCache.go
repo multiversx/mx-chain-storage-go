@@ -34,8 +34,8 @@ func (cache *baseTxCache) RegisterEvictionHandler(handler types.EvictionNotifier
 	return nil
 }
 
-// notifyEvictionHandlers will be called on a separate go routine
-func (cache *baseTxCache) notifyEvictionHandlers(txHashes [][]byte) {
+// enqueueEvictedHashesForNotification will enqueue the provided hashes on the workers pool
+func (cache *baseTxCache) enqueueEvictedHashesForNotification(txHashes [][]byte) {
 	cache.mutEvictionHandlers.RLock()
 	handlers := make([]types.EvictionNotifier, len(cache.evictionHandlers))
 	copy(handlers, cache.evictionHandlers)
@@ -43,7 +43,9 @@ func (cache *baseTxCache) notifyEvictionHandlers(txHashes [][]byte) {
 
 	for _, handler := range handlers {
 		for _, txHash := range txHashes {
-			handler.NotifyEviction(txHash)
+			cache.evictionWorkerPool.Submit(func() {
+				handler.NotifyEviction(txHash)
+			})
 		}
 	}
 }

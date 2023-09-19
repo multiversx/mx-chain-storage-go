@@ -93,9 +93,7 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 
 	if len(evicted) > 0 {
 		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
-		cache.evictionWorkerPool.Submit(func() {
-			cache.notifyEvictionHandlers(evicted)
-		})
+		cache.enqueueEvictedHashesForNotification(evicted)
 		cache.txByHash.RemoveTxsBulk(evicted)
 	}
 
@@ -174,9 +172,7 @@ func (cache *TxCache) doAfterSelection() {
 
 // RemoveTxByHash removes tx by hash
 func (cache *TxCache) RemoveTxByHash(txHash []byte) bool {
-	cache.evictionWorkerPool.Submit(func() {
-		cache.notifyEvictionHandlers([][]byte{txHash})
-	})
+	cache.enqueueEvictedHashesForNotification([][]byte{txHash})
 
 	cache.mutTxOperation.Lock()
 	defer cache.mutTxOperation.Unlock()

@@ -101,9 +101,7 @@ func (cache *CrossTxCache) Peek(key []byte) (value interface{}, ok bool) {
 func (cache *CrossTxCache) RemoveTxByHash(txHash []byte) bool {
 	ok := cache.RemoveWithResult(txHash)
 	if ok {
-		cache.evictionWorkerPool.Submit(func() {
-			cache.notifyEvictionHandlers([][]byte{txHash})
-		})
+		cache.enqueueEvictedHashesForNotification([][]byte{txHash})
 	}
 	return ok
 }
