@@ -10,19 +10,21 @@ import (
 var _ types.Batcher = (*batch)(nil)
 
 type batch struct {
-	batch       *leveldb.Batch
-	cachedData  map[string][]byte
-	removedData map[string]struct{}
-	mutBatch    sync.RWMutex
+	batch             *leveldb.Batch
+	cachedData        map[string][]byte
+	removedData       map[string]struct{}
+	previouslyRemoved map[string]struct{}
+	mutBatch          sync.RWMutex
 }
 
 // NewBatch creates a batch
-func NewBatch() *batch {
+func NewBatch(previouslyRemoved map[string]struct{}) *batch {
 	return &batch{
-		batch:       &leveldb.Batch{},
-		cachedData:  make(map[string][]byte),
-		removedData: make(map[string]struct{}),
-		mutBatch:    sync.RWMutex{},
+		batch:             &leveldb.Batch{},
+		cachedData:        make(map[string][]byte),
+		removedData:       make(map[string]struct{}),
+		previouslyRemoved: previouslyRemoved,
+		mutBatch:          sync.RWMutex{},
 	}
 }
 
@@ -69,6 +71,14 @@ func (b *batch) IsRemoved(key []byte) bool {
 	defer b.mutBatch.RUnlock()
 
 	_, found := b.removedData[string(key)]
+	if found {
+		return true
+	}
+	_, found = b.cachedData[string(key)]
+	if found {
+		return false
+	}
+	_, found = b.previouslyRemoved[string(key)]
 
 	return found
 }

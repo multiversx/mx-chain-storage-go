@@ -318,6 +318,11 @@ func (cache *TxCache) NotifyAccountNonce(accountKey []byte, nonce uint64) {
 func (cache *TxCache) ImmunizeTxsAgainstEviction(_ [][]byte) {
 }
 
+// GetRemovalStatus will return the unknown status because this implementation does not track removed keys
+func (cache *TxCache) GetRemovalStatus(_ []byte) types.RemovalStatus {
+	return types.UnknownRemovalStatus
+}
+
 // Close does nothing for this cacher implementation
 func (cache *TxCache) Close() error {
 	return nil

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/multiversx/mx-chain-storage-go/fifocache"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -374,6 +375,22 @@ func TestFIFOShardedCache_CacherRegisterHasOrAddAddedDataHandlerNotAddedShouldNo
 	assert.Equal(t, 1, len(c.AddedDataHandlers()))
 }
 
+func TestFifoShardedCache_GetRemovalStatus(t *testing.T) {
+	t.Parallel()
+
+	key := []byte("key")
+	value := []byte("value")
+
+	cache, _ := fifocache.NewShardedCache(100, 2)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+
+	_ = cache.Put(key, value, 0)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+
+	cache.Remove(key)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+}
+
 func TestFifoShardedCache_ConcurrentOperation(t *testing.T) {
 	fifoCacher, _ := fifocache.NewShardedCache(10000, 3)
 
@@ -382,7 +399,7 @@ func TestFifoShardedCache_ConcurrentOperation(t *testing.T) {
 	wg.Add(numOperations)
 	for i := 0; i < numOperations; i++ {
 		go func(idx int) {
-			switch idx % 16 {
+			switch idx % 17 {
 			case 0:
 				fifoCacher.AddedDataHandlers()
 			case 1:
@@ -415,6 +432,8 @@ func TestFifoShardedCache_ConcurrentOperation(t *testing.T) {
 				fifoCacher.SizeInBytesContained()
 			case 15:
 				fifoCacher.UnRegisterHandler("id")
+			case 16:
+				fifoCacher.GetRemovalStatus(nil)
 			}
 
 			wg.Done()

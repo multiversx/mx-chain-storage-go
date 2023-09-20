@@ -10,6 +10,8 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
 	"github.com/multiversx/mx-chain-storage-go/memorydb"
 	"github.com/multiversx/mx-chain-storage-go/storageUnit"
+	"github.com/multiversx/mx-chain-storage-go/testscommon"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +32,24 @@ func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 	return sUnit
 }
 
+func createCacheWithRemovalTracking() types.Cacher {
+	cacher, _ := storageUnit.NewCache(storageUnit.CacheCreationConfig{
+		CacheConfig: storageUnit.CacheConfig{
+			Capacity: 10,
+			Type:     storageUnit.LRUCache,
+		},
+		RemovalTrackingCacheConfig: storageUnit.CacheConfig{
+			Capacity: 10,
+			Type:     storageUnit.LRUCache,
+		},
+	})
+
+	return cacher
+}
+
 func TestStorageUnitNilPersister(t *testing.T) {
+	t.Parallel()
+
 	cache, err1 := lrucache.NewCache(10)
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
@@ -41,6 +60,8 @@ func TestStorageUnitNilPersister(t *testing.T) {
 }
 
 func TestStorageUnitNilCacher(t *testing.T) {
+	t.Parallel()
+
 	mdb := memorydb.New()
 
 	_, err1 := storageUnit.NewStorageUnit(nil, mdb)
@@ -48,6 +69,8 @@ func TestStorageUnitNilCacher(t *testing.T) {
 }
 
 func TestStorageUnit(t *testing.T) {
+	t.Parallel()
+
 	cache, err1 := lrucache.NewCache(10)
 	mdb := memorydb.New()
 
@@ -58,6 +81,8 @@ func TestStorageUnit(t *testing.T) {
 }
 
 func TestPutNotPresent(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key0"), []byte("value0")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -70,6 +95,8 @@ func TestPutNotPresent(t *testing.T) {
 }
 
 func TestPutNotPresentCache(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key1"), []byte("value1")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -84,6 +111,8 @@ func TestPutNotPresentCache(t *testing.T) {
 }
 
 func TestPutPresentShouldOverwriteValue(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key2"), []byte("value2")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -100,14 +129,47 @@ func TestPutPresentShouldOverwriteValue(t *testing.T) {
 }
 
 func TestGetNotPresent(t *testing.T) {
+	t.Parallel()
+
 	key := []byte("key3")
 	s := initStorageUnit(t, 10)
 	v, err := s.Get(key)
 
 	assert.NotNil(t, err, "expected to find no value, but found %s", v)
+	assert.Nil(t, v)
+}
+
+func TestUnit_GetWithExplicitlyRemovedKeyShouldNotCallThePersister(t *testing.T) {
+	t.Parallel()
+
+	mdb := &testscommon.PersisterStub{
+		HasCalled: func(key []byte) error {
+			assert.Fail(t, "should have not called Has")
+			return nil
+		},
+		GetCalled: func(key []byte) ([]byte, error) {
+			assert.Fail(t, "should have not called Has")
+			return nil, nil
+		},
+	}
+	cache := createCacheWithRemovalTracking()
+	storer, err := storageUnit.NewStorageUnit(cache, mdb)
+	assert.Nil(t, err)
+
+	key := []byte("key")
+	value := []byte("value")
+
+	_ = storer.Put(key, value)
+	_ = storer.Remove(key)
+
+	v, err := storer.Get(key)
+	assert.Equal(t, err, common.ErrKeyNotFound) // same as the old behaviour (key not present in the cacher & persister)
+	assert.Nil(t, v)                            // same as the old behaviour (key not present in the cacher & persister)
 }
 
 func TestGetNotPresentCache(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key4"), []byte("value4")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -123,6 +185,8 @@ func TestGetNotPresentCache(t *testing.T) {
 }
 
 func TestGetPresent(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key5"), []byte("value4")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -136,6 +200,8 @@ func TestGetPresent(t *testing.T) {
 }
 
 func TestHasNotPresent(t *testing.T) {
+	t.Parallel()
+
 	key := []byte("key6")
 	s := initStorageUnit(t, 10)
 	err := s.Has(key)
@@ -144,7 +210,36 @@ func TestHasNotPresent(t *testing.T) {
 	assert.Equal(t, err, common.ErrKeyNotFound)
 }
 
+func TestUnit_HasWithExplicitlyRemovedKeyShouldNotCallThePersister(t *testing.T) {
+	t.Parallel()
+
+	mdb := &testscommon.PersisterStub{
+		HasCalled: func(key []byte) error {
+			assert.Fail(t, "should have not called Has")
+			return nil
+		},
+		GetCalled: func(key []byte) ([]byte, error) {
+			assert.Fail(t, "should have not called Has")
+			return nil, nil
+		},
+	}
+	cache := createCacheWithRemovalTracking()
+	storer, err := storageUnit.NewStorageUnit(cache, mdb)
+	assert.Nil(t, err)
+
+	key := []byte("key")
+	value := []byte("value")
+
+	_ = storer.Put(key, value)
+	_ = storer.Remove(key)
+
+	err = storer.Has(key)
+	assert.Equal(t, err, common.ErrKeyNotFound) // same as the old behaviour (key not present in the cacher & persister)
+}
+
 func TestHasNotPresentCache(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key7"), []byte("value7")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -159,6 +254,8 @@ func TestHasNotPresentCache(t *testing.T) {
 }
 
 func TestHasPresent(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key8"), []byte("value8")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -171,6 +268,8 @@ func TestHasPresent(t *testing.T) {
 }
 
 func TestDeleteNotPresent(t *testing.T) {
+	t.Parallel()
+
 	key := []byte("key12")
 	s := initStorageUnit(t, 10)
 	err := s.Remove(key)
@@ -179,6 +278,8 @@ func TestDeleteNotPresent(t *testing.T) {
 }
 
 func TestDeleteNotPresentCache(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key13"), []byte("value13")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -200,6 +301,8 @@ func TestDeleteNotPresentCache(t *testing.T) {
 }
 
 func TestDeletePresent(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key14"), []byte("value14")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -220,6 +323,8 @@ func TestDeletePresent(t *testing.T) {
 }
 
 func TestClearCacheNotAffectPersist(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key15"), []byte("value15")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -232,31 +337,53 @@ func TestClearCacheNotAffectPersist(t *testing.T) {
 }
 
 func TestDestroyUnitNoError(t *testing.T) {
+	t.Parallel()
+
 	s := initStorageUnit(t, 10)
 	err := s.DestroyUnit()
 	assert.Nil(t, err, "no error expected, but got %s", err)
 }
 
 func TestCreateCacheFromConfWrongType(t *testing.T) {
+	t.Parallel()
 
-	cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: "NotLRU", Capacity: 100, Shards: 1, SizeInBytes: 0})
+	cacher, err := storageUnit.NewCache(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Type:        "NotLRU",
+				Capacity:    100,
+				Shards:      1,
+				SizeInBytes: 0,
+			},
+		})
 
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, cacher, "cacher expected to be nil, but got %s", cacher)
 }
 
 func TestCreateCacheFromConfOK(t *testing.T) {
+	t.Parallel()
 
-	cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.LRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0})
+	cacher, err := storageUnit.NewCache(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Type:        storageUnit.LRUCache,
+				Capacity:    10,
+				Shards:      1,
+				SizeInBytes: 0,
+			},
+		})
 
 	assert.Nil(t, err, "no error expected but got %s", err)
 	assert.NotNil(t, cacher, "valid cacher expected but got nil")
 }
 
 func TestCreateDBFromConfWrongType(t *testing.T) {
+	t.Parallel()
+
 	arg := storageUnit.ArgDB{
 		DBType:            "NotLvlDB",
-		Path:              "test",
+		Path:              t.TempDir(),
 		BatchDelaySeconds: 10,
 		MaxBatchSize:      10,
 		MaxOpenFiles:      10,
@@ -268,6 +395,8 @@ func TestCreateDBFromConfWrongType(t *testing.T) {
 }
 
 func TestCreateDBFromConfWrongFileNameLvlDB(t *testing.T) {
+	t.Parallel()
+
 	if testing.Short() {
 		t.Skip("this is not a short test")
 	}
@@ -285,6 +414,8 @@ func TestCreateDBFromConfWrongFileNameLvlDB(t *testing.T) {
 }
 
 func TestCreateDBFromConfLvlDBOk(t *testing.T) {
+	t.Parallel()
+
 	arg := storageUnit.ArgDB{
 		DBType:            storageUnit.LvlDB,
 		Path:              t.TempDir(),
@@ -301,63 +432,89 @@ func TestCreateDBFromConfLvlDBOk(t *testing.T) {
 }
 
 func TestNewStorageUnit_FromConfWrongCacheSizeVsBatchSize(t *testing.T) {
+	t.Parallel()
 
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
-		Capacity: 10,
-		Type:     storageUnit.LRUCache,
-	}, storageUnit.DBConfig{
-		FilePath:          "Blocks",
-		Type:              storageUnit.LvlDB,
-		MaxBatchSize:      11,
-		BatchDelaySeconds: 1,
-		MaxOpenFiles:      10,
-	})
+	storer, err := storageUnit.NewStorageUnitFromConf(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     storageUnit.LRUCache,
+			},
+		},
+		storageUnit.DBConfig{
+			FilePath:          t.TempDir(),
+			Type:              storageUnit.LvlDB,
+			MaxBatchSize:      11,
+			BatchDelaySeconds: 1,
+			MaxOpenFiles:      10,
+		},
+	)
 
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
 }
 
 func TestNewStorageUnit_FromConfWrongCacheConfig(t *testing.T) {
+	t.Parallel()
 
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
-		Capacity: 10,
-		Type:     "NotLRU",
-	}, storageUnit.DBConfig{
-		FilePath:          "Blocks",
-		Type:              storageUnit.LvlDB,
-		BatchDelaySeconds: 1,
-		MaxBatchSize:      1,
-		MaxOpenFiles:      10,
-	})
+	storer, err := storageUnit.NewStorageUnitFromConf(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     "NotLRU",
+			},
+		},
+		storageUnit.DBConfig{
+			FilePath:          t.TempDir(),
+			Type:              storageUnit.LvlDB,
+			BatchDelaySeconds: 1,
+			MaxBatchSize:      1,
+			MaxOpenFiles:      10,
+		},
+	)
 
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
 }
 
 func TestNewStorageUnit_FromConfWrongDBConfig(t *testing.T) {
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
-		Capacity: 10,
-		Type:     storageUnit.LRUCache,
-	}, storageUnit.DBConfig{
-		FilePath: "Blocks",
-		Type:     "NotLvlDB",
-	})
+	t.Parallel()
+
+	storer, err := storageUnit.NewStorageUnitFromConf(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     storageUnit.LRUCache,
+			},
+		},
+		storageUnit.DBConfig{
+			FilePath: t.TempDir(),
+			Type:     "NotLvlDB",
+		},
+	)
 
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
 }
 
 func TestNewStorageUnit_FromConfLvlDBOk(t *testing.T) {
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
-		Capacity: 10,
-		Type:     storageUnit.LRUCache,
-	}, storageUnit.DBConfig{
-		FilePath:          "Blocks",
-		Type:              storageUnit.LvlDB,
-		MaxBatchSize:      1,
-		BatchDelaySeconds: 1,
-		MaxOpenFiles:      10,
-	})
+	t.Parallel()
+
+	storer, err := storageUnit.NewStorageUnitFromConf(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     storageUnit.LRUCache,
+			},
+		},
+		storageUnit.DBConfig{
+			FilePath:          t.TempDir(),
+			Type:              storageUnit.LvlDB,
+			MaxBatchSize:      1,
+			BatchDelaySeconds: 1,
+			MaxOpenFiles:      10,
+		},
+	)
 
 	assert.Nil(t, err, "no error expected but got %s", err)
 	assert.NotNil(t, storer, "valid storer expected but got nil")
@@ -366,21 +523,85 @@ func TestNewStorageUnit_FromConfLvlDBOk(t *testing.T) {
 }
 
 func TestNewStorageUnit_ShouldWorkLvlDB(t *testing.T) {
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
-		Capacity: 10,
-		Type:     storageUnit.LRUCache,
-	}, storageUnit.DBConfig{
-		FilePath:          "Blocks",
-		Type:              storageUnit.LvlDB,
-		BatchDelaySeconds: 1,
-		MaxBatchSize:      1,
-		MaxOpenFiles:      10,
-	})
+	t.Parallel()
+
+	storer, err := storageUnit.NewStorageUnitFromConf(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     storageUnit.LRUCache,
+			},
+		},
+		storageUnit.DBConfig{
+			FilePath:          t.TempDir(),
+			Type:              storageUnit.LvlDB,
+			BatchDelaySeconds: 1,
+			MaxBatchSize:      1,
+			MaxOpenFiles:      10,
+		},
+	)
 
 	assert.Nil(t, err, "no error expected but got %s", err)
 	assert.NotNil(t, storer, "valid storer expected but got nil")
 	err = storer.DestroyUnit()
 	assert.Nil(t, err, "no error expected destroying the persister")
+}
+
+func TestNewStorageUnit_WrongConfigForRemovalCache(t *testing.T) {
+	t.Parallel()
+
+	storer, err := storageUnit.NewStorageUnitFromConf(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     storageUnit.LRUCache,
+			},
+			RemovalTrackingCacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     "",
+			},
+		},
+		storageUnit.DBConfig{
+			FilePath:          t.TempDir(),
+			Type:              storageUnit.LvlDB,
+			BatchDelaySeconds: 1,
+			MaxBatchSize:      1,
+			MaxOpenFiles:      10,
+		},
+	)
+
+	assert.ErrorIs(t, err, common.ErrNotSupportedCacheType)
+	assert.Contains(t, err.Error(), "when creating removal cache")
+	assert.Nil(t, storer)
+}
+
+func TestNewStorageUnit_ShouldWorkWithRemovalCache(t *testing.T) {
+	t.Parallel()
+
+	storer, err := storageUnit.NewStorageUnitFromConf(
+		storageUnit.CacheCreationConfig{
+			CacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     storageUnit.LRUCache,
+			},
+			RemovalTrackingCacheConfig: storageUnit.CacheConfig{
+				Capacity: 10,
+				Type:     storageUnit.LRUCache,
+			},
+		},
+		storageUnit.DBConfig{
+			FilePath:          t.TempDir(),
+			Type:              storageUnit.LvlDB,
+			BatchDelaySeconds: 1,
+			MaxBatchSize:      1,
+			MaxOpenFiles:      10,
+		},
+	)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, storer)
+
+	_ = storer.DestroyUnit()
 }
 
 const (

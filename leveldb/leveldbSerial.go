@@ -80,7 +80,7 @@ func NewSerialDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFi
 		closer:            closing.NewSafeChanCloser(),
 	}
 
-	dbStore.batch = NewBatch()
+	dbStore.batch = NewBatch(make(map[string]struct{}))
 
 	go dbStore.batchTimeoutHandle(ctx)
 	go dbStore.processLoop(ctx)
@@ -246,7 +246,7 @@ func (s *SerialDB) putBatch() error {
 		return common.ErrInvalidBatch
 	}
 	s.sizeBatch = 0
-	s.batch = NewBatch()
+	s.batch = NewBatch(dbBatch.removedData)
 	s.mutBatch.Unlock()
 
 	ch := make(chan error)

@@ -321,6 +321,11 @@ func (ic *ImmunityCache) Diagnose(_ bool) {
 	)
 }
 
+// GetRemovalStatus will return the unknown status because this implementation does not track removed keys
+func (ic *ImmunityCache) GetRemovalStatus(_ []byte) types.RemovalStatus {
+	return types.UnknownRemovalStatus
+}
+
 // Close does nothing for this cacher implementation
 func (ic *ImmunityCache) Close() error {
 	return nil

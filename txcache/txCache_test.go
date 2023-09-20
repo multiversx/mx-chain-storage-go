@@ -626,6 +626,22 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 	cache.Clear()
 }
 
+func TestTxCache_GetRemovalStatus(t *testing.T) {
+	t.Parallel()
+
+	key := []byte("key")
+	value := []byte("value")
+
+	cache := newUnconstrainedCacheToTest()
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+
+	_ = cache.Put(key, value, 0)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+
+	cache.Remove(key)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+}
+
 func newUnconstrainedCacheToTest() *TxCache {
 	txGasHandler, _ := dummyParams()
 	cache, err := NewTxCache(ConfigSourceMe{

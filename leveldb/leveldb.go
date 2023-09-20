@@ -220,7 +220,7 @@ func (s *DB) Has(key []byte) error {
 
 // CreateBatch returns a batcher to be used for batch writing data to the database
 func (s *DB) createBatch() types.Batcher {
-	return NewBatch()
+	return NewBatch(make(map[string]struct{}))
 }
 
 // putBatch writes the Batch data into the database
