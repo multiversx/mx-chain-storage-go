@@ -42,6 +42,7 @@ func TestEviction_EvictSendersWhileTooManyTxs(t *testing.T) {
 	require.Equal(t, uint32(100), nSenders)
 	require.Equal(t, int64(100), cache.txListBySender.counter.Get())
 	require.Equal(t, int64(100), cache.txByHash.counter.Get())
+	require.Nil(t, cache.Close())
 }
 
 func TestEviction_EvictSendersWhileTooManyBytes(t *testing.T) {
@@ -79,6 +80,7 @@ func TestEviction_EvictSendersWhileTooManyBytes(t *testing.T) {
 	require.Equal(t, uint32(100), nSenders)
 	require.Equal(t, int64(100), cache.txListBySender.counter.Get())
 	require.Equal(t, int64(100), cache.txByHash.counter.Get())
+	require.Nil(t, cache.Close())
 }
 
 func TestEviction_DoEvictionDoneInPassTwo_BecauseOfCount(t *testing.T) {
@@ -110,6 +112,7 @@ func TestEviction_DoEvictionDoneInPassTwo_BecauseOfCount(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, uint64(1), cache.CountSenders())
 	require.Equal(t, uint64(1), cache.CountTx())
+	require.Nil(t, cache.Close())
 }
 
 func TestEviction_DoEvictionDoneInPassTwo_BecauseOfSize(t *testing.T) {
@@ -164,6 +167,7 @@ func TestEviction_DoEvictionDoneInPassTwo_BecauseOfSize(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, uint64(5), cache.CountSenders())
 	require.Equal(t, uint64(5), cache.CountTx())
+	require.Nil(t, cache.Close())
 }
 
 func TestEviction_doEvictionDoesNothingWhenAlreadyInProgress(t *testing.T) {
@@ -187,6 +191,7 @@ func TestEviction_doEvictionDoesNothingWhenAlreadyInProgress(t *testing.T) {
 	cache.doEviction()
 
 	require.False(t, cache.evictionJournal.evictionPerformed)
+	require.Nil(t, cache.Close())
 }
 
 func TestEviction_evictSendersInLoop_CoverLoopBreak_WhenSmallBatch(t *testing.T) {
@@ -212,6 +217,7 @@ func TestEviction_evictSendersInLoop_CoverLoopBreak_WhenSmallBatch(t *testing.T)
 	require.Equal(t, uint32(0), steps)
 	require.Equal(t, uint32(1), nTxs)
 	require.Equal(t, uint32(1), nSenders)
+	require.Nil(t, cache.Close())
 }
 
 func TestEviction_evictSendersWhile_ShouldContinueBreak(t *testing.T) {
@@ -241,6 +247,7 @@ func TestEviction_evictSendersWhile_ShouldContinueBreak(t *testing.T) {
 	require.Equal(t, uint32(0), steps)
 	require.Equal(t, uint32(0), nTxs)
 	require.Equal(t, uint32(0), nSenders)
+	require.Nil(t, cache.Close())
 }
 
 // This seems to be the most reasonable "bad-enough" (not worst) scenario to benchmark:
@@ -271,6 +278,7 @@ func Test_AddWithEviction_UniformDistribution_25000x10(t *testing.T) {
 	// Sometimes (due to map iteration non-determinism), more eviction happens - one more step of 100 senders.
 	require.LessOrEqual(t, uint32(cache.CountTx()), config.CountThreshold)
 	require.GreaterOrEqual(t, uint32(cache.CountTx()), config.CountThreshold-config.NumSendersToPreemptivelyEvict*uint32(numTxsPerSender))
+	require.Nil(t, cache.Close())
 }
 
 func Test_EvictSendersAndTheirTxs_Concurrently(t *testing.T) {
@@ -304,4 +312,5 @@ func Test_EvictSendersAndTheirTxs_Concurrently(t *testing.T) {
 	}
 
 	wg.Wait()
+	require.Nil(t, cache.Close())
 }

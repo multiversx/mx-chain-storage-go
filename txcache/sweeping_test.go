@@ -48,6 +48,7 @@ func TestSweeping_CollectSweepable(t *testing.T) {
 	require.Equal(t, 3, cache.getNumFailedSelectionsOfSender("alice"))
 	require.Equal(t, 3, cache.getNumFailedSelectionsOfSender("bob"))
 	require.Equal(t, 0, cache.getNumFailedSelectionsOfSender("carol"))
+	require.Nil(t, cache.Close())
 }
 
 func TestSweeping_WhenSendersEscapeCollection(t *testing.T) {
@@ -93,6 +94,7 @@ func TestSweeping_WhenSendersEscapeCollection(t *testing.T) {
 	require.Equal(t, 0, cache.getNumFailedSelectionsOfSender("alice"))
 	require.Equal(t, 0, cache.getNumFailedSelectionsOfSender("bob"))
 	require.Equal(t, 0, cache.getNumFailedSelectionsOfSender("carol"))
+	require.Nil(t, cache.Close())
 }
 
 func TestSweeping_SweepSweepable(t *testing.T) {
@@ -115,4 +117,5 @@ func TestSweeping_SweepSweepable(t *testing.T) {
 
 	require.Equal(t, uint64(1), cache.CountTx())
 	require.Equal(t, uint64(1), cache.CountSenders())
+	require.Nil(t, cache.Close())
 }
