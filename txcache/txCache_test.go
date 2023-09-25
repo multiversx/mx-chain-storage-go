@@ -1,17 +1,20 @@
 package txcache
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,6 +43,7 @@ func Test_NewTxCache(t *testing.T) {
 	cache, err := NewTxCache(config, txGasHandler)
 	require.Nil(t, err)
 	require.NotNil(t, cache)
+	require.Nil(t, cache.Close())
 
 	badConfig := config
 	badConfig.Name = ""
@@ -105,6 +109,7 @@ func Test_AddTx(t *testing.T) {
 
 func Test_AddNilTx_DoesNothing(t *testing.T) {
 	cache := newUnconstrainedCacheToTest()
+	defer func() { require.Nil(t, cache.Close()) }()
 
 	txHash := []byte("hash-1")
 
@@ -133,6 +138,7 @@ func Test_AddTx_AppliesSizeConstraintsPerSenderForNumTransactions(t *testing.T) 
 	require.Equal(t, []string{"tx-alice-1", "tx-alice-2", "tx-alice-3"}, cache.getHashesForSender("alice"))
 	require.Equal(t, []string{"tx-bob-1", "tx-bob-2"}, cache.getHashesForSender("bob"))
 	require.True(t, cache.areInternalMapsConsistent())
+	require.Nil(t, cache.Close())
 }
 
 func Test_AddTx_AppliesSizeConstraintsPerSenderForNumBytes(t *testing.T) {
@@ -153,6 +159,7 @@ func Test_AddTx_AppliesSizeConstraintsPerSenderForNumBytes(t *testing.T) {
 	require.Equal(t, []string{"tx-alice-1", "tx-alice-2", "tx-alice-3"}, cache.getHashesForSender("alice"))
 	require.Equal(t, []string{"tx-bob-1", "tx-bob-2"}, cache.getHashesForSender("bob"))
 	require.True(t, cache.areInternalMapsConsistent())
+	require.Nil(t, cache.Close())
 }
 
 func Test_RemoveByTxHash(t *testing.T) {
@@ -436,6 +443,7 @@ func Test_AddWithEviction_UniformDistributionOfTxsPerSender(t *testing.T) {
 		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
 		CountPerSenderThreshold:       math.MaxUint32,
 	}
+	require.Nil(t, cache.Close())
 
 	// 100 * 1000
 	cache, err = NewTxCache(config, txGasHandler)
@@ -444,6 +452,7 @@ func Test_AddWithEviction_UniformDistributionOfTxsPerSender(t *testing.T) {
 
 	addManyTransactionsWithUniformDistribution(cache, 100, 1000)
 	require.LessOrEqual(t, cache.CountTx(), uint64(250000))
+	require.Nil(t, cache.Close())
 }
 
 func Test_NotImplementedFunctions(t *testing.T) {
@@ -543,12 +552,22 @@ func TestTxCache_TransactionIsAdded_EvenWhenInternalMapsAreInconsistent(t *testi
 func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *testing.T) {
 	cache := newUnconstrainedCacheToTest()
 
+	handlerCalls := uint32(0)
+	evictionHandlerWG := sync.WaitGroup{}
+	_ = cache.RegisterEvictionHandler(&testscommon.EvictionNotifierStub{
+		NotifyEvictionCalled: func(hash []byte) {
+			atomic.AddUint32(&handlerCalls, 1)
+			evictionHandlerWG.Done()
+		},
+	})
+
 	// A lot of routines concur to add & remove THE FIRST transaction of a sender
 	for try := 0; try < 100; try++ {
 		var wg sync.WaitGroup
 
 		for i := 0; i < 50; i++ {
 			wg.Add(1)
+			evictionHandlerWG.Add(1)
 			go func() {
 				cache.AddTx(createTx([]byte("alice-x"), "alice", 42))
 				_ = cache.RemoveTxByHash([]byte("alice-x"))
@@ -590,6 +609,7 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 
 		for i := 0; i < 50; i++ {
 			wg.Add(1)
+			evictionHandlerWG.Add(1)
 			go func() {
 				cache.AddTx(createTx([]byte("alice-x"), "alice", 42))
 				_ = cache.RemoveTxByHash([]byte("alice-x"))
@@ -624,6 +644,55 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 	}
 
 	cache.Clear()
+
+	evictionHandlerWG.Wait()
+	require.Equal(t, uint32(10000), atomic.LoadUint32(&handlerCalls))
+}
+
+func TestTxCache_RegisterEvictionHandler(t *testing.T) {
+	t.Parallel()
+
+	cache := newUnconstrainedCacheToTest()
+
+	cache.AddTx(createTx([]byte("hash-1"), "alice", 1))
+	cache.AddTx(createTx([]byte("hash-2"), "alice", 2))
+
+	err := cache.RegisterEvictionHandler(nil)
+	require.Equal(t, common.ErrNilEvictionHandler, err)
+
+	ch := make(chan uint32)
+	cnt := uint32(0)
+	err = cache.RegisterEvictionHandler(&testscommon.EvictionNotifierStub{
+		NotifyEvictionCalled: func(hash []byte) {
+			atomic.AddUint32(&cnt, 1)
+			require.True(t, bytes.Equal([]byte("hash-1"), hash) || bytes.Equal([]byte("hash-2"), hash))
+			ch <- atomic.LoadUint32(&cnt)
+		},
+	})
+	require.NoError(t, err)
+
+	removed := cache.RemoveTxByHash([]byte("hash-1"))
+	require.True(t, removed)
+	cache.Remove([]byte("hash-2"))
+	for {
+		chCnt := uint32(0)
+		select {
+		case chCnt = <-ch:
+		case <-time.After(time.Second):
+			require.Fail(t, "timeout")
+		}
+		if chCnt == 2 {
+			break
+		}
+	}
+
+	foundTx, ok := cache.GetByTxHash([]byte("hash-1"))
+	require.False(t, ok)
+	require.Nil(t, foundTx)
+
+	foundTx, ok = cache.GetByTxHash([]byte("hash-2"))
+	require.False(t, ok)
+	require.Nil(t, foundTx)
 }
 
 func newUnconstrainedCacheToTest() *TxCache {

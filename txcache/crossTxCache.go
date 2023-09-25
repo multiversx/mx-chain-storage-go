@@ -1,6 +1,7 @@
 package txcache
 
 import (
+	"github.com/gammazero/workerpool"
 	"github.com/multiversx/mx-chain-storage-go/immunitycache"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -10,6 +11,7 @@ var _ types.Cacher = (*CrossTxCache)(nil)
 // CrossTxCache holds cross-shard transactions (where destination == me)
 type CrossTxCache struct {
 	*immunitycache.ImmunityCache
+	*baseTxCache
 	config ConfigDestinationMe
 }
 
@@ -37,7 +39,11 @@ func NewCrossTxCache(config ConfigDestinationMe) (*CrossTxCache, error) {
 
 	cache := CrossTxCache{
 		ImmunityCache: immunityCache,
-		config:        config,
+		baseTxCache: &baseTxCache{
+			evictionHandlers:   make([]types.EvictionNotifier, 0),
+			evictionWorkerPool: workerpool.New(maxNumOfEvictionWorkers),
+		},
+		config: config,
 	}
 
 	return &cache, nil
@@ -93,7 +99,11 @@ func (cache *CrossTxCache) Peek(key []byte) (value interface{}, ok bool) {
 
 // RemoveTxByHash removes tx by hash
 func (cache *CrossTxCache) RemoveTxByHash(txHash []byte) bool {
-	return cache.RemoveWithResult(txHash)
+	ok := cache.RemoveWithResult(txHash)
+	if ok {
+		cache.enqueueEvictedHashesForNotification([][]byte{txHash})
+	}
+	return ok
 }
 
 // ForEachTransaction iterates over the transactions in the cache
@@ -113,6 +123,12 @@ func (cache *CrossTxCache) ForEachTransaction(function ForEachTransaction) {
 // thus does not handle nonces, nonce gaps etc.
 func (cache *CrossTxCache) GetTransactionsPoolForSender(_ string) []*WrappedTransaction {
 	return make([]*WrappedTransaction, 0)
+}
+
+// Close closes the eviction worker pool
+func (cache *CrossTxCache) Close() error {
+	cache.evictionWorkerPool.Stop()
+	return nil
 }
 
 // IsInterfaceNil returns true if there is no value under the interface

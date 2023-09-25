@@ -3,6 +3,7 @@ module github.com/multiversx/mx-chain-storage-go
 go 1.20
 
 require (
+	github.com/gammazero/workerpool v1.1.3
 	github.com/hashicorp/golang-lru v0.6.0
 	github.com/multiversx/concurrent-map v0.1.4
 	github.com/multiversx/mx-chain-core-go v1.2.16
@@ -14,6 +15,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
+	github.com/gammazero/deque v0.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect

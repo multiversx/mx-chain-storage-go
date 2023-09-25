@@ -3,6 +3,7 @@ package txcache
 import (
 	"sync"
 
+	"github.com/gammazero/workerpool"
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
 	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-storage-go/common"
@@ -14,6 +15,7 @@ var _ types.Cacher = (*TxCache)(nil)
 
 // TxCache represents a cache-like structure (it has a fixed capacity and implements an eviction mechanism) for holding transactions
 type TxCache struct {
+	*baseTxCache
 	name                      string
 	txListBySender            *txListBySenderMap
 	txByHash                  *txByHashMap
@@ -49,8 +51,11 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	senderConstraintsObj := config.getSenderConstraints()
 	txFeeHelper := newFeeComputationHelper(txGasHandler.MinGasPrice(), txGasHandler.MinGasLimit(), txGasHandler.MinGasPriceForProcessing())
 	scoreComputerObj := newDefaultScoreComputer(txFeeHelper)
-
 	txCache := &TxCache{
+		baseTxCache: &baseTxCache{
+			evictionHandlers:   make([]types.EvictionNotifier, 0),
+			evictionWorkerPool: workerpool.New(maxNumOfEvictionWorkers),
+		},
 		name:            config.Name,
 		txListBySender:  newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
 		txByHash:        newTxByHashMap(numChunks),
@@ -88,6 +93,7 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 
 	if len(evicted) > 0 {
 		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
+		cache.enqueueEvictedHashesForNotification(evicted)
 		cache.txByHash.RemoveTxsBulk(evicted)
 	}
 
@@ -166,6 +172,8 @@ func (cache *TxCache) doAfterSelection() {
 
 // RemoveTxByHash removes tx by hash
 func (cache *TxCache) RemoveTxByHash(txHash []byte) bool {
+	cache.enqueueEvictedHashesForNotification([][]byte{txHash})
+
 	cache.mutTxOperation.Lock()
 	defer cache.mutTxOperation.Unlock()
 
@@ -318,8 +326,9 @@ func (cache *TxCache) NotifyAccountNonce(accountKey []byte, nonce uint64) {
 func (cache *TxCache) ImmunizeTxsAgainstEviction(_ [][]byte) {
 }
 
-// Close does nothing for this cacher implementation
+// Close closes the eviction worker pool
 func (cache *TxCache) Close() error {
+	cache.evictionWorkerPool.Stop()
 	return nil
 }
 

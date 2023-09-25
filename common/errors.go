@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+
 	"github.com/multiversx/mx-chain-core-go/core"
 )
 
@@ -85,3 +86,6 @@ var ErrInvalidCacheExpiry = errors.New("invalid cache expiry")
 
 // ErrDBIsClosed is raised when the DB is closed
 var ErrDBIsClosed = core.ErrDBIsClosed
+
+// ErrNilEvictionHandler signals that a nil eviction handler has been provided
+var ErrNilEvictionHandler = errors.New("nil eviction handler")
