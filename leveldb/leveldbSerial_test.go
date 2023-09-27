@@ -416,3 +416,30 @@ func TestSerialDB_PutRemoveGet(t *testing.T) {
 
 	_ = ldb.Close()
 }
+
+func TestSerialDB_PutRemovePutHas(t *testing.T) {
+	ldb := createSerialLevelDb(t, 100000, 1000000, 10)
+
+	key := []byte("key")
+	value := []byte("value")
+
+	_ = ldb.Put(key, value)
+
+	// manually put the <key, value> pair in storage
+	ldb.PutBatch()
+	time.Sleep(time.Second)
+	assert.Nil(t, ldb.Has(key)) // key was found
+
+	// we now remove the key
+	_ = ldb.Remove(key)
+
+	// manually delete the key from the storage
+	ldb.PutBatch()
+	time.Sleep(time.Second)
+	assert.NotNil(t, ldb.Has(key)) // missing key
+
+	_ = ldb.Put(key, value)     // put the key again
+	assert.Nil(t, ldb.Has(key)) // key was found
+
+	_ = ldb.Close()
+}

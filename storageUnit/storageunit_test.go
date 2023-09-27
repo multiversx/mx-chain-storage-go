@@ -148,7 +148,7 @@ func TestUnit_GetWithExplicitlyRemovedKeyShouldNotCallThePersister(t *testing.T)
 			return nil
 		},
 		GetCalled: func(key []byte) ([]byte, error) {
-			assert.Fail(t, "should have not called Has")
+			assert.Fail(t, "should have not called Get")
 			return nil, nil
 		},
 	}
@@ -219,7 +219,7 @@ func TestUnit_HasWithExplicitlyRemovedKeyShouldNotCallThePersister(t *testing.T)
 			return nil
 		},
 		GetCalled: func(key []byte) ([]byte, error) {
-			assert.Fail(t, "should have not called Has")
+			assert.Fail(t, "should have not called Get")
 			return nil, nil
 		},
 	}

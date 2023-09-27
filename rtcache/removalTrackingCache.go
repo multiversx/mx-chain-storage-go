@@ -71,8 +71,8 @@ func (cache *removalTrackingCache) GetRemovalStatus(key []byte) types.RemovalSta
 
 // Clear is used to completely clear both caches.
 func (cache *removalTrackingCache) Clear() {
-	cache.mutCriticalArea.RLock()
-	defer cache.mutCriticalArea.RUnlock()
+	cache.mutCriticalArea.Lock()
+	defer cache.mutCriticalArea.Unlock()
 
 	cache.removalCache.Clear()
 	cache.unexportedCacher.Clear()

@@ -67,10 +67,13 @@ func (mock *cacherMock) HasOrAdd(key []byte, value interface{}, _ int) (has, add
 	defer mock.mut.Unlock()
 
 	_, found := mock.data[string(key)]
+	if found {
+		return found, !found
+	}
 
 	mock.data[string(key)] = value
 
-	return !found, found
+	return found, !found
 }
 
 // Remove -

@@ -14,7 +14,7 @@ const (
 	UnknownRemovalStatus RemovalStatus = "unknown"
 	// ExplicitlyRemovedStatus defines the explicitly removed status
 	ExplicitlyRemovedStatus RemovalStatus = "explicitly removed"
-	// NotRemovedStatus the key is not removed
+	// NotRemovedStatus defines the not removed status
 	NotRemovedStatus RemovalStatus = "not removed"
 )
 
