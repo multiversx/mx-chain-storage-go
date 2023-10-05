@@ -43,6 +43,10 @@ func (cache *baseTxCache) enqueueEvictedHashesForNotification(txHashes [][]byte)
 
 	for _, handler := range handlers {
 		for _, txHash := range txHashes {
+			if !handler.ShouldNotifyEviction(txHash) {
+				continue
+			}
+
 			cache.evictionWorkerPool.Submit(func() {
 				handler.NotifyEviction(txHash)
 			})
