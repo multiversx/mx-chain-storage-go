@@ -19,6 +19,7 @@ type baseTxCache struct {
 	mutEvictionHandlers sync.RWMutex
 	evictionHandlers    []types.EvictionNotifier
 	evictionWorkerPool  evictionWorkerPool
+	name                string
 }
 
 // RegisterEvictionHandler registers a handler which will be called when a tx is evicted from cache
@@ -48,7 +49,7 @@ func (cache *baseTxCache) enqueueEvictedHashesForNotification(txHashes [][]byte)
 			}
 
 			cache.evictionWorkerPool.Submit(func() {
-				handler.NotifyEviction(txHash)
+				handler.NotifyEviction(txHash, cache.name)
 			})
 		}
 	}

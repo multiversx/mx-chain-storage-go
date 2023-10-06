@@ -2,14 +2,14 @@ package testscommon
 
 // EvictionNotifierStub -
 type EvictionNotifierStub struct {
-	NotifyEvictionCalled       func(txHash []byte)
+	NotifyEvictionCalled       func(txHash []byte, cacheId string)
 	ShouldNotifyEvictionCalled func(txHash []byte) bool
 }
 
 // NotifyEviction -
-func (stub *EvictionNotifierStub) NotifyEviction(txHash []byte) {
+func (stub *EvictionNotifierStub) NotifyEviction(txHash []byte, cacheId string) {
 	if stub.NotifyEvictionCalled != nil {
-		stub.NotifyEvictionCalled(txHash)
+		stub.NotifyEvictionCalled(txHash, cacheId)
 	}
 }
 

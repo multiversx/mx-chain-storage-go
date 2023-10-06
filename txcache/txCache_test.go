@@ -555,7 +555,7 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 	handlerCalls := uint32(0)
 	evictionHandlerWG := sync.WaitGroup{}
 	_ = cache.RegisterEvictionHandler(&testscommon.EvictionNotifierStub{
-		NotifyEvictionCalled: func(hash []byte) {
+		NotifyEvictionCalled: func(hash []byte, cacheId string) {
 			atomic.AddUint32(&handlerCalls, 1)
 			evictionHandlerWG.Done()
 		},
@@ -666,7 +666,7 @@ func TestTxCache_RegisterEvictionHandler(t *testing.T) {
 	ch := make(chan uint32)
 	cnt := uint32(0)
 	err = cache.RegisterEvictionHandler(&testscommon.EvictionNotifierStub{
-		NotifyEvictionCalled: func(hash []byte) {
+		NotifyEvictionCalled: func(hash []byte, cacheId string) {
 			atomic.AddUint32(&cnt, 1)
 			require.True(t, bytes.Equal([]byte("hash-1"), hash) || bytes.Equal([]byte("hash-2"), hash))
 			ch <- atomic.LoadUint32(&cnt)

@@ -76,7 +76,7 @@ func TestCrossTxCache_RegisterEvictionHandler(t *testing.T) {
 
 	ch := make(chan struct{})
 	err = cache.RegisterEvictionHandler(&testscommon.EvictionNotifierStub{
-		NotifyEvictionCalled: func(hash []byte) {
+		NotifyEvictionCalled: func(hash []byte, cacheId string) {
 			require.True(t, bytes.Equal([]byte("hash-1"), hash))
 			ch <- struct{}{}
 		},
