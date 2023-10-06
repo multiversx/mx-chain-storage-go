@@ -80,7 +80,7 @@ func TestCrossTxCache_RegisterEvictionHandler(t *testing.T) {
 			require.True(t, bytes.Equal([]byte("hash-1"), hash))
 			ch <- struct{}{}
 		},
-		ShouldNotifyEvictionCalled: func(txHash []byte) bool {
+		ShouldNotifyEvictionCalled: func(txHash []byte, cacheId string) bool {
 			return true
 		},
 	})
