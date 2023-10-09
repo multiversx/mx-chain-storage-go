@@ -37,6 +37,10 @@ func (cache *baseTxCache) RegisterEvictionHandler(handler types.EvictionNotifier
 // enqueueEvictedHashesForNotification will enqueue the provided hashes on the workers pool
 func (cache *baseTxCache) enqueueEvictedHashesForNotification(txHashes [][]byte) {
 	cache.mutEvictionHandlers.RLock()
+	if len(cache.evictionHandlers) == 0 {
+		cache.mutEvictionHandlers.RUnlock()
+		return
+	}
 	handlers := make([]types.EvictionNotifier, len(cache.evictionHandlers))
 	copy(handlers, cache.evictionHandlers)
 	cache.mutEvictionHandlers.RUnlock()
