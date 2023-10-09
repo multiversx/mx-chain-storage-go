@@ -42,7 +42,6 @@ func NewCrossTxCache(config ConfigDestinationMe) (*CrossTxCache, error) {
 		baseTxCache: &baseTxCache{
 			evictionHandlers:   make([]types.EvictionNotifier, 0),
 			evictionWorkerPool: workerpool.New(maxNumOfEvictionWorkers),
-			name:               config.Name,
 		},
 		config: config,
 	}

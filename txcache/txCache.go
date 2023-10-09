@@ -16,6 +16,7 @@ var _ types.Cacher = (*TxCache)(nil)
 // TxCache represents a cache-like structure (it has a fixed capacity and implements an eviction mechanism) for holding transactions
 type TxCache struct {
 	*baseTxCache
+	name                      string
 	txListBySender            *txListBySenderMap
 	txByHash                  *txByHashMap
 	config                    ConfigSourceMe
@@ -54,8 +55,8 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 		baseTxCache: &baseTxCache{
 			evictionHandlers:   make([]types.EvictionNotifier, 0),
 			evictionWorkerPool: workerpool.New(maxNumOfEvictionWorkers),
-			name:               config.Name,
 		},
+		name:            config.Name,
 		txListBySender:  newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
 		txByHash:        newTxByHashMap(numChunks),
 		config:          config,
