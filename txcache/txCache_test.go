@@ -559,6 +559,9 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 			atomic.AddUint32(&handlerCalls, 1)
 			evictionHandlerWG.Done()
 		},
+		ShouldNotifyEvictionCalled: func(txHash []byte) bool {
+			return true
+		},
 	})
 
 	// A lot of routines concur to add & remove THE FIRST transaction of a sender
@@ -667,6 +670,9 @@ func TestTxCache_RegisterEvictionHandler(t *testing.T) {
 			atomic.AddUint32(&cnt, 1)
 			require.True(t, bytes.Equal([]byte("hash-1"), hash) || bytes.Equal([]byte("hash-2"), hash))
 			ch <- atomic.LoadUint32(&cnt)
+		},
+		ShouldNotifyEvictionCalled: func(txHash []byte) bool {
+			return true
 		},
 	})
 	require.NoError(t, err)

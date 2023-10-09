@@ -234,5 +234,6 @@ type PersisterCreator interface {
 // EvictionNotifier defines the behaviour of a component which is able to handle an evicted transaction
 type EvictionNotifier interface {
 	NotifyEviction(txHash []byte)
+	ShouldNotifyEviction(txHash []byte) bool
 	IsInterfaceNil() bool
 }
