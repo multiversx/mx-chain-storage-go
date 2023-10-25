@@ -12,6 +12,7 @@ import (
 var _ types.Cacher = (*lruCache)(nil)
 
 var log = logger.GetOrCreate("storage/lrucache")
+var _ types.Cacher = (*lruCache)(nil)
 
 // LRUCache implements a Least Recently Used eviction cache
 type lruCache struct {
@@ -182,6 +183,11 @@ func (c *lruCache) SizeInBytesContained() uint64 {
 // MaxSize returns the maximum number of items which can be stored in cache.
 func (c *lruCache) MaxSize() int {
 	return c.maxsize
+}
+
+// GetRemovalStatus will return the unknown status because this implementation does not track removed keys
+func (c *lruCache) GetRemovalStatus(_ []byte) types.RemovalStatus {
+	return types.UnknownRemovalStatus
 }
 
 // Close does nothing for this cacher implementation

@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+
 	"github.com/multiversx/mx-chain-core-go/core"
 )
 

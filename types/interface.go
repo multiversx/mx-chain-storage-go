@@ -3,7 +3,19 @@ package types
 import (
 	"time"
 
-	"github.com/multiversx/mx-chain-core-go/storage"
+	"github.com/multiversx/mx-chain-core-go/data"
+)
+
+// RemovalStatus removal status defines the removal possibility of a key
+type RemovalStatus string
+
+const (
+	// UnknownRemovalStatus defines the unknown status
+	UnknownRemovalStatus RemovalStatus = "unknown"
+	// ExplicitlyRemovedStatus defines the explicitly removed status
+	ExplicitlyRemovedStatus RemovalStatus = "explicitly removed"
+	// NotRemovedStatus defines the not removed status
+	NotRemovedStatus RemovalStatus = "not removed"
 )
 
 // Persister provides storage of data services in a database like construct
@@ -74,6 +86,8 @@ type Cacher interface {
 	RegisterHandler(handler func(key []byte, value interface{}), id string)
 	// UnRegisterHandler deletes the handler from the list
 	UnRegisterHandler(id string)
+	// GetRemovalStatus returns the removal status for the provided key
+	GetRemovalStatus(key []byte) RemovalStatus
 	// Close closes the underlying temporary db if the cacher implementation has one,
 	// otherwise it does nothing
 	Close() error
@@ -94,7 +108,7 @@ type Storer interface {
 	ClearCache()
 	DestroyUnit() error
 	GetFromEpoch(key []byte, epoch uint32) ([]byte, error)
-	GetBulkFromEpoch(keys [][]byte, epoch uint32) ([]storage.KeyValuePair, error)
+	GetBulkFromEpoch(keys [][]byte, epoch uint32) ([]data.KeyValuePair, error)
 	GetOldestEpoch() (uint32, error)
 	RangeKeys(handler func(key []byte, val []byte) bool)
 	Close() error

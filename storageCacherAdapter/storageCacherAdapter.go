@@ -12,6 +12,7 @@ import (
 )
 
 var log = logger.GetOrCreate("storageCacherAdapter")
+var _ types.Cacher = (*storageCacherAdapter)(nil)
 
 type storageCacherAdapter struct {
 	cacher     types.AdaptedSizedLRUCache
@@ -267,6 +268,11 @@ func (c *storageCacherAdapter) RegisterHandler(_ func(_ []byte, _ interface{}), 
 
 // UnRegisterHandler does nothing
 func (c *storageCacherAdapter) UnRegisterHandler(_ string) {
+}
+
+// GetRemovalStatus will return the unknown status because this implementation does not track removed keys
+func (c *storageCacherAdapter) GetRemovalStatus(_ []byte) types.RemovalStatus {
+	return types.UnknownRemovalStatus
 }
 
 // Close closes the underlying db

@@ -140,6 +140,11 @@ func (c *FIFOShardedCache) MaxSize() int {
 	return c.maxsize
 }
 
+// GetRemovalStatus will return the unknown status because this implementation does not track removed keys
+func (c *FIFOShardedCache) GetRemovalStatus(_ []byte) types.RemovalStatus {
+	return types.UnknownRemovalStatus
+}
+
 // Close does nothing for this cacher implementation
 func (c *FIFOShardedCache) Close() error {
 	return nil

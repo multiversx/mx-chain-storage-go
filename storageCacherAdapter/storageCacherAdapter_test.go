@@ -9,6 +9,7 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/common"
 	storageMock "github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/multiversx/mx-chain-storage-go/testscommon/trieFactory"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -694,4 +695,16 @@ func TestStorageCacherAdapter_Close(t *testing.T) {
 
 	_ = sca.Close()
 	assert.True(t, closeCalled)
+}
+
+func TestStorageCacherAdapter_GetRemovalStatus(t *testing.T) {
+	t.Parallel()
+
+	sca, _ := NewStorageCacherAdapter(
+		&storageMock.AdaptedSizedLruCacheStub{},
+		&storageMock.PersisterStub{},
+		trieFactory.NewTrieNodeFactory(),
+		&storageMock.MarshalizerMock{},
+	)
+	assert.Equal(t, types.UnknownRemovalStatus, sca.GetRemovalStatus(nil))
 }

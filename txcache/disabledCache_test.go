@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,6 +60,8 @@ func TestDisabledCache_DoesNothing(t *testing.T) {
 
 	maxSize := cache.MaxSize()
 	require.Equal(t, 0, maxSize)
+
+	require.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
 
 	require.NotPanics(t, func() { cache.RegisterHandler(func(_ []byte, _ interface{}) {}, "") })
 	require.False(t, cache.IsInterfaceNil())

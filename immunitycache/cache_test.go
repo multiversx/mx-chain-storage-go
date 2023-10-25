@@ -9,6 +9,7 @@ import (
 
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -334,6 +335,22 @@ func TestImmunityCache_ForgetCapacityHadBeenReachedInThePast(t *testing.T) {
 
 	cache.forgetCapacityHadBeenReachedInThePast()
 	require.Equal(t, uint64(0), cache.numCapacityReachedOccurrences.GetUint64())
+}
+
+func TestImmunityCache_GetRemovalStatus(t *testing.T) {
+	t.Parallel()
+
+	key := []byte("key")
+	value := []byte("value")
+
+	cache := newCacheToTest(1, 4, 1000)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+
+	_ = cache.Put(key, value, 0)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+
+	cache.Remove(key)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
 }
 
 func newCacheToTest(numChunks uint32, maxNumItems uint32, numMaxBytes uint32) *ImmunityCache {

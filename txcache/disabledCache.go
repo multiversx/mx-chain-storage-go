@@ -122,6 +122,11 @@ func (cache *DisabledCache) GetTransactionsPoolForSender(_ string) []*WrappedTra
 	return make([]*WrappedTransaction, 0)
 }
 
+// GetRemovalStatus will return the unknown status because this implementation does not track removed keys
+func (cache *DisabledCache) GetRemovalStatus(_ []byte) types.RemovalStatus {
+	return types.UnknownRemovalStatus
+}
+
 // Close does nothing
 func (cache *DisabledCache) Close() error {
 	return nil

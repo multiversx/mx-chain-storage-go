@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
-	"github.com/multiversx/mx-chain-core-go/storage"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -421,7 +421,7 @@ func TestLRUCache_CloseShouldNotErr(t *testing.T) {
 }
 
 type cacheWrapper struct {
-	c storage.Cacher
+	c types.Cacher
 }
 
 func newCacheWrapper() *cacheWrapper {
@@ -458,4 +458,20 @@ func TestLruCache_LenDuringEviction(t *testing.T) {
 	case <-time.After(time.Second):
 		assert.Fail(t, "test failed, deadlock occurred")
 	}
+}
+
+func TestLruCache_GetRemovalStatus(t *testing.T) {
+	t.Parallel()
+
+	key := []byte("key")
+	value := []byte("value")
+
+	cache, _ := lrucache.NewCache(2)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+
+	_ = cache.Put(key, value, 0)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
+
+	cache.Remove(key)
+	assert.Equal(t, types.UnknownRemovalStatus, cache.GetRemovalStatus(nil))
 }

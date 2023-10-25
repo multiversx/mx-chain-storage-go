@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
+	"github.com/multiversx/mx-chain-core-go/data"
 	"github.com/multiversx/mx-chain-core-go/hashing"
 	"github.com/multiversx/mx-chain-core-go/hashing/blake2b"
 	"github.com/multiversx/mx-chain-core-go/hashing/fnv"
 	"github.com/multiversx/mx-chain-core-go/hashing/keccak"
-	storageCore "github.com/multiversx/mx-chain-core-go/storage"
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/fifocache"
@@ -20,6 +20,7 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
 	"github.com/multiversx/mx-chain-storage-go/memorydb"
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
+	"github.com/multiversx/mx-chain-storage-go/rtcache"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
@@ -55,6 +56,7 @@ type ShardIDProviderType string
 
 // Shard id provider types that are currently supported
 const (
+	// BinarySplit is the binary-split type value
 	BinarySplit ShardIDProviderType = "BinarySplit"
 )
 
@@ -90,6 +92,12 @@ type CacheConfig struct {
 	Capacity             uint32
 	SizePerSender        uint32
 	Shards               uint32
+}
+
+// CacheCreationConfig holds the configurable elements of a cache at creation time
+type CacheCreationConfig struct {
+	CacheConfig
+	RemovalTrackingCacheConfig CacheConfig
 }
 
 // String returns a readable representation of the object
@@ -170,6 +178,11 @@ func (u *Unit) Get(key []byte) ([]byte, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 
+	removalStatus := u.cacher.GetRemovalStatus(key)
+	if removalStatus == types.ExplicitlyRemovedStatus {
+		return nil, common.ErrKeyNotFound
+	}
+
 	v, ok := u.cacher.Get(key)
 	var err error
 
@@ -200,8 +213,8 @@ func (u *Unit) GetFromEpoch(key []byte, _ uint32) ([]byte, error) {
 }
 
 // GetBulkFromEpoch will call the Get method for all keys as this storer doesn't handle epochs
-func (u *Unit) GetBulkFromEpoch(keys [][]byte, _ uint32) ([]storageCore.KeyValuePair, error) {
-	results := make([]storageCore.KeyValuePair, 0, len(keys))
+func (u *Unit) GetBulkFromEpoch(keys [][]byte, _ uint32) ([]data.KeyValuePair, error) {
+	results := make([]data.KeyValuePair, 0, len(keys))
 	for _, key := range keys {
 		value, err := u.Get(key)
 		if err != nil {
@@ -211,7 +224,10 @@ func (u *Unit) GetBulkFromEpoch(keys [][]byte, _ uint32) ([]storageCore.KeyValue
 			)
 			continue
 		}
-		keyValue := storageCore.KeyValuePair{Key: key, Value: value}
+		keyValue := data.KeyValuePair{
+			Key:   key,
+			Value: value,
+		}
 		results = append(results, keyValue)
 	}
 	return results, nil
@@ -222,6 +238,11 @@ func (u *Unit) GetBulkFromEpoch(keys [][]byte, _ uint32) ([]storageCore.KeyValue
 func (u *Unit) Has(key []byte) error {
 	u.lock.RLock()
 	defer u.lock.RUnlock()
+
+	removalStatus := u.cacher.GetRemovalStatus(key)
+	if removalStatus == types.ExplicitlyRemovedStatus {
+		return common.ErrKeyNotFound
+	}
 
 	has := u.cacher.Has(key)
 	if has {
@@ -290,7 +311,7 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 }
 
 // NewStorageUnitFromConf creates a new storage unit from a storage unit config
-func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, error) {
+func NewStorageUnitFromConf(cacheConf CacheCreationConfig, dbConf DBConfig) (*Unit, error) {
 	var cache types.Cacher
 	var db types.Persister
 	var err error
@@ -323,7 +344,25 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 }
 
 // NewCache creates a new cache from a cache config
-func NewCache(config CacheConfig) (types.Cacher, error) {
+func NewCache(config CacheCreationConfig) (types.Cacher, error) {
+	mainCache, err := newCache(config.CacheConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.RemovalTrackingCacheConfig.Capacity == 0 {
+		return mainCache, nil // we do not create removal tracking cache instances
+	}
+
+	removalCache, err := newCache(config.RemovalTrackingCacheConfig)
+	if err != nil {
+		return nil, fmt.Errorf("%w when creating removal cache", err)
+	}
+
+	return rtcache.NewRemovalTrackingCache(mainCache, removalCache)
+}
+
+func newCache(config CacheConfig) (types.Cacher, error) {
 	monitoring.MonitorNewCache(config.Name, config.SizeInBytes)
 
 	cacheType := config.Type
