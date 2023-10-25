@@ -12,6 +12,7 @@ import (
 var _ types.Cacher = (*lruCache)(nil)
 
 var log = logger.GetOrCreate("storage/lrucache")
+var _ types.Cacher = (*lruCache)(nil)
 
 // LRUCache implements a Least Recently Used eviction cache
 type lruCache struct {

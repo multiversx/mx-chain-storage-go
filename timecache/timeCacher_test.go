@@ -12,6 +12,7 @@ import (
 
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/timecache"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -361,6 +362,13 @@ func TestTimeCacher_MaxSize(t *testing.T) {
 	cacher, _ := timecache.NewTimeCacher(createArgTimeCacher())
 	assert.False(t, cacher.IsInterfaceNil())
 	assert.Equal(t, math.MaxInt32, cacher.MaxSize())
+}
+
+func TestTimeCacher_GetRemovalStatus(t *testing.T) {
+	t.Parallel()
+
+	cacher, _ := timecache.NewTimeCacher(createArgTimeCacher())
+	assert.Equal(t, types.UnknownRemovalStatus, cacher.GetRemovalStatus(nil))
 }
 
 func TestTimeCacher_ConcurrentOperations(t *testing.T) {

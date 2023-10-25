@@ -17,6 +17,8 @@ type removalTrackingCache struct {
 	removalCache    types.Cacher
 }
 
+var _ types.Cacher = (*removalTrackingCache)(nil)
+
 // NewRemovalTrackingCache will create a new instance of a cache that is able to track removal events
 func NewRemovalTrackingCache(mainCache types.Cacher, removalCache types.Cacher) (*removalTrackingCache, error) {
 	if check.IfNil(mainCache) {

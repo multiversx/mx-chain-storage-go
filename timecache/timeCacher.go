@@ -8,9 +8,11 @@ import (
 
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 var log = logger.GetOrCreate("storage/timecache")
+var _ types.Cacher = (*timeCacher)(nil)
 
 const minDuration = time.Second
 
@@ -204,6 +206,11 @@ func (tc *timeCacher) callAddedDataHandlers(key []byte, value interface{}) {
 		go handler(key, value)
 	}
 	tc.mutAddedDataHandlers.RUnlock()
+}
+
+// GetRemovalStatus will return the unknown status because this implementation does not track removed keys
+func (c *timeCacher) GetRemovalStatus(_ []byte) types.RemovalStatus {
+	return types.UnknownRemovalStatus
 }
 
 // Close will close the internal sweep go routine

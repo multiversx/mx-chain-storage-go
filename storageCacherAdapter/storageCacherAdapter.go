@@ -12,6 +12,7 @@ import (
 )
 
 var log = logger.GetOrCreate("storageCacherAdapter")
+var _ types.Cacher = (*storageCacherAdapter)(nil)
 
 type storageCacherAdapter struct {
 	cacher     types.AdaptedSizedLRUCache
