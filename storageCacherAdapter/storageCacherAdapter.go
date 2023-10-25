@@ -269,6 +269,11 @@ func (c *storageCacherAdapter) RegisterHandler(_ func(_ []byte, _ interface{}), 
 func (c *storageCacherAdapter) UnRegisterHandler(_ string) {
 }
 
+// GetRemovalStatus will return the unknown status because this implementation does not track removed keys
+func (c *storageCacherAdapter) GetRemovalStatus(_ []byte) types.RemovalStatus {
+	return types.UnknownRemovalStatus
+}
+
 // Close closes the underlying db
 func (c *storageCacherAdapter) Close() error {
 	c.lock.Lock()
