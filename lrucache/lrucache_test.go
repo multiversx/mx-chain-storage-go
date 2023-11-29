@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
-	"github.com/multiversx/mx-chain-core-go/storage"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
+	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -421,7 +421,7 @@ func TestLRUCache_CloseShouldNotErr(t *testing.T) {
 }
 
 type cacheWrapper struct {
-	c storage.Cacher
+	c types.Cacher
 }
 
 func newCacheWrapper() *cacheWrapper {
