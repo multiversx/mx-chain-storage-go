@@ -16,9 +16,7 @@ import (
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/fifocache"
-	"github.com/multiversx/mx-chain-storage-go/leveldb"
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
-	"github.com/multiversx/mx-chain-storage-go/memorydb"
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -289,8 +287,12 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 	return sUnit, nil
 }
 
+type PersisterFactoryHandler interface {
+	Create(path string) (types.Persister, error)
+}
+
 // NewStorageUnitFromConf creates a new storage unit from a storage unit config
-func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, error) {
+func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig, persisterFactory PersisterFactoryHandler) (*Unit, error) {
 	var cache types.Cacher
 	var db types.Persister
 	var err error
@@ -307,14 +309,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 		return nil, err
 	}
 
-	argDB := ArgDB{
-		DBType:            dbConf.Type,
-		Path:              dbConf.FilePath,
-		BatchDelaySeconds: dbConf.BatchDelaySeconds,
-		MaxBatchSize:      dbConf.MaxBatchSize,
-		MaxOpenFiles:      dbConf.MaxOpenFiles,
-	}
-	db, err = NewDB(argDB)
+	db, err = NewDB(persisterFactory, dbConf.FilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -378,24 +373,15 @@ type ArgDB struct {
 }
 
 // NewDB creates a new database from database config
-func NewDB(argDB ArgDB) (types.Persister, error) {
+func NewDB(persisterFactory PersisterFactoryHandler, path string) (types.Persister, error) {
 	var db types.Persister
 	var err error
 
 	for i := 0; i < MaxRetriesToCreateDB; i++ {
-		switch argDB.DBType {
-		case LvlDB:
-			db, err = leveldb.NewDB(argDB.Path, argDB.BatchDelaySeconds, argDB.MaxBatchSize, argDB.MaxOpenFiles)
-		case LvlDBSerial:
-			db, err = leveldb.NewSerialDB(argDB.Path, argDB.BatchDelaySeconds, argDB.MaxBatchSize, argDB.MaxOpenFiles)
-		case MemoryDB:
-			db = memorydb.New()
-		default:
-			return nil, common.ErrNotSupportedDBType
-		}
+		persister, err := persisterFactory.Create(path)
 
 		if err == nil {
-			return db, nil
+			return persister, nil
 		}
 
 		// TODO: extract this in a parameter and inject it
