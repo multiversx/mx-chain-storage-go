@@ -3,6 +3,7 @@ package storageUnit
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -72,6 +73,9 @@ const MaxRetriesToCreateDB = 10
 
 // SleepTimeBetweenCreateDBRetries represents the number of seconds to sleep between DB creates
 const SleepTimeBetweenCreateDBRetries = 5 * time.Second
+
+// ErrNilPersisterFactory signals that a nil persister factory handler has been provided
+var ErrNilPersisterFactory = errors.New("nil persister factory")
 
 // UnitConfig holds the configurable elements of the storage unit
 type UnitConfig struct {
@@ -290,6 +294,7 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 // PersisterFactoryHandler defines the behaviour of a component which is able to create persisters
 type PersisterFactoryHandler interface {
 	Create(path string) (types.Persister, error)
+	IsInterfaceNil() bool
 }
 
 // NewStorageUnitFromConf creates a new storage unit from a storage unit config
@@ -375,8 +380,12 @@ type ArgDB struct {
 
 // NewDB creates a new database from database config
 // TODO: refactor to integrate retries loop into persister factory; maybe implement persister
-//			factory separatelly in storage repo
+// factory separatelly in storage repo
 func NewDB(persisterFactory PersisterFactoryHandler, path string) (types.Persister, error) {
+	if check.IfNil(persisterFactory) {
+		return nil, ErrNilPersisterFactory
+	}
+
 	var db types.Persister
 	var err error
 
