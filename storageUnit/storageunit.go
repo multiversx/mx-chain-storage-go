@@ -374,6 +374,8 @@ type ArgDB struct {
 }
 
 // NewDB creates a new database from database config
+// TODO: refactor to integrate retries loop into persister factory; maybe implement persister
+//			factory separatelly in storage repo
 func NewDB(persisterFactory PersisterFactoryHandler, path string) (types.Persister, error) {
 	var db types.Persister
 	var err error
