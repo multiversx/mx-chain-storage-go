@@ -287,6 +287,7 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 	return sUnit, nil
 }
 
+// PersisterFactoryHandler defines the behaviour of a component which is able to create persisters
 type PersisterFactoryHandler interface {
 	Create(path string) (types.Persister, error)
 }
@@ -378,10 +379,10 @@ func NewDB(persisterFactory PersisterFactoryHandler, path string) (types.Persist
 	var err error
 
 	for i := 0; i < MaxRetriesToCreateDB; i++ {
-		persister, err := persisterFactory.Create(path)
+		db, err = persisterFactory.Create(path)
 
 		if err == nil {
-			return persister, nil
+			return db, nil
 		}
 
 		// TODO: extract this in a parameter and inject it
