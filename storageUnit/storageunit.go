@@ -294,6 +294,7 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 // PersisterFactoryHandler defines the behaviour of a component which is able to create persisters
 type PersisterFactoryHandler interface {
 	Create(path string) (types.Persister, error)
+	CreateWithRetries(path string) (types.Persister, error)
 	IsInterfaceNil() bool
 }
 
@@ -315,7 +316,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig, persisterFac
 		return nil, err
 	}
 
-	db, err = NewDB(persisterFactory, dbConf.FilePath)
+	db, err = persisterFactory.CreateWithRetries(dbConf.FilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -367,43 +368,6 @@ func NewCache(config CacheConfig) (types.Cacher, error) {
 	}
 
 	return cacher, nil
-}
-
-// ArgDB is a structure that is used to create a new storage.Persister implementation
-type ArgDB struct {
-	DBType            DBType
-	Path              string
-	BatchDelaySeconds int
-	MaxBatchSize      int
-	MaxOpenFiles      int
-}
-
-// NewDB creates a new database from database config
-// TODO: refactor to integrate retries loop into persister factory; maybe implement persister
-// factory separatelly in storage repo
-func NewDB(persisterFactory PersisterFactoryHandler, path string) (types.Persister, error) {
-	if check.IfNil(persisterFactory) {
-		return nil, ErrNilPersisterFactory
-	}
-
-	var db types.Persister
-	var err error
-
-	for i := 0; i < MaxRetriesToCreateDB; i++ {
-		db, err = persisterFactory.Create(path)
-
-		if err == nil {
-			return db, nil
-		}
-
-		// TODO: extract this in a parameter and inject it
-		time.Sleep(SleepTimeBetweenCreateDBRetries)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
 }
 
 // NewHasher will return a hasher implementation form the string HasherType

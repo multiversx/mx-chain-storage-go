@@ -25,6 +25,11 @@ func NewPersisterFactoryHandlerMock(dbType storageUnit.DBType, batchDelaySeconds
 	}
 }
 
+// CreateWithRetries -
+func (mock *persisterFactoryHandlerMock) CreateWithRetries(path string) (types.Persister, error) {
+	return mock.Create(path)
+}
+
 // Create -
 func (mock *persisterFactoryHandlerMock) Create(path string) (types.Persister, error) {
 	switch mock.dbType {

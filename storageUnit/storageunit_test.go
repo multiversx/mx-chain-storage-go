@@ -254,54 +254,6 @@ func TestCreateCacheFromConfOK(t *testing.T) {
 	assert.NotNil(t, cacher, "valid cacher expected but got nil")
 }
 
-func TestCreateDBFromConfWrongType(t *testing.T) {
-	persisterFactory := testscommon.NewPersisterFactoryHandlerMock(
-		"NotLvlDB",
-		10,
-		10,
-		10,
-	)
-	persister, err := storageUnit.NewDB(persisterFactory, "test")
-
-	assert.NotNil(t, err, "error expected")
-	assert.Nil(t, persister, "persister expected to be nil, but got %s", persister)
-}
-
-func TestCreateDBFromConfWrongFileNameLvlDB(t *testing.T) {
-	if testing.Short() {
-		t.Skip("this is not a short test")
-	}
-
-	path := ""
-	persisterFactory := testscommon.NewPersisterFactoryHandlerMock(
-		storageUnit.LvlDB,
-		10,
-		10,
-		10,
-	)
-
-	persister, err := storageUnit.NewDB(persisterFactory, path)
-	assert.NotNil(t, err, "error expected")
-	assert.Nil(t, persister, "persister expected to be nil, but got %s", persister)
-}
-
-func TestCreateDBFromConfLvlDBOk(t *testing.T) {
-	path := t.TempDir()
-	persisterFactory := testscommon.NewPersisterFactoryHandlerMock(
-		storageUnit.LvlDB,
-		10,
-		10,
-		10,
-	)
-
-	persister, err := storageUnit.NewDB(persisterFactory, path)
-	assert.Nil(t, err, "no error expected")
-	assert.NotNil(t, persister, "valid persister expected but got nil")
-
-	err = persister.Destroy()
-	assert.Nil(t, err, "no error expected destroying the persister")
-}
-
 func TestNewStorageUnit_FromConfWrongCacheSizeVsBatchSize(t *testing.T) {
 
 	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
