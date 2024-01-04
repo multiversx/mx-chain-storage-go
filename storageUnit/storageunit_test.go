@@ -10,6 +10,7 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
 	"github.com/multiversx/mx-chain-storage-go/memorydb"
 	"github.com/multiversx/mx-chain-storage-go/storageUnit"
+	"github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -254,14 +255,13 @@ func TestCreateCacheFromConfOK(t *testing.T) {
 }
 
 func TestCreateDBFromConfWrongType(t *testing.T) {
-	arg := storageUnit.ArgDB{
-		DBType:            "NotLvlDB",
-		Path:              "test",
-		BatchDelaySeconds: 10,
-		MaxBatchSize:      10,
-		MaxOpenFiles:      10,
-	}
-	persister, err := storageUnit.NewDB(arg)
+	persisterFactory := testscommon.NewPersisterFactoryHandlerMock(
+		"NotLvlDB",
+		10,
+		10,
+		10,
+	)
+	persister, err := storageUnit.NewDB(persisterFactory, "test")
 
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, persister, "persister expected to be nil, but got %s", persister)
@@ -272,27 +272,29 @@ func TestCreateDBFromConfWrongFileNameLvlDB(t *testing.T) {
 		t.Skip("this is not a short test")
 	}
 
-	arg := storageUnit.ArgDB{
-		DBType:            storageUnit.LvlDB,
-		Path:              "",
-		BatchDelaySeconds: 10,
-		MaxBatchSize:      10,
-		MaxOpenFiles:      10,
-	}
-	persister, err := storageUnit.NewDB(arg)
+	path := ""
+	persisterFactory := testscommon.NewPersisterFactoryHandlerMock(
+		storageUnit.LvlDB,
+		10,
+		10,
+		10,
+	)
+
+	persister, err := storageUnit.NewDB(persisterFactory, path)
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, persister, "persister expected to be nil, but got %s", persister)
 }
 
 func TestCreateDBFromConfLvlDBOk(t *testing.T) {
-	arg := storageUnit.ArgDB{
-		DBType:            storageUnit.LvlDB,
-		Path:              t.TempDir(),
-		BatchDelaySeconds: 10,
-		MaxBatchSize:      10,
-		MaxOpenFiles:      10,
-	}
-	persister, err := storageUnit.NewDB(arg)
+	path := t.TempDir()
+	persisterFactory := testscommon.NewPersisterFactoryHandlerMock(
+		storageUnit.LvlDB,
+		10,
+		10,
+		10,
+	)
+
+	persister, err := storageUnit.NewDB(persisterFactory, path)
 	assert.Nil(t, err, "no error expected")
 	assert.NotNil(t, persister, "valid persister expected but got nil")
 
@@ -311,7 +313,9 @@ func TestNewStorageUnit_FromConfWrongCacheSizeVsBatchSize(t *testing.T) {
 		MaxBatchSize:      11,
 		BatchDelaySeconds: 1,
 		MaxOpenFiles:      10,
-	})
+	},
+		testscommon.NewPersisterFactoryHandlerMock(storageUnit.LvlDB, 11, 1, 10),
+	)
 
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
@@ -328,7 +332,9 @@ func TestNewStorageUnit_FromConfWrongCacheConfig(t *testing.T) {
 		BatchDelaySeconds: 1,
 		MaxBatchSize:      1,
 		MaxOpenFiles:      10,
-	})
+	},
+		testscommon.NewPersisterFactoryHandlerMock(storageUnit.LvlDB, 1, 1, 10),
+	)
 
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
@@ -341,7 +347,9 @@ func TestNewStorageUnit_FromConfWrongDBConfig(t *testing.T) {
 	}, storageUnit.DBConfig{
 		FilePath: "Blocks",
 		Type:     "NotLvlDB",
-	})
+	},
+		testscommon.NewPersisterFactoryHandlerMock("NotLvlDB", 0, 0, 0),
+	)
 
 	assert.NotNil(t, err, "error expected")
 	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
@@ -357,7 +365,9 @@ func TestNewStorageUnit_FromConfLvlDBOk(t *testing.T) {
 		MaxBatchSize:      1,
 		BatchDelaySeconds: 1,
 		MaxOpenFiles:      10,
-	})
+	},
+		testscommon.NewPersisterFactoryHandlerMock(storageUnit.LvlDB, 1, 1, 10),
+	)
 
 	assert.Nil(t, err, "no error expected but got %s", err)
 	assert.NotNil(t, storer, "valid storer expected but got nil")
@@ -375,7 +385,9 @@ func TestNewStorageUnit_ShouldWorkLvlDB(t *testing.T) {
 		BatchDelaySeconds: 1,
 		MaxBatchSize:      1,
 		MaxOpenFiles:      10,
-	})
+	},
+		testscommon.NewPersisterFactoryHandlerMock(storageUnit.LvlDB, 1, 1, 10),
+	)
 
 	assert.Nil(t, err, "no error expected but got %s", err)
 	assert.NotNil(t, storer, "valid storer expected but got nil")

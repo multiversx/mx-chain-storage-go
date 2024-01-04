@@ -3,6 +3,7 @@ package storageUnit
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -16,9 +17,7 @@ import (
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/fifocache"
-	"github.com/multiversx/mx-chain-storage-go/leveldb"
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
-	"github.com/multiversx/mx-chain-storage-go/memorydb"
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -34,7 +33,7 @@ type DBType string
 // HasherType represents the type of the supported hash functions
 type HasherType string
 
-// LRUCache is currently the only supported Cache type
+// Cache types that are currently supported
 const (
 	LRUCache         CacheType = "LRU"
 	SizeLRUCache     CacheType = "SizeLRU"
@@ -43,12 +42,19 @@ const (
 
 var log = logger.GetOrCreate("storage/storageUnit")
 
-// LvlDB currently the only supported DBs
-// More to be added
+// DB types that are currently supported
 const (
 	LvlDB       DBType = "LvlDB"
 	LvlDBSerial DBType = "LvlDBSerial"
 	MemoryDB    DBType = "MemoryDB"
+)
+
+// ShardIDProviderType represents the type for the supported shard id provider
+type ShardIDProviderType string
+
+// Shard id provider types that are currently supported
+const (
+	BinarySplit ShardIDProviderType = "BinarySplit"
 )
 
 const (
@@ -67,6 +73,9 @@ const MaxRetriesToCreateDB = 10
 
 // SleepTimeBetweenCreateDBRetries represents the number of seconds to sleep between DB creates
 const SleepTimeBetweenCreateDBRetries = 5 * time.Second
+
+// ErrNilPersisterFactory signals that a nil persister factory handler has been provided
+var ErrNilPersisterFactory = errors.New("nil persister factory")
 
 // UnitConfig holds the configurable elements of the storage unit
 type UnitConfig struct {
@@ -282,8 +291,14 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 	return sUnit, nil
 }
 
+// PersisterFactoryHandler defines the behaviour of a component which is able to create persisters
+type PersisterFactoryHandler interface {
+	Create(path string) (types.Persister, error)
+	IsInterfaceNil() bool
+}
+
 // NewStorageUnitFromConf creates a new storage unit from a storage unit config
-func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, error) {
+func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig, persisterFactory PersisterFactoryHandler) (*Unit, error) {
 	var cache types.Cacher
 	var db types.Persister
 	var err error
@@ -300,14 +315,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig) (*Unit, erro
 		return nil, err
 	}
 
-	argDB := ArgDB{
-		DBType:            dbConf.Type,
-		Path:              dbConf.FilePath,
-		BatchDelaySeconds: dbConf.BatchDelaySeconds,
-		MaxBatchSize:      dbConf.MaxBatchSize,
-		MaxOpenFiles:      dbConf.MaxOpenFiles,
-	}
-	db, err = NewDB(argDB)
+	db, err = NewDB(persisterFactory, dbConf.FilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -371,21 +379,18 @@ type ArgDB struct {
 }
 
 // NewDB creates a new database from database config
-func NewDB(argDB ArgDB) (types.Persister, error) {
+// TODO: refactor to integrate retries loop into persister factory; maybe implement persister
+// factory separatelly in storage repo
+func NewDB(persisterFactory PersisterFactoryHandler, path string) (types.Persister, error) {
+	if check.IfNil(persisterFactory) {
+		return nil, ErrNilPersisterFactory
+	}
+
 	var db types.Persister
 	var err error
 
 	for i := 0; i < MaxRetriesToCreateDB; i++ {
-		switch argDB.DBType {
-		case LvlDB:
-			db, err = leveldb.NewDB(argDB.Path, argDB.BatchDelaySeconds, argDB.MaxBatchSize, argDB.MaxOpenFiles)
-		case LvlDBSerial:
-			db, err = leveldb.NewSerialDB(argDB.Path, argDB.BatchDelaySeconds, argDB.MaxBatchSize, argDB.MaxOpenFiles)
-		case MemoryDB:
-			db = memorydb.New()
-		default:
-			return nil, common.ErrNotSupportedDBType
-		}
+		db, err = persisterFactory.Create(path)
 
 		if err == nil {
 			return db, nil
