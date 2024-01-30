@@ -3,17 +3,12 @@ package storageUnit
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-core-go/data"
-	"github.com/multiversx/mx-chain-core-go/hashing"
-	"github.com/multiversx/mx-chain-core-go/hashing/blake2b"
-	"github.com/multiversx/mx-chain-core-go/hashing/fnv"
-	"github.com/multiversx/mx-chain-core-go/hashing/keccak"
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/fifocache"
@@ -29,9 +24,6 @@ type CacheType string
 
 // DBType represents the type of the supported databases
 type DBType string
-
-// HasherType represents the type of the supported hash functions
-type HasherType string
 
 // Cache types that are currently supported
 const (
@@ -57,15 +49,6 @@ const (
 	BinarySplit ShardIDProviderType = "BinarySplit"
 )
 
-const (
-	// Keccak is the string representation of the keccak hashing function
-	Keccak HasherType = "Keccak"
-	// Blake2b is the string representation of the blake2b hashing function
-	Blake2b HasherType = "Blake2b"
-	// Fnv is the string representation of the fnv hashing function
-	Fnv HasherType = "Fnv"
-)
-
 const minimumSizeForLRUCache = 1024
 
 // MaxRetriesToCreateDB represents the maximum number of times to try to create DB if it failed
@@ -74,13 +57,11 @@ const MaxRetriesToCreateDB = 10
 // SleepTimeBetweenCreateDBRetries represents the number of seconds to sleep between DB creates
 const SleepTimeBetweenCreateDBRetries = 5 * time.Second
 
-// ErrNilPersisterFactory signals that a nil persister factory handler has been provided
-var ErrNilPersisterFactory = errors.New("nil persister factory")
-
-// UnitConfig holds the configurable elements of the storage unit
-type UnitConfig struct {
-	CacheConf CacheConfig
-	DBConf    DBConfig
+// PersisterFactoryHandler defines the behaviour of a component which is able to create persisters
+type PersisterFactoryHandler interface {
+	Create(path string) (types.Persister, error)
+	CreateWithRetries(path string) (types.Persister, error)
+	IsInterfaceNil() bool
 }
 
 // CacheConfig holds the configurable elements of a cache
@@ -119,6 +100,50 @@ type Unit struct {
 	lock      sync.RWMutex
 	persister types.Persister
 	cacher    types.Cacher
+}
+
+// NewStorageUnit is the constructor for the storage unit, creating a new storage unit
+// from the given cacher and persister.
+func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
+	if check.IfNil(p) {
+		return nil, common.ErrNilPersister
+	}
+	if check.IfNil(c) {
+		return nil, common.ErrNilCacher
+	}
+
+	sUnit := &Unit{
+		persister: p,
+		cacher:    c,
+	}
+
+	return sUnit, nil
+}
+
+// NewStorageUnitFromConf creates a new storage unit from a storage unit config
+func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig, persisterFactory PersisterFactoryHandler) (*Unit, error) {
+	var cache types.Cacher
+	var db types.Persister
+	var err error
+
+	// TODO: if there will be a differentiation between the creation or opening of a DB, the DB could be destroyed
+	// in case of a failure while creating (not opening).
+
+	if dbConf.MaxBatchSize > int(cacheConf.Capacity) {
+		return nil, common.ErrCacheSizeIsLowerThanBatchSize
+	}
+
+	cache, err = NewCache(cacheConf)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err = persisterFactory.CreateWithRetries(dbConf.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewStorageUnit(cache, db)
 }
 
 // Put adds data to both cache and persistence medium
@@ -273,57 +298,6 @@ func (u *Unit) IsInterfaceNil() bool {
 	return u == nil
 }
 
-// NewStorageUnit is the constructor for the storage unit, creating a new storage unit
-// from the given cacher and persister.
-func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
-	if check.IfNil(p) {
-		return nil, common.ErrNilPersister
-	}
-	if check.IfNil(c) {
-		return nil, common.ErrNilCacher
-	}
-
-	sUnit := &Unit{
-		persister: p,
-		cacher:    c,
-	}
-
-	return sUnit, nil
-}
-
-// PersisterFactoryHandler defines the behaviour of a component which is able to create persisters
-type PersisterFactoryHandler interface {
-	Create(path string) (types.Persister, error)
-	CreateWithRetries(path string) (types.Persister, error)
-	IsInterfaceNil() bool
-}
-
-// NewStorageUnitFromConf creates a new storage unit from a storage unit config
-func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig, persisterFactory PersisterFactoryHandler) (*Unit, error) {
-	var cache types.Cacher
-	var db types.Persister
-	var err error
-
-	// TODO: if there will be a differentiation between the creation or opening of a DB, the DB could be destroyed
-	// in case of a failure while creating (not opening).
-
-	if dbConf.MaxBatchSize > int(cacheConf.Capacity) {
-		return nil, common.ErrCacheSizeIsLowerThanBatchSize
-	}
-
-	cache, err = NewCache(cacheConf)
-	if err != nil {
-		return nil, err
-	}
-
-	db, err = persisterFactory.CreateWithRetries(dbConf.FilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewStorageUnit(cache, db)
-}
-
 // NewCache creates a new cache from a cache config
 func NewCache(config CacheConfig) (types.Cacher, error) {
 	monitoring.MonitorNewCache(config.Name, config.SizeInBytes)
@@ -368,18 +342,4 @@ func NewCache(config CacheConfig) (types.Cacher, error) {
 	}
 
 	return cacher, nil
-}
-
-// NewHasher will return a hasher implementation form the string HasherType
-func (h HasherType) NewHasher() (hashing.Hasher, error) {
-	switch h {
-	case Keccak:
-		return keccak.NewKeccak(), nil
-	case Blake2b:
-		return blake2b.NewBlake2b(), nil
-	case Fnv:
-		return fnv.NewFnv(), nil
-	default:
-		return nil, common.ErrNotSupportedHashType
-	}
 }
