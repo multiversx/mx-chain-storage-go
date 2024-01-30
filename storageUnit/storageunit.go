@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
+	"github.com/multiversx/mx-chain-core-go/data"
 	"github.com/multiversx/mx-chain-core-go/hashing"
 	"github.com/multiversx/mx-chain-core-go/hashing/blake2b"
 	"github.com/multiversx/mx-chain-core-go/hashing/fnv"
 	"github.com/multiversx/mx-chain-core-go/hashing/keccak"
-	storageCore "github.com/multiversx/mx-chain-core-go/storage"
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/fifocache"
@@ -202,8 +202,8 @@ func (u *Unit) GetFromEpoch(key []byte, _ uint32) ([]byte, error) {
 }
 
 // GetBulkFromEpoch will call the Get method for all keys as this storer doesn't handle epochs
-func (u *Unit) GetBulkFromEpoch(keys [][]byte, _ uint32) ([]storageCore.KeyValuePair, error) {
-	results := make([]storageCore.KeyValuePair, 0, len(keys))
+func (u *Unit) GetBulkFromEpoch(keys [][]byte, _ uint32) ([]data.KeyValuePair, error) {
+	results := make([]data.KeyValuePair, 0, len(keys))
 	for _, key := range keys {
 		value, err := u.Get(key)
 		if err != nil {
@@ -213,7 +213,7 @@ func (u *Unit) GetBulkFromEpoch(keys [][]byte, _ uint32) ([]storageCore.KeyValue
 			)
 			continue
 		}
-		keyValue := storageCore.KeyValuePair{Key: key, Value: value}
+		keyValue := data.KeyValuePair{Key: key, Value: value}
 		results = append(results, keyValue)
 	}
 	return results, nil
