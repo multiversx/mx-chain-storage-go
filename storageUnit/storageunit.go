@@ -2,96 +2,26 @@ package storageUnit
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-core-go/data"
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
-	"github.com/multiversx/mx-chain-storage-go/fifocache"
-	"github.com/multiversx/mx-chain-storage-go/lrucache"
-	"github.com/multiversx/mx-chain-storage-go/monitoring"
+	"github.com/multiversx/mx-chain-storage-go/factory"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 var _ types.Storer = (*Unit)(nil)
 
-// CacheType represents the type of the supported caches
-type CacheType string
-
-// DBType represents the type of the supported databases
-type DBType string
-
-// Cache types that are currently supported
-const (
-	LRUCache         CacheType = "LRU"
-	SizeLRUCache     CacheType = "SizeLRU"
-	FIFOShardedCache CacheType = "FIFOSharded"
-)
-
 var log = logger.GetOrCreate("storage/storageUnit")
-
-// DB types that are currently supported
-const (
-	LvlDB       DBType = "LvlDB"
-	LvlDBSerial DBType = "LvlDBSerial"
-	MemoryDB    DBType = "MemoryDB"
-)
-
-// ShardIDProviderType represents the type for the supported shard id provider
-type ShardIDProviderType string
-
-// Shard id provider types that are currently supported
-const (
-	BinarySplit ShardIDProviderType = "BinarySplit"
-)
-
-const minimumSizeForLRUCache = 1024
-
-// MaxRetriesToCreateDB represents the maximum number of times to try to create DB if it failed
-const MaxRetriesToCreateDB = 10
-
-// SleepTimeBetweenCreateDBRetries represents the number of seconds to sleep between DB creates
-const SleepTimeBetweenCreateDBRetries = 5 * time.Second
 
 // PersisterFactoryHandler defines the behaviour of a component which is able to create persisters
 type PersisterFactoryHandler interface {
 	Create(path string) (types.Persister, error)
 	CreateWithRetries(path string) (types.Persister, error)
 	IsInterfaceNil() bool
-}
-
-// CacheConfig holds the configurable elements of a cache
-type CacheConfig struct {
-	Name                 string
-	Type                 CacheType
-	SizeInBytes          uint64
-	SizeInBytesPerSender uint32
-	Capacity             uint32
-	SizePerSender        uint32
-	Shards               uint32
-}
-
-// String returns a readable representation of the object
-func (config *CacheConfig) String() string {
-	bytes, err := json.Marshal(config)
-	if err != nil {
-		log.Error("CacheConfig.String()", "err", err)
-	}
-
-	return string(bytes)
-}
-
-// DBConfig holds the configurable elements of a database
-type DBConfig struct {
-	FilePath          string
-	Type              DBType
-	BatchDelaySeconds int
-	MaxBatchSize      int
-	MaxOpenFiles      int
 }
 
 // Unit represents a storer's data bank
@@ -121,7 +51,7 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 }
 
 // NewStorageUnitFromConf creates a new storage unit from a storage unit config
-func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig, persisterFactory PersisterFactoryHandler) (*Unit, error) {
+func NewStorageUnitFromConf(cacheConf common.CacheConfig, dbConf common.DBConfig, persisterFactory PersisterFactoryHandler) (*Unit, error) {
 	var cache types.Cacher
 	var db types.Persister
 	var err error
@@ -133,7 +63,7 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig, persisterFac
 		return nil, common.ErrCacheSizeIsLowerThanBatchSize
 	}
 
-	cache, err = NewCache(cacheConf)
+	cache, err = factory.NewCache(cacheConf)
 	if err != nil {
 		return nil, err
 	}
@@ -296,50 +226,4 @@ func (u *Unit) DestroyUnit() error {
 // IsInterfaceNil returns true if there is no value under the interface
 func (u *Unit) IsInterfaceNil() bool {
 	return u == nil
-}
-
-// NewCache creates a new cache from a cache config
-func NewCache(config CacheConfig) (types.Cacher, error) {
-	monitoring.MonitorNewCache(config.Name, config.SizeInBytes)
-
-	cacheType := config.Type
-	capacity := config.Capacity
-	shards := config.Shards
-	sizeInBytes := config.SizeInBytes
-
-	var cacher types.Cacher
-	var err error
-
-	switch cacheType {
-	case LRUCache:
-		if sizeInBytes != 0 {
-			return nil, common.ErrLRUCacheWithProvidedSize
-		}
-
-		cacher, err = lrucache.NewCache(int(capacity))
-	case SizeLRUCache:
-		if sizeInBytes < minimumSizeForLRUCache {
-			return nil, fmt.Errorf("%w, provided %d, minimum %d",
-				common.ErrLRUCacheInvalidSize,
-				sizeInBytes,
-				minimumSizeForLRUCache,
-			)
-		}
-
-		cacher, err = lrucache.NewCacheWithSizeInBytes(int(capacity), int64(sizeInBytes))
-	case FIFOShardedCache:
-		cacher, err = fifocache.NewShardedCache(int(capacity), int(shards))
-		if err != nil {
-			return nil, err
-		}
-		// add other implementations if required
-	default:
-		return nil, common.ErrNotSupportedCacheType
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return cacher, nil
 }

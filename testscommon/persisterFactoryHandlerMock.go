@@ -4,19 +4,18 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/leveldb"
 	"github.com/multiversx/mx-chain-storage-go/memorydb"
-	"github.com/multiversx/mx-chain-storage-go/storageUnit"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 type persisterFactoryHandlerMock struct {
-	dbType            storageUnit.DBType
+	dbType            common.DBType
 	batchDelaySeconds int
 	maxBatchSize      int
 	maxOpenFiles      int
 }
 
 // NewPersisterFactoryHandlerMock -
-func NewPersisterFactoryHandlerMock(dbType storageUnit.DBType, batchDelaySeconds int, maxBatchSize int, maxOpenFiles int) *persisterFactoryHandlerMock {
+func NewPersisterFactoryHandlerMock(dbType common.DBType, batchDelaySeconds int, maxBatchSize int, maxOpenFiles int) *persisterFactoryHandlerMock {
 	return &persisterFactoryHandlerMock{
 		dbType:            dbType,
 		batchDelaySeconds: batchDelaySeconds,
@@ -33,11 +32,11 @@ func (mock *persisterFactoryHandlerMock) CreateWithRetries(path string) (types.P
 // Create -
 func (mock *persisterFactoryHandlerMock) Create(path string) (types.Persister, error) {
 	switch mock.dbType {
-	case storageUnit.LvlDB:
+	case common.LvlDB:
 		return leveldb.NewDB(path, mock.batchDelaySeconds, mock.maxBatchSize, mock.maxOpenFiles)
-	case storageUnit.LvlDBSerial:
+	case common.LvlDBSerial:
 		return leveldb.NewSerialDB(path, mock.batchDelaySeconds, mock.maxBatchSize, mock.maxOpenFiles)
-	case storageUnit.MemoryDB:
+	case common.MemoryDB:
 		return memorydb.New(), nil
 	default:
 		return nil, common.ErrNotSupportedDBType

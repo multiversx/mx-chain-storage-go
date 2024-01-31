@@ -1,9 +1,6 @@
 package storageUnit_test
 
 import (
-	"fmt"
-	"math/rand"
-	"strconv"
 	"testing"
 
 	"github.com/multiversx/mx-chain-storage-go/common"
@@ -13,12 +10,6 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/stretchr/testify/assert"
 )
-
-func logError(err error) {
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-}
 
 func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 	mdb := memorydb.New()
@@ -32,6 +23,8 @@ func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 }
 
 func TestStorageUnitNilPersister(t *testing.T) {
+	t.Parallel()
+
 	cache, err1 := lrucache.NewCache(10)
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
@@ -42,6 +35,8 @@ func TestStorageUnitNilPersister(t *testing.T) {
 }
 
 func TestStorageUnitNilCacher(t *testing.T) {
+	t.Parallel()
+
 	mdb := memorydb.New()
 
 	_, err1 := storageUnit.NewStorageUnit(nil, mdb)
@@ -49,6 +44,8 @@ func TestStorageUnitNilCacher(t *testing.T) {
 }
 
 func TestStorageUnit(t *testing.T) {
+	t.Parallel()
+
 	cache, err1 := lrucache.NewCache(10)
 	mdb := memorydb.New()
 
@@ -59,6 +56,8 @@ func TestStorageUnit(t *testing.T) {
 }
 
 func TestPutNotPresent(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key0"), []byte("value0")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -71,6 +70,8 @@ func TestPutNotPresent(t *testing.T) {
 }
 
 func TestPutNotPresentCache(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key1"), []byte("value1")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -85,6 +86,8 @@ func TestPutNotPresentCache(t *testing.T) {
 }
 
 func TestPutPresentShouldOverwriteValue(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key2"), []byte("value2")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -101,6 +104,8 @@ func TestPutPresentShouldOverwriteValue(t *testing.T) {
 }
 
 func TestGetNotPresent(t *testing.T) {
+	t.Parallel()
+
 	key := []byte("key3")
 	s := initStorageUnit(t, 10)
 	v, err := s.Get(key)
@@ -109,6 +114,8 @@ func TestGetNotPresent(t *testing.T) {
 }
 
 func TestGetNotPresentCache(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key4"), []byte("value4")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -124,6 +131,8 @@ func TestGetNotPresentCache(t *testing.T) {
 }
 
 func TestGetPresent(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key5"), []byte("value4")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -137,6 +146,8 @@ func TestGetPresent(t *testing.T) {
 }
 
 func TestHasNotPresent(t *testing.T) {
+	t.Parallel()
+
 	key := []byte("key6")
 	s := initStorageUnit(t, 10)
 	err := s.Has(key)
@@ -146,6 +157,8 @@ func TestHasNotPresent(t *testing.T) {
 }
 
 func TestHasNotPresentCache(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key7"), []byte("value7")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -160,6 +173,8 @@ func TestHasNotPresentCache(t *testing.T) {
 }
 
 func TestHasPresent(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key8"), []byte("value8")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -172,6 +187,8 @@ func TestHasPresent(t *testing.T) {
 }
 
 func TestDeleteNotPresent(t *testing.T) {
+	t.Parallel()
+
 	key := []byte("key12")
 	s := initStorageUnit(t, 10)
 	err := s.Remove(key)
@@ -180,6 +197,8 @@ func TestDeleteNotPresent(t *testing.T) {
 }
 
 func TestDeleteNotPresentCache(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key13"), []byte("value13")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -201,6 +220,8 @@ func TestDeleteNotPresentCache(t *testing.T) {
 }
 
 func TestDeletePresent(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key14"), []byte("value14")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -221,6 +242,8 @@ func TestDeletePresent(t *testing.T) {
 }
 
 func TestClearCacheNotAffectPersist(t *testing.T) {
+	t.Parallel()
+
 	key, val := []byte("key15"), []byte("value15")
 	s := initStorageUnit(t, 10)
 	err := s.Put(key, val)
@@ -233,40 +256,27 @@ func TestClearCacheNotAffectPersist(t *testing.T) {
 }
 
 func TestDestroyUnitNoError(t *testing.T) {
+	t.Parallel()
+
 	s := initStorageUnit(t, 10)
 	err := s.DestroyUnit()
 	assert.Nil(t, err, "no error expected, but got %s", err)
 }
 
-func TestCreateCacheFromConfWrongType(t *testing.T) {
-
-	cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: "NotLRU", Capacity: 100, Shards: 1, SizeInBytes: 0})
-
-	assert.NotNil(t, err, "error expected")
-	assert.Nil(t, cacher, "cacher expected to be nil, but got %s", cacher)
-}
-
-func TestCreateCacheFromConfOK(t *testing.T) {
-
-	cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.LRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0})
-
-	assert.Nil(t, err, "no error expected but got %s", err)
-	assert.NotNil(t, cacher, "valid cacher expected but got nil")
-}
-
 func TestNewStorageUnit_FromConfWrongCacheSizeVsBatchSize(t *testing.T) {
+	t.Parallel()
 
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
+	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
 		Capacity: 10,
-		Type:     storageUnit.LRUCache,
-	}, storageUnit.DBConfig{
+		Type:     common.LRUCache,
+	}, common.DBConfig{
 		FilePath:          "Blocks",
-		Type:              storageUnit.LvlDB,
+		Type:              common.LvlDB,
 		MaxBatchSize:      11,
 		BatchDelaySeconds: 1,
 		MaxOpenFiles:      10,
 	},
-		testscommon.NewPersisterFactoryHandlerMock(storageUnit.LvlDB, 11, 1, 10),
+		testscommon.NewPersisterFactoryHandlerMock(common.LvlDB, 11, 1, 10),
 	)
 
 	assert.NotNil(t, err, "error expected")
@@ -274,18 +284,19 @@ func TestNewStorageUnit_FromConfWrongCacheSizeVsBatchSize(t *testing.T) {
 }
 
 func TestNewStorageUnit_FromConfWrongCacheConfig(t *testing.T) {
+	t.Parallel()
 
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
+	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
 		Capacity: 10,
 		Type:     "NotLRU",
-	}, storageUnit.DBConfig{
+	}, common.DBConfig{
 		FilePath:          "Blocks",
-		Type:              storageUnit.LvlDB,
+		Type:              common.LvlDB,
 		BatchDelaySeconds: 1,
 		MaxBatchSize:      1,
 		MaxOpenFiles:      10,
 	},
-		testscommon.NewPersisterFactoryHandlerMock(storageUnit.LvlDB, 1, 1, 10),
+		testscommon.NewPersisterFactoryHandlerMock(common.LvlDB, 1, 1, 10),
 	)
 
 	assert.NotNil(t, err, "error expected")
@@ -293,10 +304,12 @@ func TestNewStorageUnit_FromConfWrongCacheConfig(t *testing.T) {
 }
 
 func TestNewStorageUnit_FromConfWrongDBConfig(t *testing.T) {
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
+	t.Parallel()
+
+	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
 		Capacity: 10,
-		Type:     storageUnit.LRUCache,
-	}, storageUnit.DBConfig{
+		Type:     common.LRUCache,
+	}, common.DBConfig{
 		FilePath: "Blocks",
 		Type:     "NotLvlDB",
 	},
@@ -308,17 +321,19 @@ func TestNewStorageUnit_FromConfWrongDBConfig(t *testing.T) {
 }
 
 func TestNewStorageUnit_FromConfLvlDBOk(t *testing.T) {
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
+	t.Parallel()
+
+	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
 		Capacity: 10,
-		Type:     storageUnit.LRUCache,
-	}, storageUnit.DBConfig{
+		Type:     common.LRUCache,
+	}, common.DBConfig{
 		FilePath:          "Blocks",
-		Type:              storageUnit.LvlDB,
+		Type:              common.LvlDB,
 		MaxBatchSize:      1,
 		BatchDelaySeconds: 1,
 		MaxOpenFiles:      10,
 	},
-		testscommon.NewPersisterFactoryHandlerMock(storageUnit.LvlDB, 1, 1, 10),
+		testscommon.NewPersisterFactoryHandlerMock(common.LvlDB, 1, 1, 10),
 	)
 
 	assert.Nil(t, err, "no error expected but got %s", err)
@@ -328,90 +343,23 @@ func TestNewStorageUnit_FromConfLvlDBOk(t *testing.T) {
 }
 
 func TestNewStorageUnit_ShouldWorkLvlDB(t *testing.T) {
-	storer, err := storageUnit.NewStorageUnitFromConf(storageUnit.CacheConfig{
+	t.Parallel()
+
+	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
 		Capacity: 10,
-		Type:     storageUnit.LRUCache,
-	}, storageUnit.DBConfig{
+		Type:     common.LRUCache,
+	}, common.DBConfig{
 		FilePath:          "Blocks",
-		Type:              storageUnit.LvlDB,
+		Type:              common.LvlDB,
 		BatchDelaySeconds: 1,
 		MaxBatchSize:      1,
 		MaxOpenFiles:      10,
 	},
-		testscommon.NewPersisterFactoryHandlerMock(storageUnit.LvlDB, 1, 1, 10),
+		testscommon.NewPersisterFactoryHandlerMock(common.LvlDB, 1, 1, 10),
 	)
 
 	assert.Nil(t, err, "no error expected but got %s", err)
 	assert.NotNil(t, storer, "valid storer expected but got nil")
 	err = storer.DestroyUnit()
 	assert.Nil(t, err, "no error expected destroying the persister")
-}
-
-const (
-	valuesInDb = 100000
-)
-
-func BenchmarkStorageUnit_Put(b *testing.B) {
-	b.StopTimer()
-	s := initStorageUnit(b, 1)
-	defer func() {
-		err := s.DestroyUnit()
-		logError(err)
-	}()
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		nr := rand.Intn(valuesInDb)
-		b.StartTimer()
-
-		err := s.Put([]byte(strconv.Itoa(nr)), []byte(strconv.Itoa(nr)))
-		logError(err)
-	}
-}
-
-func BenchmarkStorageUnit_GetWithDataBeingPresent(b *testing.B) {
-	b.StopTimer()
-	s := initStorageUnit(b, 1)
-	defer func() {
-		err := s.DestroyUnit()
-		logError(err)
-	}()
-	for i := 0; i < valuesInDb; i++ {
-		err := s.Put([]byte(strconv.Itoa(i)), []byte(strconv.Itoa(i)))
-		logError(err)
-	}
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		nr := rand.Intn(valuesInDb)
-		b.StartTimer()
-
-		_, err := s.Get([]byte(strconv.Itoa(nr)))
-		logError(err)
-	}
-}
-
-func BenchmarkStorageUnit_GetWithDataNotBeingPresent(b *testing.B) {
-	b.StopTimer()
-	s := initStorageUnit(b, 1)
-	defer func() {
-		err := s.DestroyUnit()
-		logError(err)
-	}()
-	for i := 0; i < valuesInDb; i++ {
-		err := s.Put([]byte(strconv.Itoa(i)), []byte(strconv.Itoa(i)))
-		logError(err)
-	}
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		nr := rand.Intn(valuesInDb) + valuesInDb
-		b.StartTimer()
-
-		_, err := s.Get([]byte(strconv.Itoa(nr)))
-		logError(err)
-	}
 }
