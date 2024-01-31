@@ -9,7 +9,6 @@ import (
 	"github.com/multiversx/mx-chain-core-go/data"
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/multiversx/mx-chain-storage-go/common"
-	"github.com/multiversx/mx-chain-storage-go/factory"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
@@ -48,32 +47,6 @@ func NewStorageUnit(c types.Cacher, p types.Persister) (*Unit, error) {
 	}
 
 	return sUnit, nil
-}
-
-// NewStorageUnitFromConf creates a new storage unit from a storage unit config
-func NewStorageUnitFromConf(cacheConf common.CacheConfig, dbConf common.DBConfig, persisterFactory PersisterFactoryHandler) (*Unit, error) {
-	var cache types.Cacher
-	var db types.Persister
-	var err error
-
-	// TODO: if there will be a differentiation between the creation or opening of a DB, the DB could be destroyed
-	// in case of a failure while creating (not opening).
-
-	if dbConf.MaxBatchSize > int(cacheConf.Capacity) {
-		return nil, common.ErrCacheSizeIsLowerThanBatchSize
-	}
-
-	cache, err = factory.NewCache(cacheConf)
-	if err != nil {
-		return nil, err
-	}
-
-	db, err = persisterFactory.CreateWithRetries(dbConf.FilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewStorageUnit(cache, db)
 }
 
 // Put adds data to both cache and persistence medium

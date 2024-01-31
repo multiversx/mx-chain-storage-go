@@ -7,7 +7,6 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
 	"github.com/multiversx/mx-chain-storage-go/memorydb"
 	"github.com/multiversx/mx-chain-storage-go/storageUnit"
-	"github.com/multiversx/mx-chain-storage-go/testscommon"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -261,105 +260,4 @@ func TestDestroyUnitNoError(t *testing.T) {
 	s := initStorageUnit(t, 10)
 	err := s.DestroyUnit()
 	assert.Nil(t, err, "no error expected, but got %s", err)
-}
-
-func TestNewStorageUnit_FromConfWrongCacheSizeVsBatchSize(t *testing.T) {
-	t.Parallel()
-
-	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
-		Capacity: 10,
-		Type:     common.LRUCache,
-	}, common.DBConfig{
-		FilePath:          "Blocks",
-		Type:              common.LvlDB,
-		MaxBatchSize:      11,
-		BatchDelaySeconds: 1,
-		MaxOpenFiles:      10,
-	},
-		testscommon.NewPersisterFactoryHandlerMock(common.LvlDB, 11, 1, 10),
-	)
-
-	assert.NotNil(t, err, "error expected")
-	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
-}
-
-func TestNewStorageUnit_FromConfWrongCacheConfig(t *testing.T) {
-	t.Parallel()
-
-	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
-		Capacity: 10,
-		Type:     "NotLRU",
-	}, common.DBConfig{
-		FilePath:          "Blocks",
-		Type:              common.LvlDB,
-		BatchDelaySeconds: 1,
-		MaxBatchSize:      1,
-		MaxOpenFiles:      10,
-	},
-		testscommon.NewPersisterFactoryHandlerMock(common.LvlDB, 1, 1, 10),
-	)
-
-	assert.NotNil(t, err, "error expected")
-	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
-}
-
-func TestNewStorageUnit_FromConfWrongDBConfig(t *testing.T) {
-	t.Parallel()
-
-	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
-		Capacity: 10,
-		Type:     common.LRUCache,
-	}, common.DBConfig{
-		FilePath: "Blocks",
-		Type:     "NotLvlDB",
-	},
-		testscommon.NewPersisterFactoryHandlerMock("NotLvlDB", 0, 0, 0),
-	)
-
-	assert.NotNil(t, err, "error expected")
-	assert.Nil(t, storer, "storer expected to be nil but got %s", storer)
-}
-
-func TestNewStorageUnit_FromConfLvlDBOk(t *testing.T) {
-	t.Parallel()
-
-	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
-		Capacity: 10,
-		Type:     common.LRUCache,
-	}, common.DBConfig{
-		FilePath:          "Blocks",
-		Type:              common.LvlDB,
-		MaxBatchSize:      1,
-		BatchDelaySeconds: 1,
-		MaxOpenFiles:      10,
-	},
-		testscommon.NewPersisterFactoryHandlerMock(common.LvlDB, 1, 1, 10),
-	)
-
-	assert.Nil(t, err, "no error expected but got %s", err)
-	assert.NotNil(t, storer, "valid storer expected but got nil")
-	err = storer.DestroyUnit()
-	assert.Nil(t, err, "no error expected destroying the persister")
-}
-
-func TestNewStorageUnit_ShouldWorkLvlDB(t *testing.T) {
-	t.Parallel()
-
-	storer, err := storageUnit.NewStorageUnitFromConf(common.CacheConfig{
-		Capacity: 10,
-		Type:     common.LRUCache,
-	}, common.DBConfig{
-		FilePath:          "Blocks",
-		Type:              common.LvlDB,
-		BatchDelaySeconds: 1,
-		MaxBatchSize:      1,
-		MaxOpenFiles:      10,
-	},
-		testscommon.NewPersisterFactoryHandlerMock(common.LvlDB, 1, 1, 10),
-	)
-
-	assert.Nil(t, err, "no error expected but got %s", err)
-	assert.NotNil(t, storer, "valid storer expected but got nil")
-	err = storer.DestroyUnit()
-	assert.Nil(t, err, "no error expected destroying the persister")
 }
