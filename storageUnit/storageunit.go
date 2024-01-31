@@ -16,13 +16,6 @@ var _ types.Storer = (*Unit)(nil)
 
 var log = logger.GetOrCreate("storage/storageUnit")
 
-// PersisterFactoryHandler defines the behaviour of a component which is able to create persisters
-type PersisterFactoryHandler interface {
-	Create(path string) (types.Persister, error)
-	CreateWithRetries(path string) (types.Persister, error)
-	IsInterfaceNil() bool
-}
-
 // Unit represents a storer's data bank
 // holding the cache and persistence unit
 type Unit struct {

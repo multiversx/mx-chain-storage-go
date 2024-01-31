@@ -46,7 +46,6 @@ func NewCache(config common.CacheConfig) (types.Cacher, error) {
 		if err != nil {
 			return nil, err
 		}
-		// add other implementations if required
 	default:
 		return nil, common.ErrNotSupportedCacheType
 	}
