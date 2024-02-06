@@ -28,6 +28,7 @@ var log = logger.GetOrCreate("storage/leveldb")
 
 // DB holds a pointer to the leveldb database and the path to where it is stored.
 type DB struct {
+	keysRemovedHandler
 	*baseLevelDb
 	maxBatchSize      int
 	batchDelaySeconds int
@@ -76,11 +77,12 @@ func NewDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFiles in
 
 	ctx, cancel := context.WithCancel(context.Background())
 	dbStore := &DB{
-		baseLevelDb:       bldb,
-		maxBatchSize:      maxBatchSize,
-		batchDelaySeconds: batchDelaySeconds,
-		sizeBatch:         0,
-		cancel:            cancel,
+		baseLevelDb:        bldb,
+		maxBatchSize:       maxBatchSize,
+		batchDelaySeconds:  batchDelaySeconds,
+		sizeBatch:          0,
+		cancel:             cancel,
+		keysRemovedHandler: newMapKeysRemovedHandler(),
 	}
 
 	dbStore.batch = dbStore.createBatch()
@@ -220,7 +222,7 @@ func (s *DB) Has(key []byte) error {
 
 // CreateBatch returns a batcher to be used for batch writing data to the database
 func (s *DB) createBatch() types.Batcher {
-	return NewBatch()
+	return NewBatch(0, s.keysRemovedHandler)
 }
 
 // putBatch writes the Batch data into the database
