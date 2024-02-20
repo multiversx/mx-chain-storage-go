@@ -1,7 +1,6 @@
 package txcache
 
 import (
-	"bytes"
 	"container/list"
 	"sync"
 
@@ -14,22 +13,22 @@ var _ maps.BucketSortedMapItem = (*txListForSender)(nil)
 
 // txListForSender represents a sorted list of transactions of a particular sender
 type txListForSender struct {
-	copyDetectedGap     bool
-	lastComputedScore   atomic.Uint32
-	accountNonceKnown   atomic.Flag
-	sweepable           atomic.Flag
-	copyPreviousNonce   uint64
-	sender              string
-	items               *list.List
-	copyBatchIndex      *list.Element
-	constraints         *senderConstraints
-	scoreChunk          *maps.MapChunk
-	accountNonce        atomic.Uint64
-	totalBytes          atomic.Counter
-	totalGas            atomic.Counter
-	totalFeeScore       atomic.Counter
+	copyDetectedGap   bool
+	lastComputedScore atomic.Uint32
+	accountNonceKnown atomic.Flag
+	sweepable         atomic.Flag
+	copyPreviousNonce uint64
+	sender            string
+	items             *list.List
+	copyBatchIndex    *list.Element
+	constraints       *senderConstraints
+	scoreChunk        *maps.MapChunk
+	accountNonce      atomic.Uint64
+	//totalBytes        atomic.Counter
+	//totalGas            atomic.Counter
+	//totalFeeScore       atomic.Counter
 	numFailedSelections atomic.Counter
-	onScoreChange       scoreChangeCallback
+	//onScoreChange       scoreChangeCallback
 
 	scoreChunkMutex sync.RWMutex
 	mutex           sync.RWMutex
@@ -38,12 +37,11 @@ type txListForSender struct {
 type scoreChangeCallback func(value *txListForSender, scoreParams senderScoreParams)
 
 // newTxListForSender creates a new (sorted) list of transactions
-func newTxListForSender(sender string, constraints *senderConstraints, onScoreChange scoreChangeCallback) *txListForSender {
+func newTxListForSender(sender string, constraints *senderConstraints) *txListForSender {
 	return &txListForSender{
-		items:         list.New(),
-		sender:        sender,
-		constraints:   constraints,
-		onScoreChange: onScoreChange,
+		items:       list.New(),
+		sender:      sender,
+		constraints: constraints,
 	}
 }
 
@@ -66,8 +64,8 @@ func (listForSender *txListForSender) AddTx(tx *WrappedTransaction, gasHandler T
 	}
 
 	listForSender.onAddedTransaction(tx, gasHandler, txFeeHelper)
-	evicted := listForSender.applySizeConstraints()
-	listForSender.triggerScoreChange()
+	evicted := [][]byte{}
+	//listForSender.triggerScoreChange()
 	return true, evicted
 }
 
@@ -93,64 +91,64 @@ func (listForSender *txListForSender) applySizeConstraints() [][]byte {
 }
 
 func (listForSender *txListForSender) isCapacityExceeded() bool {
-	maxBytes := int64(listForSender.constraints.maxNumBytes)
-	maxNumTxs := uint64(listForSender.constraints.maxNumTxs)
-	tooManyBytes := listForSender.totalBytes.Get() > maxBytes
-	tooManyTxs := listForSender.countTx() > maxNumTxs
-
-	return tooManyBytes || tooManyTxs
+	return false
 }
 
 func (listForSender *txListForSender) onAddedTransaction(tx *WrappedTransaction, gasHandler TxGasHandler, txFeeHelper feeHelper) {
-	listForSender.totalBytes.Add(tx.Size)
-	listForSender.totalGas.Add(int64(estimateTxGas(tx)))
-	listForSender.totalFeeScore.Add(int64(estimateTxFeeScore(tx, gasHandler, txFeeHelper)))
+	// listForSender.totalBytes.Add(tx.Size)
+	// listForSender.totalGas.Add(int64(estimateTxGas(tx)))
+	// listForSender.totalFeeScore.Add(int64(estimateTxFeeScore(tx, gasHandler, txFeeHelper)))
 }
 
 func (listForSender *txListForSender) triggerScoreChange() {
-	scoreParams := listForSender.getScoreParams()
-	listForSender.onScoreChange(listForSender, scoreParams)
+	// scoreParams := listForSender.getScoreParams()
+	// listForSender.onScoreChange(listForSender, scoreParams)
 }
 
 // This function should only be used in critical section (listForSender.mutex)
 func (listForSender *txListForSender) getScoreParams() senderScoreParams {
-	fee := listForSender.totalFeeScore.GetUint64()
-	gas := listForSender.totalGas.GetUint64()
-	count := listForSender.countTx()
+	// fee := listForSender.totalFeeScore.GetUint64()
+	// gas := listForSender.totalGas.GetUint64()
+	// count := listForSender.countTx()
 
-	return senderScoreParams{count: count, feeScore: fee, gas: gas}
+	// return senderScoreParams{count: count, feeScore: fee, gas: gas}
+	return senderScoreParams{}
 }
 
 // This function should only be used in critical section (listForSender.mutex)
 func (listForSender *txListForSender) findInsertionPlace(incomingTx *WrappedTransaction) (*list.Element, error) {
-	incomingNonce := incomingTx.Tx.GetNonce()
-	incomingGasPrice := incomingTx.Tx.GetGasPrice()
+	incomingNonce := incomingTx.TxDirectPointer.Nonce
+	//incomingGasPrice := incomingTx.Tx.GetGasPrice()
 
 	for element := listForSender.items.Back(); element != nil; element = element.Prev() {
 		currentTx := element.Value.(*WrappedTransaction)
-		currentTxNonce := currentTx.Tx.GetNonce()
-		currentTxGasPrice := currentTx.Tx.GetGasPrice()
+		currentTxNonce := currentTx.TxDirectPointer.Nonce
+		//currentTxGasPrice := currentTx.Tx.GetGasPrice()
 
-		if incomingTx.sameAs(currentTx) {
-			// The incoming transaction will be discarded
+		// if incomingTx.sameAsKnowingThatSenderIsSame(currentTx) {
+		// 	// The incoming transaction will be discarded
+		// 	return nil, common.ErrItemAlreadyInCache
+		// }
+
+		if currentTxNonce == incomingNonce {
 			return nil, common.ErrItemAlreadyInCache
 		}
 
-		if currentTxNonce == incomingNonce {
-			if currentTxGasPrice > incomingGasPrice {
-				// The incoming transaction will be placed right after the existing one, which has same nonce but higher price.
-				// If the nonces are the same, but the incoming gas price is higher or equal, the search loop continues.
-				return element, nil
-			}
-			if currentTxGasPrice == incomingGasPrice {
-				// The incoming transaction will be placed right after the existing one, which has same nonce and the same price.
-				// (but different hash, because of some other fields like receiver, value or data)
-				// This will order out the transactions having the same nonce and gas price
-				if bytes.Compare(currentTx.TxHash, incomingTx.TxHash) < 0 {
-					return element, nil
-				}
-			}
-		}
+		// if currentTxNonce == incomingNonce {
+		// 	if currentTxGasPrice > incomingGasPrice {
+		// 		// The incoming transaction will be placed right after the existing one, which has same nonce but higher price.
+		// 		// If the nonces are the same, but the incoming gas price is higher or equal, the search loop continues.
+		// 		return element, nil
+		// 	}
+		// 	if currentTxGasPrice == incomingGasPrice {
+		// 		// The incoming transaction will be placed right after the existing one, which has same nonce and the same price.
+		// 		// (but different hash, because of some other fields like receiver, value or data)
+		// 		// This will order out the transactions having the same nonce and gas price
+		// 		if bytes.Compare(currentTx.TxHash, incomingTx.TxHash) < 0 {
+		// 			return element, nil
+		// 		}
+		// 	}
+		// }
 
 		if currentTxNonce < incomingNonce {
 			// We've found the first transaction with a lower nonce than the incoming one,
@@ -174,34 +172,35 @@ func (listForSender *txListForSender) RemoveTx(tx *WrappedTransaction) bool {
 	if isFound {
 		listForSender.items.Remove(marker)
 		listForSender.onRemovedListElement(marker)
-		listForSender.triggerScoreChange()
+		//listForSender.triggerScoreChange()
 	}
 
 	return isFound
 }
 
 func (listForSender *txListForSender) onRemovedListElement(element *list.Element) {
-	value := element.Value.(*WrappedTransaction)
+	// value := element.Value.(*WrappedTransaction)
 
-	listForSender.totalBytes.Subtract(value.Size)
-	listForSender.totalGas.Subtract(int64(estimateTxGas(value)))
-	listForSender.totalFeeScore.Subtract(int64(value.TxFeeScoreNormalized))
+	// listForSender.totalBytes.Subtract(value.Size)
+	// listForSender.totalGas.Subtract(int64(estimateTxGas(value)))
+	// listForSender.totalFeeScore.Subtract(int64(value.TxFeeScoreNormalized))
 }
 
 // This function should only be used in critical section (listForSender.mutex)
 func (listForSender *txListForSender) findListElementWithTx(txToFind *WrappedTransaction) *list.Element {
-	txToFindHash := txToFind.TxHash
-	txToFindNonce := txToFind.Tx.GetNonce()
+	//	txToFindHash := txToFind.TxHash
+	txToFindNonce := txToFind.TxDirectPointer.Nonce
 
 	for element := listForSender.items.Front(); element != nil; element = element.Next() {
 		value := element.Value.(*WrappedTransaction)
+		thisNonce := value.TxDirectPointer.Nonce
 
-		if bytes.Equal(value.TxHash, txToFindHash) {
+		if thisNonce == txToFindNonce {
 			return element
 		}
 
 		// Optimization: stop search at this point, since the list is sorted by nonce
-		if value.Tx.GetNonce() > txToFindNonce {
+		if thisNonce > txToFindNonce {
 			break
 		}
 	}
