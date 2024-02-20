@@ -245,6 +245,7 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 	// There is an exception though: if this is the first read operation for the sender in the current selection process and the sender is in the grace period,
 	// then one transaction will be returned. But subsequent reads for this sender will return nothing.
 	if detectedGap {
+		log.Debug("Detected gap for sender", "sender", listForSender.sender, "nonce", previousNonce)
 		if isFirstBatch && listForSender.isInGracePeriod() {
 			journal.isGracePeriod = true
 			batchSize = 1
@@ -266,6 +267,7 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 		lastTxGasLimit = value.Tx.GetGasLimit()
 
 		if previousNonce > 0 && txNonce > previousNonce+1 {
+			log.Debug("Detected gap for sender - middle", "sender", listForSender.sender, "nonce", previousNonce)
 			listForSender.copyDetectedGap = true
 			journal.hasMiddleGap = true
 			break
