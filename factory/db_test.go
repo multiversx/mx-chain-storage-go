@@ -60,6 +60,9 @@ func TestNewDB(t *testing.T) {
 		persister, err := factory.NewDB(argsDB)
 		require.Nil(t, err)
 		require.Equal(t, "*leveldb.DB", fmt.Sprintf("%T", persister))
+
+		err = persister.Close()
+		require.Nil(t, err)
 	})
 
 	t.Run("LvlDBSerial type, should work", func(t *testing.T) {
@@ -77,6 +80,9 @@ func TestNewDB(t *testing.T) {
 		persister, err := factory.NewDB(argsDB)
 		require.Nil(t, err)
 		require.Equal(t, "*leveldb.SerialDB", fmt.Sprintf("%T", persister))
+
+		err = persister.Close()
+		require.Nil(t, err)
 	})
 
 	t.Run("MemoryDB type, should work", func(t *testing.T) {
@@ -94,5 +100,8 @@ func TestNewDB(t *testing.T) {
 		persister, err := factory.NewDB(argsDB)
 		require.Nil(t, err)
 		require.Equal(t, "*memorydb.DB", fmt.Sprintf("%T", persister))
+
+		err = persister.Close()
+		require.Nil(t, err)
 	})
 }
