@@ -21,16 +21,13 @@ func NewCache(config common.CacheConfig) (types.Cacher, error) {
 	shards := config.Shards
 	sizeInBytes := config.SizeInBytes
 
-	var cacher types.Cacher
-	var err error
-
 	switch cacheType {
 	case common.LRUCache:
 		if sizeInBytes != 0 {
 			return nil, common.ErrLRUCacheWithProvidedSize
 		}
 
-		cacher, err = lrucache.NewCache(int(capacity))
+		return lrucache.NewCache(int(capacity))
 	case common.SizeLRUCache:
 		if sizeInBytes < minimumSizeForLRUCache {
 			return nil, fmt.Errorf("%w, provided %d, minimum %d",
@@ -40,19 +37,10 @@ func NewCache(config common.CacheConfig) (types.Cacher, error) {
 			)
 		}
 
-		cacher, err = lrucache.NewCacheWithSizeInBytes(int(capacity), int64(sizeInBytes))
+		return lrucache.NewCacheWithSizeInBytes(int(capacity), int64(sizeInBytes))
 	case common.FIFOShardedCache:
-		cacher, err = fifocache.NewShardedCache(int(capacity), int(shards))
-		if err != nil {
-			return nil, err
-		}
+		return fifocache.NewShardedCache(int(capacity), int(shards))
 	default:
 		return nil, common.ErrNotSupportedCacheType
 	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return cacher, nil
 }
