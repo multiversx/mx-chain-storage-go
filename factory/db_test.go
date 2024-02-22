@@ -96,6 +96,3 @@ func TestNewDB(t *testing.T) {
 		require.Equal(t, "*memorydb.DB", fmt.Sprintf("%T", persister))
 	})
 }
-
-func TestNewDB_WrongFileNameLvlDB(t *testing.T) {
-}
