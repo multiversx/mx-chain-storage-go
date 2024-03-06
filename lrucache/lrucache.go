@@ -18,8 +18,9 @@ type lruCache struct {
 	cache   types.SizedLRUCacheHandler
 	maxsize int
 
-	mutAddedDataHandlers sync.RWMutex
-	mapDataHandlers      map[string]func(key []byte, value interface{})
+	mutAddedDataHandlers  sync.RWMutex
+	mapDataHandlers       map[string]func(key []byte, value interface{})
+	callAddedDataHandlers func(key []byte, value interface{})
 }
 
 // NewCache creates a new LRU cache instance
@@ -55,6 +56,8 @@ func createLRUCache(size int, cache *lru.Cache) *lruCache {
 		mutAddedDataHandlers: sync.RWMutex{},
 		mapDataHandlers:      make(map[string]func(key []byte, value interface{})),
 	}
+	c.callAddedDataHandlers = c.callAddedDataHandlersAsync
+
 	return c
 }
 
@@ -144,7 +147,7 @@ func (c *lruCache) HasOrAdd(key []byte, value interface{}, sizeInBytes int) (has
 	return has, !has
 }
 
-func (c *lruCache) callAddedDataHandlers(key []byte, value interface{}) {
+func (c *lruCache) callAddedDataHandlersAsync(key []byte, value interface{}) {
 	c.mutAddedDataHandlers.RLock()
 	for _, handler := range c.mapDataHandlers {
 		go handler(key, value)

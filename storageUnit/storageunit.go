@@ -36,6 +36,7 @@ type HasherType string
 // Cache types that are currently supported
 const (
 	LRUCache         CacheType = "LRU"
+	SyncedLRUCache   CacheType = "SyncedLRU"
 	SizeLRUCache     CacheType = "SizeLRU"
 	FIFOShardedCache CacheType = "FIFOSharded"
 )
@@ -52,8 +53,8 @@ const (
 // ShardIDProviderType represents the type for the supported shard id provider
 type ShardIDProviderType string
 
-// Shard id provider types that are currently supported
 const (
+	// BinarySplit provider types that are currently supported
 	BinarySplit ShardIDProviderType = "BinarySplit"
 )
 
@@ -332,16 +333,19 @@ func NewCache(config CacheConfig) (types.Cacher, error) {
 	shards := config.Shards
 	sizeInBytes := config.SizeInBytes
 
-	var cacher types.Cacher
-	var err error
-
 	switch cacheType {
 	case LRUCache:
 		if sizeInBytes != 0 {
 			return nil, common.ErrLRUCacheWithProvidedSize
 		}
 
-		cacher, err = lrucache.NewCache(int(capacity))
+		return lrucache.NewCache(int(capacity))
+	case SyncedLRUCache:
+		if sizeInBytes != 0 {
+			return nil, common.ErrLRUCacheWithProvidedSize
+		}
+
+		return lrucache.NewSyncedLRUCache(int(capacity))
 	case SizeLRUCache:
 		if sizeInBytes < minimumSizeForLRUCache {
 			return nil, fmt.Errorf("%w, provided %d, minimum %d",
@@ -351,22 +355,12 @@ func NewCache(config CacheConfig) (types.Cacher, error) {
 			)
 		}
 
-		cacher, err = lrucache.NewCacheWithSizeInBytes(int(capacity), int64(sizeInBytes))
+		return lrucache.NewCacheWithSizeInBytes(int(capacity), int64(sizeInBytes))
 	case FIFOShardedCache:
-		cacher, err = fifocache.NewShardedCache(int(capacity), int(shards))
-		if err != nil {
-			return nil, err
-		}
-		// add other implementations if required
+		return fifocache.NewShardedCache(int(capacity), int(shards))
 	default:
 		return nil, common.ErrNotSupportedCacheType
 	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return cacher, nil
 }
 
 // ArgDB is a structure that is used to create a new storage.Persister implementation

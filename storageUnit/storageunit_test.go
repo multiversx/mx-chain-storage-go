@@ -238,20 +238,77 @@ func TestDestroyUnitNoError(t *testing.T) {
 	assert.Nil(t, err, "no error expected, but got %s", err)
 }
 
-func TestCreateCacheFromConfWrongType(t *testing.T) {
+func TestNewCache(t *testing.T) {
+	t.Parallel()
 
-	cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: "NotLRU", Capacity: 100, Shards: 1, SizeInBytes: 0})
+	t.Run("invalid cache should error", func(t *testing.T) {
+		t.Parallel()
 
-	assert.NotNil(t, err, "error expected")
-	assert.Nil(t, cacher, "cacher expected to be nil, but got %s", cacher)
-}
+		cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: "NotLRU", Capacity: 100, Shards: 1, SizeInBytes: 0})
 
-func TestCreateCacheFromConfOK(t *testing.T) {
+		assert.NotNil(t, err)
+		assert.Nil(t, cacher)
+	})
+	t.Run("LRU cache", func(t *testing.T) {
+		t.Parallel()
 
-	cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.LRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0})
+		t.Run("invalid configuration should error", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.LRUCache, Capacity: 10, Shards: 1, SizeInBytes: 1})
 
-	assert.Nil(t, err, "no error expected but got %s", err)
-	assert.NotNil(t, cacher, "valid cacher expected but got nil")
+			assert.Equal(t, common.ErrLRUCacheWithProvidedSize, err)
+			assert.Nil(t, cacher)
+		})
+		t.Run("valid configuration should work", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.LRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0})
+
+			assert.Nil(t, err)
+			assert.NotNil(t, cacher)
+			assert.Equal(t, "*lrucache.lruCache", fmt.Sprintf("%T", cacher))
+		})
+	})
+	t.Run("Synced LRU cache", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("invalid configuration should error", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SyncedLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 1})
+
+			assert.Equal(t, common.ErrLRUCacheWithProvidedSize, err)
+			assert.Nil(t, cacher)
+		})
+		t.Run("valid configuration should work", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SyncedLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0})
+
+			assert.Nil(t, err)
+			assert.NotNil(t, cacher)
+			assert.Equal(t, "*lrucache.syncedLRUCache", fmt.Sprintf("%T", cacher))
+		})
+	})
+	t.Run("Size LRU cache", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("invalid configuration should error", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SizeLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 1023})
+
+			assert.ErrorIs(t, err, common.ErrLRUCacheInvalidSize)
+			assert.Nil(t, cacher)
+		})
+		t.Run("valid configuration should work", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SizeLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 1024})
+
+			assert.Nil(t, err)
+			assert.NotNil(t, cacher)
+			assert.Equal(t, "*lrucache.lruCache", fmt.Sprintf("%T", cacher))
+		})
+	})
+	t.Run("FIFO sharded cache", func(t *testing.T) {
+		t.Parallel()
+
+		cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.FIFOShardedCache, Capacity: 10, Shards: 1, SizeInBytes: 1024})
+
+		assert.Nil(t, err)
+		assert.NotNil(t, cacher)
+		assert.Equal(t, "*fifocache.FIFOShardedCache", fmt.Sprintf("%T", cacher))
+	})
 }
 
 func TestCreateDBFromConfWrongType(t *testing.T) {

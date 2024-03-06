@@ -12,6 +12,7 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/lrucache"
 	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var timeoutWaitForWaitGroups = time.Second * 2
@@ -458,4 +459,32 @@ func TestLruCache_LenDuringEviction(t *testing.T) {
 	case <-time.After(time.Second):
 		assert.Fail(t, "test failed, deadlock occurred")
 	}
+}
+
+func TestLruCache_PutShouldCallTheHandlersInAsyncManner(t *testing.T) {
+	t.Parallel()
+
+	c, err := lrucache.NewCache(100)
+	require.Nil(t, err)
+
+	wgCalled := sync.WaitGroup{}
+	wgCalled.Add(2)
+	handler1 := func(key []byte, value interface{}) {
+		wgCalled.Done()
+		time.Sleep(time.Second * 2)
+	}
+	handler2 := func(key []byte, value interface{}) {
+		wgCalled.Done()
+		time.Sleep(time.Second * 2)
+	}
+
+	c.RegisterHandler(handler1, "id1")
+	c.RegisterHandler(handler2, "id2")
+
+	timeStampStart := time.Now()
+	_ = c.Put([]byte("key"), []byte("value"), 0)
+	wgCalled.Wait()
+	timeStampEnd := time.Now()
+
+	assert.Less(t, timeStampEnd.Sub(timeStampStart), time.Second*4)
 }
