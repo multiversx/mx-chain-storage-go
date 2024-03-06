@@ -22,7 +22,7 @@ func logError(err error) {
 
 func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 	mdb := memorydb.New()
-	cache, err2 := lrucache.NewCache(cSize, false)
+	cache, err2 := lrucache.NewCache(cSize)
 	assert.Nil(tb, err2, "no error expected but got %s", err2)
 
 	sUnit, err := storageUnit.NewStorageUnit(cache, mdb)
@@ -32,7 +32,7 @@ func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 }
 
 func TestStorageUnitNilPersister(t *testing.T) {
-	cache, err1 := lrucache.NewCache(10, false)
+	cache, err1 := lrucache.NewCache(10)
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
 
@@ -49,7 +49,7 @@ func TestStorageUnitNilCacher(t *testing.T) {
 }
 
 func TestStorageUnit(t *testing.T) {
-	cache, err1 := lrucache.NewCache(10, false)
+	cache, err1 := lrucache.NewCache(10)
 	mdb := memorydb.New()
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
@@ -282,8 +282,15 @@ func TestNewCache(t *testing.T) {
 			assert.ErrorIs(t, err, common.ErrLRUCacheInvalidSize)
 			assert.Nil(t, cacher)
 		})
-		t.Run("valid configuration should work", func(t *testing.T) {
-			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SizeLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 1024})
+		t.Run("valid configuration should work with synced calls", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SizeLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 1024, CallHandlersInSync: true})
+
+			assert.Nil(t, err)
+			assert.NotNil(t, cacher)
+			assert.Equal(t, "*lrucache.lruCache", fmt.Sprintf("%T", cacher))
+		})
+		t.Run("valid configuration should work with async calls", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SizeLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 1024, CallHandlersInSync: false})
 
 			assert.Nil(t, err)
 			assert.NotNil(t, cacher)

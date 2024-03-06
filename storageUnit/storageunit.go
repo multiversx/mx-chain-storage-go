@@ -334,7 +334,13 @@ func NewCache(config CacheConfig) (types.Cacher, error) {
 			return nil, common.ErrLRUCacheWithProvidedSize
 		}
 
-		return lrucache.NewCache(int(config.Capacity), config.CallHandlersInSync)
+		cache, err := lrucache.NewCache(int(config.Capacity))
+		if err != nil {
+			return nil, err
+		}
+		cache.SetCallHandlersSyncMode(config.CallHandlersInSync)
+
+		return cache, nil
 	case SizeLRUCache:
 		if config.SizeInBytes < minimumSizeForLRUCache {
 			return nil, fmt.Errorf("%w, provided %d, minimum %d",
@@ -344,7 +350,13 @@ func NewCache(config CacheConfig) (types.Cacher, error) {
 			)
 		}
 
-		return lrucache.NewCacheWithSizeInBytes(int(config.Capacity), int64(config.SizeInBytes), config.CallHandlersInSync)
+		cache, err := lrucache.NewCacheWithSizeInBytes(int(config.Capacity), int64(config.SizeInBytes))
+		if err != nil {
+			return nil, err
+		}
+		cache.SetCallHandlersSyncMode(config.CallHandlersInSync)
+
+		return cache, nil
 	case FIFOShardedCache:
 		return fifocache.NewShardedCache(int(config.Capacity), int(config.Shards))
 	default:
