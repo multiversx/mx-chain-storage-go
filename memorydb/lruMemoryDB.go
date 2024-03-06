@@ -16,7 +16,7 @@ type lruDB struct {
 
 // NewlruDB creates a lruDB according to size
 func NewlruDB(size uint32) (*lruDB, error) {
-	cacher, err := lrucache.NewCache(int(size))
+	cacher, err := lrucache.NewCache(int(size), false)
 	if err != nil {
 		return nil, err
 	}

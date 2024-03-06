@@ -36,7 +36,6 @@ type HasherType string
 // Cache types that are currently supported
 const (
 	LRUCache         CacheType = "LRU"
-	SyncedLRUCache   CacheType = "SyncedLRU"
 	SizeLRUCache     CacheType = "SizeLRU"
 	FIFOShardedCache CacheType = "FIFOSharded"
 )
@@ -93,6 +92,7 @@ type CacheConfig struct {
 	Capacity             uint32
 	SizePerSender        uint32
 	Shards               uint32
+	CallHandlersInSync   bool
 }
 
 // String returns a readable representation of the object
@@ -328,36 +328,25 @@ func NewStorageUnitFromConf(cacheConf CacheConfig, dbConf DBConfig, persisterFac
 func NewCache(config CacheConfig) (types.Cacher, error) {
 	monitoring.MonitorNewCache(config.Name, config.SizeInBytes)
 
-	cacheType := config.Type
-	capacity := config.Capacity
-	shards := config.Shards
-	sizeInBytes := config.SizeInBytes
-
-	switch cacheType {
+	switch config.Type {
 	case LRUCache:
-		if sizeInBytes != 0 {
+		if config.SizeInBytes != 0 {
 			return nil, common.ErrLRUCacheWithProvidedSize
 		}
 
-		return lrucache.NewCache(int(capacity))
-	case SyncedLRUCache:
-		if sizeInBytes != 0 {
-			return nil, common.ErrLRUCacheWithProvidedSize
-		}
-
-		return lrucache.NewSyncedLRUCache(int(capacity))
+		return lrucache.NewCache(int(config.Capacity), config.CallHandlersInSync)
 	case SizeLRUCache:
-		if sizeInBytes < minimumSizeForLRUCache {
+		if config.SizeInBytes < minimumSizeForLRUCache {
 			return nil, fmt.Errorf("%w, provided %d, minimum %d",
 				common.ErrLRUCacheInvalidSize,
-				sizeInBytes,
+				config.SizeInBytes,
 				minimumSizeForLRUCache,
 			)
 		}
 
-		return lrucache.NewCacheWithSizeInBytes(int(capacity), int64(sizeInBytes))
+		return lrucache.NewCacheWithSizeInBytes(int(config.Capacity), int64(config.SizeInBytes), config.CallHandlersInSync)
 	case FIFOShardedCache:
-		return fifocache.NewShardedCache(int(capacity), int(shards))
+		return fifocache.NewShardedCache(int(config.Capacity), int(config.Shards))
 	default:
 		return nil, common.ErrNotSupportedCacheType
 	}

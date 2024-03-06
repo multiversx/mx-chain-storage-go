@@ -18,36 +18,36 @@ type lruCache struct {
 	cache   types.SizedLRUCacheHandler
 	maxsize int
 
-	mutAddedDataHandlers  sync.RWMutex
-	mapDataHandlers       map[string]func(key []byte, value interface{})
-	callAddedDataHandlers func(key []byte, value interface{})
+	mutAddedDataHandlers sync.RWMutex
+	mapDataHandlers      map[string]func(key []byte, value interface{})
+	callHandlersInSync   bool
 }
 
 // NewCache creates a new LRU cache instance
-func NewCache(size int) (*lruCache, error) {
+func NewCache(size int, callHandlersInSync bool) (*lruCache, error) {
 	cache, err := lru.New(size)
 	if err != nil {
 		return nil, err
 	}
 
-	c := createLRUCache(size, cache)
+	c := createLRUCache(size, cache, callHandlersInSync)
 
 	return c, nil
 }
 
 // NewCacheWithEviction creates a new sized LRU cache instance with eviction function
-func NewCacheWithEviction(size int, onEvicted func(key interface{}, value interface{})) (*lruCache, error) {
+func NewCacheWithEviction(size int, onEvicted func(key interface{}, value interface{}), callHandlersInSync bool) (*lruCache, error) {
 	cache, err := lru.NewWithEvict(size, onEvicted)
 	if err != nil {
 		return nil, err
 	}
 
-	c := createLRUCache(size, cache)
+	c := createLRUCache(size, cache, callHandlersInSync)
 
 	return c, nil
 }
 
-func createLRUCache(size int, cache *lru.Cache) *lruCache {
+func createLRUCache(size int, cache *lru.Cache, callHandlersInSync bool) *lruCache {
 	c := &lruCache{
 		cache: &simpleLRUCacheAdapter{
 			LRUCacheHandler: cache,
@@ -55,14 +55,15 @@ func createLRUCache(size int, cache *lru.Cache) *lruCache {
 		maxsize:              size,
 		mutAddedDataHandlers: sync.RWMutex{},
 		mapDataHandlers:      make(map[string]func(key []byte, value interface{})),
+		callHandlersInSync:   callHandlersInSync,
 	}
-	c.callAddedDataHandlers = c.callAddedDataHandlersAsync
+	c.checkHandlersCallMode()
 
 	return c
 }
 
 // NewCacheWithSizeInBytes creates a new sized LRU cache instance
-func NewCacheWithSizeInBytes(size int, sizeInBytes int64) (*lruCache, error) {
+func NewCacheWithSizeInBytes(size int, sizeInBytes int64, callHandlersInSync bool) (*lruCache, error) {
 	cache, err := capacity.NewCapacityLRU(size, sizeInBytes)
 	if err != nil {
 		return nil, err
@@ -73,9 +74,17 @@ func NewCacheWithSizeInBytes(size int, sizeInBytes int64) (*lruCache, error) {
 		maxsize:              size,
 		mutAddedDataHandlers: sync.RWMutex{},
 		mapDataHandlers:      make(map[string]func(key []byte, value interface{})),
+		callHandlersInSync:   callHandlersInSync,
 	}
+	c.checkHandlersCallMode()
 
 	return c, nil
+}
+
+func (c *lruCache) checkHandlersCallMode() {
+	if c.callHandlersInSync {
+		log.Warn("created a new LRU cache that calls the inner handlers in sync. This is not designed to be used in production mode!")
+	}
 }
 
 // Clear is used to completely clear the cache.
@@ -147,12 +156,21 @@ func (c *lruCache) HasOrAdd(key []byte, value interface{}, sizeInBytes int) (has
 	return has, !has
 }
 
-func (c *lruCache) callAddedDataHandlersAsync(key []byte, value interface{}) {
+func (c *lruCache) callAddedDataHandlers(key []byte, value interface{}) {
 	c.mutAddedDataHandlers.RLock()
 	for _, handler := range c.mapDataHandlers {
-		go handler(key, value)
+		c.callHandler(handler, key, value)
 	}
 	c.mutAddedDataHandlers.RUnlock()
+}
+
+func (c *lruCache) callHandler(handler func(key []byte, value interface{}), key []byte, value interface{}) {
+	if c.callHandlersInSync {
+		handler(key, value)
+		return
+	}
+
+	go handler(key, value)
 }
 
 // Remove removes the provided key from the cache.

@@ -22,7 +22,7 @@ func logError(err error) {
 
 func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 	mdb := memorydb.New()
-	cache, err2 := lrucache.NewCache(cSize)
+	cache, err2 := lrucache.NewCache(cSize, false)
 	assert.Nil(tb, err2, "no error expected but got %s", err2)
 
 	sUnit, err := storageUnit.NewStorageUnit(cache, mdb)
@@ -32,7 +32,7 @@ func initStorageUnit(tb testing.TB, cSize int) *storageUnit.Unit {
 }
 
 func TestStorageUnitNilPersister(t *testing.T) {
-	cache, err1 := lrucache.NewCache(10)
+	cache, err1 := lrucache.NewCache(10, false)
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
 
@@ -49,7 +49,7 @@ func TestStorageUnitNilCacher(t *testing.T) {
 }
 
 func TestStorageUnit(t *testing.T) {
-	cache, err1 := lrucache.NewCache(10)
+	cache, err1 := lrucache.NewCache(10, false)
 	mdb := memorydb.New()
 
 	assert.Nil(t, err1, "no error expected but got %s", err1)
@@ -258,29 +258,19 @@ func TestNewCache(t *testing.T) {
 			assert.Equal(t, common.ErrLRUCacheWithProvidedSize, err)
 			assert.Nil(t, cacher)
 		})
-		t.Run("valid configuration should work", func(t *testing.T) {
-			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.LRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0})
+		t.Run("valid configuration should work with synced calls", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.LRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0, CallHandlersInSync: true})
 
 			assert.Nil(t, err)
 			assert.NotNil(t, cacher)
 			assert.Equal(t, "*lrucache.lruCache", fmt.Sprintf("%T", cacher))
 		})
-	})
-	t.Run("Synced LRU cache", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("invalid configuration should error", func(t *testing.T) {
-			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SyncedLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 1})
-
-			assert.Equal(t, common.ErrLRUCacheWithProvidedSize, err)
-			assert.Nil(t, cacher)
-		})
-		t.Run("valid configuration should work", func(t *testing.T) {
-			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.SyncedLRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0})
+		t.Run("valid configuration should work with async calls", func(t *testing.T) {
+			cacher, err := storageUnit.NewCache(storageUnit.CacheConfig{Type: storageUnit.LRUCache, Capacity: 10, Shards: 1, SizeInBytes: 0, CallHandlersInSync: false})
 
 			assert.Nil(t, err)
 			assert.NotNil(t, cacher)
-			assert.Equal(t, "*lrucache.syncedLRUCache", fmt.Sprintf("%T", cacher))
+			assert.Equal(t, "*lrucache.lruCache", fmt.Sprintf("%T", cacher))
 		})
 	})
 	t.Run("Size LRU cache", func(t *testing.T) {

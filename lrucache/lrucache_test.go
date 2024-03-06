@@ -22,7 +22,7 @@ var timeoutWaitForWaitGroups = time.Second * 2
 func TestNewCache_BadSizeShouldErr(t *testing.T) {
 	t.Parallel()
 
-	c, err := lrucache.NewCache(0)
+	c, err := lrucache.NewCache(0, false)
 
 	assert.True(t, check.IfNil(c))
 	assert.NotNil(t, err)
@@ -31,7 +31,7 @@ func TestNewCache_BadSizeShouldErr(t *testing.T) {
 func TestNewCache_ShouldWork(t *testing.T) {
 	t.Parallel()
 
-	c, err := lrucache.NewCache(1)
+	c, err := lrucache.NewCache(1, false)
 
 	assert.False(t, check.IfNil(c))
 	assert.Nil(t, err)
@@ -42,7 +42,7 @@ func TestNewCache_ShouldWork(t *testing.T) {
 func TestNewCacheWithSizeInBytes_BadSizeShouldErr(t *testing.T) {
 	t.Parallel()
 
-	c, err := lrucache.NewCacheWithSizeInBytes(0, 100000)
+	c, err := lrucache.NewCacheWithSizeInBytes(0, 100000, false)
 
 	assert.True(t, check.IfNil(c))
 	assert.Equal(t, common.ErrCacheSizeInvalid, err)
@@ -51,7 +51,7 @@ func TestNewCacheWithSizeInBytes_BadSizeShouldErr(t *testing.T) {
 func TestNewCacheWithSizeInBytes_BadSizeInBytesShouldErr(t *testing.T) {
 	t.Parallel()
 
-	c, err := lrucache.NewCacheWithSizeInBytes(1, 0)
+	c, err := lrucache.NewCacheWithSizeInBytes(1, 0, false)
 
 	assert.True(t, check.IfNil(c))
 	assert.Equal(t, common.ErrCacheCapacityInvalid, err)
@@ -60,7 +60,7 @@ func TestNewCacheWithSizeInBytes_BadSizeInBytesShouldErr(t *testing.T) {
 func TestNewCacheWithSizeInBytes_ShouldWork(t *testing.T) {
 	t.Parallel()
 
-	c, err := lrucache.NewCacheWithSizeInBytes(1, 100000)
+	c, err := lrucache.NewCacheWithSizeInBytes(1, 100000, false)
 
 	assert.False(t, check.IfNil(c))
 	assert.Nil(t, err)
@@ -70,7 +70,7 @@ func TestLRUCache_PutNotPresent(t *testing.T) {
 	t.Parallel()
 
 	key, val := []byte("key"), []byte("value")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	l := c.Len()
 
@@ -86,7 +86,7 @@ func TestLRUCache_PutPresent(t *testing.T) {
 	t.Parallel()
 
 	key, val := []byte("key"), []byte("value")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	c.Put(key, val, 0)
 	c.Put(key, val, 0)
@@ -101,7 +101,7 @@ func TestLRUCache_PutPresentRewrite(t *testing.T) {
 	key := []byte("key")
 	val1 := []byte("value1")
 	val2 := []byte("value2")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	c.Put(key, val1, 0)
 	c.Put(key, val2, 0)
@@ -117,7 +117,7 @@ func TestLRUCache_GetNotPresent(t *testing.T) {
 	t.Parallel()
 
 	key := []byte("key1")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	v, ok := c.Get(key)
 
@@ -128,7 +128,7 @@ func TestLRUCache_GetPresent(t *testing.T) {
 	t.Parallel()
 
 	key, val := []byte("key2"), []byte("value2")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	c.Put(key, val, 0)
 
@@ -142,7 +142,7 @@ func TestLRUCache_HasNotPresent(t *testing.T) {
 	t.Parallel()
 
 	key := []byte("key3")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	found := c.Has(key)
 
@@ -153,7 +153,7 @@ func TestLRUCache_HasPresent(t *testing.T) {
 	t.Parallel()
 
 	key, val := []byte("key4"), []byte("value4")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	c.Put(key, val, 0)
 
@@ -166,7 +166,7 @@ func TestLRUCache_PeekNotPresent(t *testing.T) {
 	t.Parallel()
 
 	key := []byte("key5")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	_, ok := c.Peek(key)
 
@@ -177,7 +177,7 @@ func TestLRUCache_PeekPresent(t *testing.T) {
 	t.Parallel()
 
 	key, val := []byte("key6"), []byte("value6")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	c.Put(key, val, 0)
 	v, ok := c.Peek(key)
@@ -190,7 +190,7 @@ func TestLRUCache_HasOrAddNotPresent(t *testing.T) {
 	t.Parallel()
 
 	key, val := []byte("key7"), []byte("value7")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	_, ok := c.Peek(key)
 	assert.False(t, ok, "not expected to find key %s", key)
@@ -205,7 +205,7 @@ func TestLRUCache_HasOrAddPresent(t *testing.T) {
 	t.Parallel()
 
 	key, val := []byte("key8"), []byte("value8")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	_, ok := c.Peek(key)
 
@@ -222,7 +222,7 @@ func TestLRUCache_RemoveNotPresent(t *testing.T) {
 	t.Parallel()
 
 	key := []byte("key9")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	found := c.Has(key)
 
@@ -238,7 +238,7 @@ func TestLRUCache_RemovePresent(t *testing.T) {
 	t.Parallel()
 
 	key, val := []byte("key10"), []byte("value10")
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	c.Put(key, val, 0)
 	found := c.Has(key)
@@ -254,7 +254,7 @@ func TestLRUCache_RemovePresent(t *testing.T) {
 func TestLRUCache_Keys(t *testing.T) {
 	t.Parallel()
 
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	for i := 0; i < 20; i++ {
 		key, val := []byte(fmt.Sprintf("key%d", i)), []byte(fmt.Sprintf("value%d", i))
@@ -270,7 +270,7 @@ func TestLRUCache_Keys(t *testing.T) {
 func TestLRUCache_Len(t *testing.T) {
 	t.Parallel()
 
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	for i := 0; i < 20; i++ {
 		key, val := []byte(fmt.Sprintf("key%d", i)), []byte(fmt.Sprintf("value%d", i))
@@ -285,7 +285,7 @@ func TestLRUCache_Len(t *testing.T) {
 func TestLRUCache_Clear(t *testing.T) {
 	t.Parallel()
 
-	c, _ := lrucache.NewCache(10)
+	c, _ := lrucache.NewCache(10, false)
 
 	for i := 0; i < 5; i++ {
 		key, val := []byte(fmt.Sprintf("key%d", i)), []byte(fmt.Sprintf("value%d", i))
@@ -305,7 +305,7 @@ func TestLRUCache_Clear(t *testing.T) {
 func TestLRUCache_CacherRegisterAddedDataHandlerNilHandlerShouldIgnore(t *testing.T) {
 	t.Parallel()
 
-	c, _ := lrucache.NewCache(100)
+	c, _ := lrucache.NewCache(100, false)
 	c.RegisterHandler(nil, "")
 
 	assert.Equal(t, 0, len(c.AddedDataHandlers()))
@@ -331,7 +331,7 @@ func TestLRUCache_CacherRegisterPutAddedDataHandlerShouldWork(t *testing.T) {
 		chDone <- true
 	}()
 
-	c, _ := lrucache.NewCache(100)
+	c, _ := lrucache.NewCache(100, false)
 	c.RegisterHandler(f, "")
 	c.Put([]byte("aaaa"), "bbbb", 0)
 
@@ -365,7 +365,7 @@ func TestLRUCache_CacherRegisterHasOrAddAddedDataHandlerShouldWork(t *testing.T)
 		chDone <- true
 	}()
 
-	c, _ := lrucache.NewCache(100)
+	c, _ := lrucache.NewCache(100, false)
 	c.RegisterHandler(f, "")
 	c.HasOrAdd([]byte("aaaa"), "bbbb", 0)
 
@@ -395,7 +395,7 @@ func TestLRUCache_CacherRegisterHasOrAddAddedDataHandlerNotAddedShouldNotCall(t 
 		chDone <- true
 	}()
 
-	c, _ := lrucache.NewCache(100)
+	c, _ := lrucache.NewCache(100, false)
 	//first add, no call
 	c.HasOrAdd([]byte("aaaa"), "bbbb", 0)
 	c.RegisterHandler(f, "")
@@ -415,7 +415,7 @@ func TestLRUCache_CacherRegisterHasOrAddAddedDataHandlerNotAddedShouldNotCall(t 
 func TestLRUCache_CloseShouldNotErr(t *testing.T) {
 	t.Parallel()
 
-	c, _ := lrucache.NewCache(1)
+	c, _ := lrucache.NewCache(1, false)
 
 	err := c.Close()
 	assert.Nil(t, err)
@@ -427,7 +427,7 @@ type cacheWrapper struct {
 
 func newCacheWrapper() *cacheWrapper {
 	wrapper := &cacheWrapper{}
-	wrapper.c, _ = lrucache.NewCacheWithEviction(2, wrapper.onEvict)
+	wrapper.c, _ = lrucache.NewCacheWithEviction(2, wrapper.onEvict, false)
 
 	return wrapper
 }
@@ -461,30 +461,58 @@ func TestLruCache_LenDuringEviction(t *testing.T) {
 	}
 }
 
-func TestLruCache_PutShouldCallTheHandlersInAsyncManner(t *testing.T) {
+func TestLruCache_PutShouldCallTheHandlers(t *testing.T) {
 	t.Parallel()
 
-	c, err := lrucache.NewCache(100)
-	require.Nil(t, err)
+	t.Run("async mode should work", func(t *testing.T) {
+		c, err := lrucache.NewCache(100, false)
+		require.Nil(t, err)
 
-	wgCalled := sync.WaitGroup{}
-	wgCalled.Add(2)
-	handler1 := func(key []byte, value interface{}) {
-		wgCalled.Done()
-		time.Sleep(time.Second * 2)
-	}
-	handler2 := func(key []byte, value interface{}) {
-		wgCalled.Done()
-		time.Sleep(time.Second * 2)
-	}
+		wgCalled := sync.WaitGroup{}
+		wgCalled.Add(2)
+		handler1 := func(key []byte, value interface{}) {
+			wgCalled.Done()
+			time.Sleep(time.Second * 2)
+		}
+		handler2 := func(key []byte, value interface{}) {
+			wgCalled.Done()
+			time.Sleep(time.Second * 2)
+		}
 
-	c.RegisterHandler(handler1, "id1")
-	c.RegisterHandler(handler2, "id2")
+		c.RegisterHandler(handler1, "id1")
+		c.RegisterHandler(handler2, "id2")
 
-	timeStampStart := time.Now()
-	_ = c.Put([]byte("key"), []byte("value"), 0)
-	wgCalled.Wait()
-	timeStampEnd := time.Now()
+		timeStampStart := time.Now()
+		_ = c.Put([]byte("key"), []byte("value"), 0)
+		wgCalled.Wait()
+		timeStampEnd := time.Now()
 
-	assert.Less(t, timeStampEnd.Sub(timeStampStart), time.Second*4)
+		assert.Less(t, timeStampEnd.Sub(timeStampStart), time.Second*4)
+	})
+	t.Run("sync mode should work", func(t *testing.T) {
+		c, err := lrucache.NewCache(100, true)
+		require.Nil(t, err)
+
+		wgCalled := sync.WaitGroup{}
+		wgCalled.Add(2)
+		handler1 := func(key []byte, value interface{}) {
+			wgCalled.Done()
+			time.Sleep(time.Second * 2)
+		}
+		handler2 := func(key []byte, value interface{}) {
+			wgCalled.Done()
+			time.Sleep(time.Second * 2)
+		}
+
+		c.RegisterHandler(handler1, "id1")
+		c.RegisterHandler(handler2, "id2")
+
+		timeStampStart := time.Now()
+		_ = c.Put([]byte("key"), []byte("value"), 0)
+		wgCalled.Wait()
+		timeStampEnd := time.Now()
+
+		assert.GreaterOrEqual(t, timeStampEnd.Sub(timeStampStart), time.Second*4)
+	})
+
 }
