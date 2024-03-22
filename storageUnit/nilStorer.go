@@ -1,9 +1,12 @@
 package storageUnit
 
 import (
-	storageCore "github.com/multiversx/mx-chain-core-go/storage"
+	"github.com/multiversx/mx-chain-core-go/data"
 	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
+
+var _ types.Storer = (*NilStorer)(nil)
 
 // NilStorer resembles a disabled implementation of the Storer interface
 type NilStorer struct {
@@ -20,7 +23,7 @@ func (ns *NilStorer) GetFromEpoch(_ []byte, _ uint32) ([]byte, error) {
 }
 
 // GetBulkFromEpoch will do nothing
-func (ns *NilStorer) GetBulkFromEpoch(_ [][]byte, _ uint32) ([]storageCore.KeyValuePair, error) {
+func (ns *NilStorer) GetBulkFromEpoch(_ [][]byte, _ uint32) ([]data.KeyValuePair, error) {
 	return nil, nil
 }
 
