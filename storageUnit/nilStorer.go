@@ -3,7 +3,10 @@ package storageUnit
 import (
 	"github.com/multiversx/mx-chain-core-go/data"
 	"github.com/multiversx/mx-chain-storage-go/common"
+	"github.com/multiversx/mx-chain-storage-go/types"
 )
+
+var _ types.Storer = (*NilStorer)(nil)
 
 // NilStorer resembles a disabled implementation of the Storer interface
 type NilStorer struct {
