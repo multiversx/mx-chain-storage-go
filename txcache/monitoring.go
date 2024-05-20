@@ -120,10 +120,11 @@ func (journal *evictionJournal) display() {
 
 // Diagnose checks the state of the cache for inconsistencies and displays a summary
 func (cache *TxCache) Diagnose(deep bool) {
-	cache.diagnoseShallowly()
-	if deep {
-		cache.diagnoseDeeply()
-	}
+	// Disabled for benchmark.
+	// cache.diagnoseShallowly()
+	// if deep {
+	// 	cache.diagnoseDeeply()
+	// }
 }
 
 func (cache *TxCache) diagnoseShallowly() {

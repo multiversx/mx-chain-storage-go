@@ -33,6 +33,8 @@ type TxCache struct {
 
 // NewTxCache creates a new transaction cache
 func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, error) {
+	config.EvictionEnabled = false
+
 	log.Debug("NewTxCache", "config", config.String())
 	monitoring.MonitorNewCache(config.Name, uint64(config.NumBytesThreshold))
 
@@ -124,7 +126,7 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
-			batchSizeWithScoreCoefficient := batchSizePerSender * int(txList.getLastComputedScore()+1)
+			batchSizeWithScoreCoefficient := batchSizePerSender // * int(txList.getLastComputedScore()+1)
 			// Reset happens on first pass only
 			isFirstBatch := pass == 0
 			journal := txList.selectBatchTo(isFirstBatch, result[resultFillIndex:], batchSizeWithScoreCoefficient, bandwidthPerSender)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/multiversx/mx-chain-core-go/data"
+	"github.com/multiversx/mx-chain-core-go/data/transaction"
 )
 
 const processFeeFactor = float64(0.8) // 80%
@@ -11,6 +12,7 @@ const processFeeFactor = float64(0.8) // 80%
 // WrappedTransaction contains a transaction, its hash and extra information
 type WrappedTransaction struct {
 	Tx                   data.TransactionHandler
+	TxDirectPointer      *transaction.Transaction
 	TxHash               []byte
 	SenderShardID        uint32
 	ReceiverShardID      uint32
