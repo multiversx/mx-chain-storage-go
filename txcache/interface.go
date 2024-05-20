@@ -1,12 +1,9 @@
 package txcache
 
-import (
-	"github.com/multiversx/mx-chain-core-go/data"
-)
+import "github.com/multiversx/mx-chain-core-go/data"
 
-type scoreComputer interface {
-	computeScore(scoreParams senderScoreParams) uint32
-}
+// ForEachTransaction is an iterator callback
+type ForEachTransaction func(txHash []byte, value *WrappedTransaction)
 
 // TxGasHandler handles a transaction gas and gas cost
 type TxGasHandler interface {
@@ -18,6 +15,3 @@ type TxGasHandler interface {
 	MinGasPriceForProcessing() uint64
 	IsInterfaceNil() bool
 }
-
-// ForEachTransaction is an iterator callback
-type ForEachTransaction func(txHash []byte, value *WrappedTransaction)

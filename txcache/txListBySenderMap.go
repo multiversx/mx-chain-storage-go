@@ -11,31 +11,20 @@ const numberOfScoreChunks = uint32(1)
 
 // txListBySenderMap is a map-like structure for holding and accessing transactions by sender
 type txListBySenderMap struct {
-	backingMap        *maps.BucketSortedMap
-	senderConstraints senderConstraints
-	counter           atomic.Counter
-	scoreComputer     scoreComputer
-	txGasHandler      TxGasHandler
-	txFeeHelper       feeHelper
-	mutex             sync.Mutex
+	backingMap   *maps.BucketSortedMap
+	counter      atomic.Counter
+	txGasHandler TxGasHandler
+	mutex        sync.Mutex
 }
 
 // newTxListBySenderMap creates a new instance of TxListBySenderMap
 func newTxListBySenderMap(
 	nChunksHint uint32,
-	senderConstraints senderConstraints,
-	scoreComputer scoreComputer,
-	txGasHandler TxGasHandler,
-	txFeeHelper feeHelper,
 ) *txListBySenderMap {
 	backingMap := maps.NewBucketSortedMap(nChunksHint, numberOfScoreChunks)
 
 	return &txListBySenderMap{
-		backingMap:        backingMap,
-		senderConstraints: senderConstraints,
-		scoreComputer:     scoreComputer,
-		txGasHandler:      txGasHandler,
-		txFeeHelper:       txFeeHelper,
+		backingMap: backingMap,
 	}
 }
 
@@ -43,7 +32,7 @@ func newTxListBySenderMap(
 func (txMap *txListBySenderMap) addTx(tx *WrappedTransaction) (bool, [][]byte) {
 	sender := string(tx.Tx.GetSndAddr())
 	listForSender := txMap.getOrAddListForSender(sender)
-	return listForSender.AddTx(tx, txMap.txGasHandler, txMap.txFeeHelper)
+	return listForSender.AddTx(tx)
 }
 
 // getOrAddListForSender gets or lazily creates a list (using double-checked locking pattern)
@@ -75,7 +64,7 @@ func (txMap *txListBySenderMap) getListForSender(sender string) (*txListForSende
 }
 
 func (txMap *txListBySenderMap) addSender(sender string) *txListForSender {
-	listForSender := newTxListForSender(sender, &txMap.senderConstraints)
+	listForSender := newTxListForSender(sender)
 
 	txMap.backingMap.Set(listForSender)
 	txMap.backingMap.NotifyScoreChange(listForSender, 0)

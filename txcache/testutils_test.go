@@ -37,13 +37,6 @@ func (txMap *txListBySenderMap) testGetListForSender(sender string) *txListForSe
 	return list
 }
 
-func (cache *TxCache) getScoreOfSender(sender string) uint32 {
-	list := cache.getListForSender(sender)
-	scoreParams := list.getScoreParams()
-	computer := cache.txListBySender.scoreComputer
-	return computer.computeScore(scoreParams)
-}
-
 func (cache *TxCache) getNumFailedSelectionsOfSender(sender string) int {
 	return int(cache.getListForSender(sender).numFailedSelections.Get())
 }
@@ -100,9 +93,10 @@ func createTx(hash []byte, sender string, nonce uint64) *WrappedTransaction {
 	}
 
 	return &WrappedTransaction{
-		Tx:     tx,
-		TxHash: hash,
-		Size:   int64(estimatedSizeOfBoundedTxFields),
+		Tx:              tx,
+		TxDirectPointer: tx,
+		TxHash:          hash,
+		Size:            int64(estimatedSizeOfBoundedTxFields),
 	}
 }
 func createTxWithGasLimit(hash []byte, sender string, nonce uint64, gasLimit uint64) *WrappedTransaction {
@@ -113,9 +107,10 @@ func createTxWithGasLimit(hash []byte, sender string, nonce uint64, gasLimit uin
 	}
 
 	return &WrappedTransaction{
-		Tx:     tx,
-		TxHash: hash,
-		Size:   int64(estimatedSizeOfBoundedTxFields),
+		Tx:              tx,
+		TxDirectPointer: tx,
+		TxHash:          hash,
+		Size:            int64(estimatedSizeOfBoundedTxFields),
 	}
 }
 
@@ -134,9 +129,10 @@ func createTxWithParams(hash []byte, sender string, nonce uint64, size uint64, g
 	}
 
 	return &WrappedTransaction{
-		Tx:     tx,
-		TxHash: hash,
-		Size:   int64(size),
+		Tx:              tx,
+		TxDirectPointer: tx,
+		TxHash:          hash,
+		Size:            int64(size),
 	}
 }
 
@@ -180,13 +176,4 @@ func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	case <-time.After(timeout):
 		return true // timed out
 	}
-}
-
-var _ scoreComputer = (*disabledScoreComputer)(nil)
-
-type disabledScoreComputer struct {
-}
-
-func (computer *disabledScoreComputer) computeScore(_ senderScoreParams) uint32 {
-	return 0
 }

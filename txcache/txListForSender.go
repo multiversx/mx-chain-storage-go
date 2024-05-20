@@ -13,41 +13,35 @@ var _ maps.BucketSortedMapItem = (*txListForSender)(nil)
 
 // txListForSender represents a sorted list of transactions of a particular sender
 type txListForSender struct {
-	copyDetectedGap   bool
-	lastComputedScore atomic.Uint32
-	accountNonceKnown atomic.Flag
-	sweepable         atomic.Flag
-	copyPreviousNonce uint64
-	sender            string
-	items             *list.List
-	copyBatchIndex    *list.Element
-	constraints       *senderConstraints
-	scoreChunk        *maps.MapChunk
-	accountNonce      atomic.Uint64
-	//totalBytes        atomic.Counter
-	//totalGas            atomic.Counter
-	//totalFeeScore       atomic.Counter
+	copyDetectedGap     bool
+	lastComputedScore   atomic.Uint32
+	accountNonceKnown   atomic.Flag
+	sweepable           atomic.Flag
+	copyPreviousNonce   uint64
+	sender              string
+	items               *list.List
+	copyBatchIndex      *list.Element
+	scoreChunk          *maps.MapChunk
+	accountNonce        atomic.Uint64
 	numFailedSelections atomic.Counter
-	//onScoreChange       scoreChangeCallback
 
 	scoreChunkMutex sync.RWMutex
 	mutex           sync.RWMutex
 }
 
-type scoreChangeCallback func(value *txListForSender, scoreParams senderScoreParams)
+type scoreChangeCallback func(value *txListForSender)
 
 // newTxListForSender creates a new (sorted) list of transactions
-func newTxListForSender(sender string, constraints *senderConstraints) *txListForSender {
+func newTxListForSender(sender string) *txListForSender {
 	return &txListForSender{
-		items:       list.New(),
-		sender:      sender,
-		constraints: constraints,
+		items:  list.New(),
+		sender: sender,
 	}
 }
 
 // AddTx adds a transaction in sender's list
 // This is a "sorted" insert
-func (listForSender *txListForSender) AddTx(tx *WrappedTransaction, gasHandler TxGasHandler, txFeeHelper feeHelper) (bool, [][]byte) {
+func (listForSender *txListForSender) AddTx(tx *WrappedTransaction) (bool, [][]byte) {
 	// We don't allow concurrent interceptor goroutines to mutate a given sender's list
 	listForSender.mutex.Lock()
 	defer listForSender.mutex.Unlock()
@@ -63,9 +57,7 @@ func (listForSender *txListForSender) AddTx(tx *WrappedTransaction, gasHandler T
 		listForSender.items.InsertAfter(tx, insertionPlace)
 	}
 
-	listForSender.onAddedTransaction(tx, gasHandler, txFeeHelper)
 	evicted := [][]byte{}
-	//listForSender.triggerScoreChange()
 	return true, evicted
 }
 
@@ -80,7 +72,6 @@ func (listForSender *txListForSender) applySizeConstraints() [][]byte {
 		}
 
 		listForSender.items.Remove(element)
-		listForSender.onRemovedListElement(element)
 
 		// Keep track of removed transactions
 		value := element.Value.(*WrappedTransaction)
@@ -94,61 +85,17 @@ func (listForSender *txListForSender) isCapacityExceeded() bool {
 	return false
 }
 
-func (listForSender *txListForSender) onAddedTransaction(tx *WrappedTransaction, gasHandler TxGasHandler, txFeeHelper feeHelper) {
-	// listForSender.totalBytes.Add(tx.Size)
-	// listForSender.totalGas.Add(int64(estimateTxGas(tx)))
-	// listForSender.totalFeeScore.Add(int64(estimateTxFeeScore(tx, gasHandler, txFeeHelper)))
-}
-
-func (listForSender *txListForSender) triggerScoreChange() {
-	// scoreParams := listForSender.getScoreParams()
-	// listForSender.onScoreChange(listForSender, scoreParams)
-}
-
-// This function should only be used in critical section (listForSender.mutex)
-func (listForSender *txListForSender) getScoreParams() senderScoreParams {
-	// fee := listForSender.totalFeeScore.GetUint64()
-	// gas := listForSender.totalGas.GetUint64()
-	// count := listForSender.countTx()
-
-	// return senderScoreParams{count: count, feeScore: fee, gas: gas}
-	return senderScoreParams{}
-}
-
 // This function should only be used in critical section (listForSender.mutex)
 func (listForSender *txListForSender) findInsertionPlace(incomingTx *WrappedTransaction) (*list.Element, error) {
 	incomingNonce := incomingTx.TxDirectPointer.Nonce
-	//incomingGasPrice := incomingTx.Tx.GetGasPrice()
 
 	for element := listForSender.items.Back(); element != nil; element = element.Prev() {
 		currentTx := element.Value.(*WrappedTransaction)
 		currentTxNonce := currentTx.TxDirectPointer.Nonce
-		//currentTxGasPrice := currentTx.Tx.GetGasPrice()
-
-		// if incomingTx.sameAsKnowingThatSenderIsSame(currentTx) {
-		// 	// The incoming transaction will be discarded
-		// 	return nil, common.ErrItemAlreadyInCache
-		// }
 
 		if currentTxNonce == incomingNonce {
 			return nil, common.ErrItemAlreadyInCache
 		}
-
-		// if currentTxNonce == incomingNonce {
-		// 	if currentTxGasPrice > incomingGasPrice {
-		// 		// The incoming transaction will be placed right after the existing one, which has same nonce but higher price.
-		// 		// If the nonces are the same, but the incoming gas price is higher or equal, the search loop continues.
-		// 		return element, nil
-		// 	}
-		// 	if currentTxGasPrice == incomingGasPrice {
-		// 		// The incoming transaction will be placed right after the existing one, which has same nonce and the same price.
-		// 		// (but different hash, because of some other fields like receiver, value or data)
-		// 		// This will order out the transactions having the same nonce and gas price
-		// 		if bytes.Compare(currentTx.TxHash, incomingTx.TxHash) < 0 {
-		// 			return element, nil
-		// 		}
-		// 	}
-		// }
 
 		if currentTxNonce < incomingNonce {
 			// We've found the first transaction with a lower nonce than the incoming one,
@@ -171,19 +118,9 @@ func (listForSender *txListForSender) RemoveTx(tx *WrappedTransaction) bool {
 	isFound := marker != nil
 	if isFound {
 		listForSender.items.Remove(marker)
-		listForSender.onRemovedListElement(marker)
-		//listForSender.triggerScoreChange()
 	}
 
 	return isFound
-}
-
-func (listForSender *txListForSender) onRemovedListElement(element *list.Element) {
-	// value := element.Value.(*WrappedTransaction)
-
-	// listForSender.totalBytes.Subtract(value.Size)
-	// listForSender.totalGas.Subtract(int64(estimateTxGas(value)))
-	// listForSender.totalFeeScore.Subtract(int64(value.TxFeeScoreNormalized))
 }
 
 // This function should only be used in critical section (listForSender.mutex)

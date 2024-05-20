@@ -35,48 +35,42 @@ func Test_NewTxCache(t *testing.T) {
 		CountThreshold:                math.MaxUint32,
 		NumSendersToPreemptivelyEvict: 100,
 	}
-	txGasHandler, _ := dummyParams()
 
-	cache, err := NewTxCache(config, txGasHandler)
+	cache, err := NewTxCache(config, nil)
 	require.Nil(t, err)
 	require.NotNil(t, cache)
 
 	badConfig := config
 	badConfig.Name = ""
-	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.Name", txGasHandler)
+	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.Name")
 
 	badConfig = config
 	badConfig.NumChunks = 0
-	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.NumChunks", txGasHandler)
+	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.NumChunks")
 
 	badConfig = config
 	badConfig.NumBytesPerSenderThreshold = 0
-	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.NumBytesPerSenderThreshold", txGasHandler)
+	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.NumBytesPerSenderThreshold")
 
 	badConfig = config
 	badConfig.CountPerSenderThreshold = 0
-	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.CountPerSenderThreshold", txGasHandler)
-
-	badConfig = config
-	cache, err = NewTxCache(config, nil)
-	require.Nil(t, cache)
-	require.Equal(t, common.ErrNilTxGasHandler, err)
+	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.CountPerSenderThreshold")
 
 	badConfig = withEvictionConfig
 	badConfig.NumBytesThreshold = 0
-	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.NumBytesThreshold", txGasHandler)
+	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.NumBytesThreshold")
 
 	badConfig = withEvictionConfig
 	badConfig.CountThreshold = 0
-	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.CountThreshold", txGasHandler)
+	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.CountThreshold")
 
 	badConfig = withEvictionConfig
 	badConfig.NumSendersToPreemptivelyEvict = 0
-	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.NumSendersToPreemptivelyEvict", txGasHandler)
+	requireErrorOnNewTxCache(t, badConfig, common.ErrInvalidConfig, "config.NumSendersToPreemptivelyEvict")
 }
 
-func requireErrorOnNewTxCache(t *testing.T, config ConfigSourceMe, errExpected error, errPartialMessage string, txGasHandler TxGasHandler) {
-	cache, errReceived := NewTxCache(config, txGasHandler)
+func requireErrorOnNewTxCache(t *testing.T, config ConfigSourceMe, errExpected error, errPartialMessage string) {
+	cache, errReceived := NewTxCache(config, nil)
 	require.Nil(t, cache)
 	require.True(t, errors.Is(errReceived, errExpected))
 	require.Contains(t, errReceived.Error(), errPartialMessage)
@@ -115,44 +109,6 @@ func Test_AddNilTx_DoesNothing(t *testing.T) {
 	foundTx, ok := cache.GetByTxHash(txHash)
 	require.False(t, ok)
 	require.Nil(t, foundTx)
-}
-
-func Test_AddTx_AppliesSizeConstraintsPerSenderForNumTransactions(t *testing.T) {
-	cache := newCacheToTest(maxNumBytesPerSenderUpperBound, 3)
-
-	cache.AddTx(createTx([]byte("tx-alice-1"), "alice", 1))
-	cache.AddTx(createTx([]byte("tx-alice-2"), "alice", 2))
-	cache.AddTx(createTx([]byte("tx-alice-4"), "alice", 4))
-	cache.AddTx(createTx([]byte("tx-bob-1"), "bob", 1))
-	cache.AddTx(createTx([]byte("tx-bob-2"), "bob", 2))
-	require.Equal(t, []string{"tx-alice-1", "tx-alice-2", "tx-alice-4"}, cache.getHashesForSender("alice"))
-	require.Equal(t, []string{"tx-bob-1", "tx-bob-2"}, cache.getHashesForSender("bob"))
-	require.True(t, cache.areInternalMapsConsistent())
-
-	cache.AddTx(createTx([]byte("tx-alice-3"), "alice", 3))
-	require.Equal(t, []string{"tx-alice-1", "tx-alice-2", "tx-alice-3"}, cache.getHashesForSender("alice"))
-	require.Equal(t, []string{"tx-bob-1", "tx-bob-2"}, cache.getHashesForSender("bob"))
-	require.True(t, cache.areInternalMapsConsistent())
-}
-
-func Test_AddTx_AppliesSizeConstraintsPerSenderForNumBytes(t *testing.T) {
-	cache := newCacheToTest(1024, math.MaxUint32)
-
-	cache.AddTx(createTxWithParams([]byte("tx-alice-1"), "alice", 1, 128, 42, 42))
-	cache.AddTx(createTxWithParams([]byte("tx-alice-2"), "alice", 2, 512, 42, 42))
-	cache.AddTx(createTxWithParams([]byte("tx-alice-4"), "alice", 3, 256, 42, 42))
-	cache.AddTx(createTxWithParams([]byte("tx-bob-1"), "bob", 1, 512, 42, 42))
-	cache.AddTx(createTxWithParams([]byte("tx-bob-2"), "bob", 2, 513, 42, 42))
-
-	require.Equal(t, []string{"tx-alice-1", "tx-alice-2", "tx-alice-4"}, cache.getHashesForSender("alice"))
-	require.Equal(t, []string{"tx-bob-1"}, cache.getHashesForSender("bob"))
-	require.True(t, cache.areInternalMapsConsistent())
-
-	cache.AddTx(createTxWithParams([]byte("tx-alice-3"), "alice", 3, 256, 42, 42))
-	cache.AddTx(createTxWithParams([]byte("tx-bob-2"), "bob", 3, 512, 42, 42))
-	require.Equal(t, []string{"tx-alice-1", "tx-alice-2", "tx-alice-3"}, cache.getHashesForSender("alice"))
-	require.Equal(t, []string{"tx-bob-1", "tx-bob-2"}, cache.getHashesForSender("bob"))
-	require.True(t, cache.areInternalMapsConsistent())
 }
 
 func Test_RemoveByTxHash(t *testing.T) {
@@ -405,47 +361,6 @@ func Test_Keys(t *testing.T) {
 	require.Contains(t, keys, []byte("bob-y"))
 }
 
-func Test_AddWithEviction_UniformDistributionOfTxsPerSender(t *testing.T) {
-	txGasHandler, _ := dummyParams()
-	config := ConfigSourceMe{
-		Name:                          "untitled",
-		NumChunks:                     16,
-		EvictionEnabled:               true,
-		NumBytesThreshold:             maxNumBytesUpperBound,
-		CountThreshold:                100,
-		NumSendersToPreemptivelyEvict: 1,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
-		CountPerSenderThreshold:       math.MaxUint32,
-	}
-
-	// 11 * 10
-	cache, err := NewTxCache(config, txGasHandler)
-	require.Nil(t, err)
-	require.NotNil(t, cache)
-
-	addManyTransactionsWithUniformDistribution(cache, 11, 10)
-	require.LessOrEqual(t, cache.CountTx(), uint64(100))
-
-	config = ConfigSourceMe{
-		Name:                          "untitled",
-		NumChunks:                     16,
-		EvictionEnabled:               true,
-		NumBytesThreshold:             maxNumBytesUpperBound,
-		CountThreshold:                250000,
-		NumSendersToPreemptivelyEvict: 1,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
-		CountPerSenderThreshold:       math.MaxUint32,
-	}
-
-	// 100 * 1000
-	cache, err = NewTxCache(config, txGasHandler)
-	require.Nil(t, err)
-	require.NotNil(t, cache)
-
-	addManyTransactionsWithUniformDistribution(cache, 100, 1000)
-	require.LessOrEqual(t, cache.CountTx(), uint64(250000))
-}
-
 func Test_NotImplementedFunctions(t *testing.T) {
 	cache := newUnconstrainedCacheToTest()
 
@@ -627,13 +542,12 @@ func TestTxCache_NoCriticalInconsistency_WhenConcurrentAdditionsAndRemovals(t *t
 }
 
 func newUnconstrainedCacheToTest() *TxCache {
-	txGasHandler, _ := dummyParams()
 	cache, err := NewTxCache(ConfigSourceMe{
 		Name:                       "test",
 		NumChunks:                  16,
 		NumBytesPerSenderThreshold: maxNumBytesPerSenderUpperBound,
 		CountPerSenderThreshold:    math.MaxUint32,
-	}, txGasHandler)
+	}, nil)
 	if err != nil {
 		panic(fmt.Sprintf("newUnconstrainedCacheToTest(): %s", err))
 	}
@@ -642,13 +556,12 @@ func newUnconstrainedCacheToTest() *TxCache {
 }
 
 func newCacheToTest(numBytesPerSenderThreshold uint32, countPerSenderThreshold uint32) *TxCache {
-	txGasHandler, _ := dummyParams()
 	cache, err := NewTxCache(ConfigSourceMe{
 		Name:                       "test",
 		NumChunks:                  16,
 		NumBytesPerSenderThreshold: numBytesPerSenderThreshold,
 		CountPerSenderThreshold:    countPerSenderThreshold,
-	}, txGasHandler)
+	}, nil)
 	if err != nil {
 		panic(fmt.Sprintf("newCacheToTest(): %s", err))
 	}

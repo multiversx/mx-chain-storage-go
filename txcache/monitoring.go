@@ -157,21 +157,6 @@ func (cache *TxCache) diagnoseShallowly() {
 	log.Debug("TxCache.NumTxs:", "estimate", numTxsEstimate, "inChunks", numTxsInChunks, "keys", len(txsKeys))
 }
 
-func (cache *TxCache) diagnoseDeeply() {
-	sw := core.NewStopWatch()
-	sw.Start("diagnose")
-
-	journal := cache.checkInternalConsistency()
-	cache.displaySendersSummary()
-
-	sw.Stop("diagnose")
-	duration := sw.GetMeasurement("diagnose")
-
-	log.Debug("TxCache.diagnoseDeeply()", "name", cache.name, "duration", duration)
-	journal.display()
-	cache.displaySendersHistogram()
-}
-
 type internalConsistencyJournal struct {
 	numInMapByHash        int
 	numInMapBySender      int

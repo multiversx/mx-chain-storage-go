@@ -5,7 +5,6 @@ import (
 
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
 	"github.com/multiversx/mx-chain-core-go/core/check"
-	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -32,9 +31,7 @@ type TxCache struct {
 }
 
 // NewTxCache creates a new transaction cache
-func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, error) {
-	config.EvictionEnabled = false
-
+func NewTxCache(config ConfigSourceMe, _ TxGasHandler) (*TxCache, error) {
 	log.Debug("NewTxCache", "config", config.String())
 	monitoring.MonitorNewCache(config.Name, uint64(config.NumBytesThreshold))
 
@@ -42,25 +39,18 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	if err != nil {
 		return nil, err
 	}
-	if check.IfNil(txGasHandler) {
-		return nil, common.ErrNilTxGasHandler
-	}
 
 	// Note: for simplicity, we use the same "numChunks" for both internal concurrent maps
 	numChunks := config.NumChunks
-	senderConstraintsObj := config.getSenderConstraints()
-	txFeeHelper := newFeeComputationHelper(txGasHandler.MinGasPrice(), txGasHandler.MinGasLimit(), txGasHandler.MinGasPriceForProcessing())
-	scoreComputerObj := newDefaultScoreComputer(txFeeHelper)
 
 	txCache := &TxCache{
 		name:            config.Name,
-		txListBySender:  newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
+		txListBySender:  newTxListBySenderMap(numChunks),
 		txByHash:        newTxByHashMap(numChunks),
 		config:          config,
 		evictionJournal: evictionJournal{},
 	}
 
-	txCache.initSweepable()
 	return txCache, nil
 }
 
@@ -69,10 +59,6 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 	if tx == nil || check.IfNil(tx.Tx) {
 		return false, false
-	}
-
-	if cache.config.EvictionEnabled {
-		cache.doEviction()
 	}
 
 	cache.mutTxOperation.Lock()
@@ -126,15 +112,11 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
-			batchSizeWithScoreCoefficient := batchSizePerSender // * int(txList.getLastComputedScore()+1)
+			batchSizeWithScoreCoefficient := batchSizePerSender
 			// Reset happens on first pass only
 			isFirstBatch := pass == 0
 			journal := txList.selectBatchTo(isFirstBatch, result[resultFillIndex:], batchSizeWithScoreCoefficient, bandwidthPerSender)
 			cache.monitorBatchSelectionEnd(journal)
-
-			if isFirstBatch {
-				cache.collectSweepable(txList)
-			}
 
 			resultFillIndex += journal.copied
 			copiedInThisPass += journal.copied
@@ -162,7 +144,6 @@ func (cache *TxCache) getSendersEligibleForSelection() []*txListForSender {
 }
 
 func (cache *TxCache) doAfterSelection() {
-	cache.sweepSweepable()
 	cache.Diagnose(false)
 }
 

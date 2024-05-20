@@ -30,11 +30,6 @@ type ConfigSourceMe struct {
 	NumSendersToPreemptivelyEvict uint32
 }
 
-type senderConstraints struct {
-	maxNumTxs   uint32
-	maxNumBytes uint32
-}
-
 // TODO: Upon further analysis and brainstorming, add some sensible minimum accepted values for the appropriate fields.
 func (config *ConfigSourceMe) verify() error {
 	if len(config.Name) == 0 {
@@ -62,13 +57,6 @@ func (config *ConfigSourceMe) verify() error {
 	}
 
 	return nil
-}
-
-func (config *ConfigSourceMe) getSenderConstraints() senderConstraints {
-	return senderConstraints{
-		maxNumBytes: config.NumBytesPerSenderThreshold,
-		maxNumTxs:   config.CountPerSenderThreshold,
-	}
 }
 
 // String returns a readable representation of the object
