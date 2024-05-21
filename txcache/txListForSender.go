@@ -13,17 +13,15 @@ var _ maps.BucketSortedMapItem = (*txListForSender)(nil)
 
 // txListForSender represents a sorted list of transactions of a particular sender
 type txListForSender struct {
-	copyDetectedGap     bool
-	lastComputedScore   atomic.Uint32
-	accountNonceKnown   atomic.Flag
-	sweepable           atomic.Flag
-	copyPreviousNonce   uint64
-	sender              string
-	items               *list.List
-	copyBatchIndex      *list.Element
-	scoreChunk          *maps.MapChunk
-	accountNonce        atomic.Uint64
-	numFailedSelections atomic.Counter
+	copyDetectedGap   bool
+	lastComputedScore atomic.Uint32
+	accountNonceKnown atomic.Flag
+	copyPreviousNonce uint64
+	sender            string
+	items             *list.List
+	copyBatchIndex    *list.Element
+	scoreChunk        *maps.MapChunk
+	accountNonce      atomic.Uint64
 
 	scoreChunkMutex sync.RWMutex
 	mutex           sync.RWMutex
@@ -151,24 +149,19 @@ func (listForSender *txListForSender) IsEmpty() bool {
 
 // selectBatchTo copies a batch (usually small) of transactions of a limited gas bandwidth and limited number of transactions to a destination slice
 // It also updates the internal state used for copy operations
-func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destination []*WrappedTransaction, batchSize int, bandwidth uint64) batchSelectionJournal {
+func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destination []*WrappedTransaction, batchSize int, bandwidth uint64) int {
 	// We can't read from multiple goroutines at the same time
 	// And we can't mutate the sender's list while reading it
 	listForSender.mutex.Lock()
 	defer listForSender.mutex.Unlock()
 
-	journal := batchSelectionJournal{}
-
 	// Reset the internal state used for copy operations
 	if isFirstBatch {
-		hasInitialGap := listForSender.verifyInitialGapOnSelectionStart()
+		hasInitialGap := listForSender.hasInitialGap()
 
 		listForSender.copyBatchIndex = listForSender.items.Front()
 		listForSender.copyPreviousNonce = 0
 		listForSender.copyDetectedGap = hasInitialGap
-
-		journal.isFirstBatch = true
-		journal.hasInitialGap = hasInitialGap
 	}
 
 	element := listForSender.copyBatchIndex
@@ -177,16 +170,8 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 	previousNonce := listForSender.copyPreviousNonce
 
 	// If a nonce gap is detected, no transaction is returned in this read.
-	// There is an exception though: if this is the first read operation for the sender in the current selection process and the sender is in the grace period,
-	// then one transaction will be returned. But subsequent reads for this sender will return nothing.
 	if detectedGap {
-		log.Debug("Detected gap for sender", "sender", listForSender.sender, "nonce", previousNonce)
-		if isFirstBatch && listForSender.isInGracePeriod() {
-			journal.isGracePeriod = true
-			batchSize = 1
-		} else {
-			batchSize = 0
-		}
+		batchSize = 0
 	}
 
 	copiedBandwidth := uint64(0)
@@ -204,7 +189,6 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 		if previousNonce > 0 && txNonce > previousNonce+1 {
 			log.Debug("Detected gap for sender - middle", "sender", listForSender.sender, "nonce", previousNonce)
 			listForSender.copyDetectedGap = true
-			journal.hasMiddleGap = true
 			break
 		}
 
@@ -215,8 +199,7 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 
 	listForSender.copyBatchIndex = element
 	listForSender.copyPreviousNonce = previousNonce
-	journal.copied = copied
-	return journal
+	return copied
 }
 
 // getTxHashes returns the hashes of transactions in the list
@@ -262,23 +245,6 @@ func (listForSender *txListForSender) notifyAccountNonce(nonce uint64) {
 	_ = listForSender.accountNonceKnown.SetReturningPrevious()
 }
 
-// This function should only be used in critical section (listForSender.mutex)
-func (listForSender *txListForSender) verifyInitialGapOnSelectionStart() bool {
-	hasInitialGap := listForSender.hasInitialGap()
-
-	if hasInitialGap {
-		listForSender.numFailedSelections.Increment()
-
-		if listForSender.isGracePeriodExceeded() {
-			_ = listForSender.sweepable.SetReturningPrevious()
-		}
-	} else {
-		listForSender.numFailedSelections.Reset()
-	}
-
-	return hasInitialGap
-}
-
 // hasInitialGap should only be called at tx selection time, since only then we can detect initial gaps with certainty
 // This function should only be used in critical section (listForSender.mutex)
 func (listForSender *txListForSender) hasInitialGap() bool {
@@ -307,25 +273,6 @@ func (listForSender *txListForSender) getLowestNonceTx() *WrappedTransaction {
 
 	value := front.Value.(*WrappedTransaction)
 	return value
-}
-
-// isInGracePeriod returns whether the sender is grace period due to a number of failed selections
-func (listForSender *txListForSender) isInGracePeriod() bool {
-	numFailedSelections := listForSender.numFailedSelections.Get()
-	return numFailedSelections >= senderGracePeriodLowerBound && numFailedSelections <= senderGracePeriodUpperBound
-}
-
-func (listForSender *txListForSender) isGracePeriodExceeded() bool {
-	numFailedSelections := listForSender.numFailedSelections.Get()
-	return numFailedSelections > senderGracePeriodUpperBound
-}
-
-func (listForSender *txListForSender) getLastComputedScore() uint32 {
-	return listForSender.lastComputedScore.Get()
-}
-
-func (listForSender *txListForSender) setLastComputedScore(score uint32) {
-	listForSender.lastComputedScore.Set(score)
 }
 
 // GetKey returns the key

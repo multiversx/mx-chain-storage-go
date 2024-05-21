@@ -32,10 +32,6 @@ func (txMap *txListBySenderMap) testGetListForSender(sender string) *txListForSe
 	return list
 }
 
-func (cache *TxCache) getNumFailedSelectionsOfSender(sender string) int {
-	return int(cache.getListForSender(sender).numFailedSelections.Get())
-}
-
 func (listForSender *txListForSender) getTxHashesAsStrings() []string {
 	hashes := listForSender.getTxHashes()
 	return hashesAsStrings(hashes)

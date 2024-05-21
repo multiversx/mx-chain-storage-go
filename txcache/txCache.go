@@ -3,7 +3,6 @@ package txcache
 import (
 	"sync"
 
-	"github.com/multiversx/mx-chain-core-go/core/atomic"
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -12,15 +11,11 @@ var _ types.Cacher = (*TxCache)(nil)
 
 // TxCache represents a cache-like structure (it has a fixed capacity and implements an eviction mechanism) for holding transactions
 type TxCache struct {
-	name                     string
-	txListBySender           *txListBySenderMap
-	txByHash                 *txByHashMap
-	config                   ConfigSourceMe
-	numSendersSelected       atomic.Counter
-	numSendersWithInitialGap atomic.Counter
-	numSendersWithMiddleGap  atomic.Counter
-	numSendersInGracePeriod  atomic.Counter
-	mutTxOperation           sync.Mutex
+	name           string
+	txListBySender *txListBySenderMap
+	txByHash       *txByHashMap
+	config         ConfigSourceMe
+	mutTxOperation sync.Mutex
 }
 
 // NewTxCache creates a new transaction cache
@@ -90,14 +85,12 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
-			batchSizeWithScoreCoefficient := batchSizePerSender
 			// Reset happens on first pass only
 			isFirstBatch := pass == 0
-			journal := txList.selectBatchTo(isFirstBatch, result[resultFillIndex:], batchSizeWithScoreCoefficient, bandwidthPerSender)
-			cache.monitorBatchSelectionEnd(journal)
+			copied := txList.selectBatchTo(isFirstBatch, result[resultFillIndex:], batchSizePerSender, bandwidthPerSender)
 
-			resultFillIndex += journal.copied
-			copiedInThisPass += journal.copied
+			resultFillIndex += copied
+			copiedInThisPass += copied
 			resultIsFull = resultFillIndex == numRequested
 			if resultIsFull {
 				break
