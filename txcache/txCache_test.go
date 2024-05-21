@@ -97,20 +97,6 @@ func Test_AddTx(t *testing.T) {
 	require.Equal(t, tx, foundTx)
 }
 
-func Test_AddNilTx_DoesNothing(t *testing.T) {
-	cache := newUnconstrainedCacheToTest()
-
-	txHash := []byte("hash-1")
-
-	ok, added := cache.AddTx(&WrappedTransaction{Tx: nil, TxHash: txHash})
-	require.False(t, ok)
-	require.False(t, added)
-
-	foundTx, ok := cache.GetByTxHash(txHash)
-	require.False(t, ok)
-	require.Nil(t, foundTx)
-}
-
 func Test_RemoveByTxHash(t *testing.T) {
 	cache := newUnconstrainedCacheToTest()
 

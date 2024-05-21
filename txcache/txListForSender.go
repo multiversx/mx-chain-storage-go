@@ -41,14 +41,14 @@ func newTxListForSender(sender string) *txListForSender {
 
 // AddTx adds a transaction in sender's list
 // This is a "sorted" insert
-func (listForSender *txListForSender) AddTx(tx *WrappedTransaction) (bool, [][]byte) {
+func (listForSender *txListForSender) AddTx(tx *WrappedTransaction) bool {
 	// We don't allow concurrent interceptor goroutines to mutate a given sender's list
 	listForSender.mutex.Lock()
 	defer listForSender.mutex.Unlock()
 
 	insertionPlace, err := listForSender.findInsertionPlace(tx)
 	if err != nil {
-		return false, nil
+		return false
 	}
 
 	if insertionPlace == nil {
@@ -57,8 +57,7 @@ func (listForSender *txListForSender) AddTx(tx *WrappedTransaction) (bool, [][]b
 		listForSender.items.InsertAfter(tx, insertionPlace)
 	}
 
-	evicted := [][]byte{}
-	return true, evicted
+	return true
 }
 
 // This function should only be used in critical section (listForSender.mutex)

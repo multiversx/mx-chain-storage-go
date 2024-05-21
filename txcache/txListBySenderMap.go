@@ -29,7 +29,7 @@ func newTxListBySenderMap(
 }
 
 // addTx adds a transaction in the map, in the corresponding list (selected by its sender)
-func (txMap *txListBySenderMap) addTx(tx *WrappedTransaction) (bool, [][]byte) {
+func (txMap *txListBySenderMap) addTx(tx *WrappedTransaction) bool {
 	sender := string(tx.Tx.GetSndAddr())
 	listForSender := txMap.getOrAddListForSender(sender)
 	return listForSender.AddTx(tx)

@@ -15,11 +15,6 @@ const oneBillion = oneMilion * 1000
 const delta = 0.00000001
 const estimatedSizeOfBoundedTxFields = uint64(128)
 
-func (cache *TxCache) areInternalMapsConsistent() bool {
-	journal := cache.checkInternalConsistency()
-	return journal.isFine()
-}
-
 func (cache *TxCache) getHashesForSender(sender string) []string {
 	return cache.getListForSender(sender).getTxHashesAsStrings()
 }
@@ -39,16 +34,6 @@ func (txMap *txListBySenderMap) testGetListForSender(sender string) *txListForSe
 
 func (cache *TxCache) getNumFailedSelectionsOfSender(sender string) int {
 	return int(cache.getListForSender(sender).numFailedSelections.Get())
-}
-
-func (cache *TxCache) isSenderSweepable(sender string) bool {
-	for _, item := range cache.sweepingListOfSenders {
-		if item.sender == sender {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (listForSender *txListForSender) getTxHashesAsStrings() []string {

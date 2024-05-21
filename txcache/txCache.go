@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
-	"github.com/multiversx/mx-chain-core-go/core/check"
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -13,21 +12,15 @@ var _ types.Cacher = (*TxCache)(nil)
 
 // TxCache represents a cache-like structure (it has a fixed capacity and implements an eviction mechanism) for holding transactions
 type TxCache struct {
-	name                      string
-	txListBySender            *txListBySenderMap
-	txByHash                  *txByHashMap
-	config                    ConfigSourceMe
-	evictionMutex             sync.Mutex
-	evictionJournal           evictionJournal
-	evictionSnapshotOfSenders []*txListForSender
-	isEvictionInProgress      atomic.Flag
-	numSendersSelected        atomic.Counter
-	numSendersWithInitialGap  atomic.Counter
-	numSendersWithMiddleGap   atomic.Counter
-	numSendersInGracePeriod   atomic.Counter
-	sweepingMutex             sync.Mutex
-	sweepingListOfSenders     []*txListForSender
-	mutTxOperation            sync.Mutex
+	name                     string
+	txListBySender           *txListBySenderMap
+	txByHash                 *txByHashMap
+	config                   ConfigSourceMe
+	numSendersSelected       atomic.Counter
+	numSendersWithInitialGap atomic.Counter
+	numSendersWithMiddleGap  atomic.Counter
+	numSendersInGracePeriod  atomic.Counter
+	mutTxOperation           sync.Mutex
 }
 
 // NewTxCache creates a new transaction cache
@@ -44,11 +37,10 @@ func NewTxCache(config ConfigSourceMe, _ TxGasHandler) (*TxCache, error) {
 	numChunks := config.NumChunks
 
 	txCache := &TxCache{
-		name:            config.Name,
-		txListBySender:  newTxListBySenderMap(numChunks),
-		txByHash:        newTxByHashMap(numChunks),
-		config:          config,
-		evictionJournal: evictionJournal{},
+		name:           config.Name,
+		txListBySender: newTxListBySenderMap(numChunks),
+		txByHash:       newTxByHashMap(numChunks),
+		config:         config,
 	}
 
 	return txCache, nil
@@ -57,27 +49,14 @@ func NewTxCache(config ConfigSourceMe, _ TxGasHandler) (*TxCache, error) {
 // AddTx adds a transaction in the cache
 // Eviction happens if maximum capacity is reached
 func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
-	if tx == nil || check.IfNil(tx.Tx) {
+	if tx == nil {
 		return false, false
 	}
 
 	cache.mutTxOperation.Lock()
 	addedInByHash := cache.txByHash.addTx(tx)
-	addedInBySender, evicted := cache.txListBySender.addTx(tx)
+	addedInBySender := cache.txListBySender.addTx(tx)
 	cache.mutTxOperation.Unlock()
-	if addedInByHash != addedInBySender {
-		// This can happen  when two go-routines concur to add the same transaction:
-		// - A adds to "txByHash"
-		// - B won't add to "txByHash" (duplicate)
-		// - B adds to "txListBySender"
-		// - A won't add to "txListBySender" (duplicate)
-		log.Trace("TxCache.AddTx(): slight inconsistency detected:", "name", cache.name, "tx", tx.TxHash, "sender", tx.Tx.GetSndAddr(), "addedInByHash", addedInByHash, "addedInBySender", addedInBySender)
-	}
-
-	if len(evicted) > 0 {
-		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
-		cache.txByHash.RemoveTxsBulk(evicted)
-	}
 
 	// The return value "added" is true even if transaction added, but then removed due to limits be sender.
 	// This it to ensure that onAdded() notification is triggered.
@@ -95,7 +74,6 @@ func (cache *TxCache) GetByTxHash(txHash []byte) (*WrappedTransaction, bool) {
 // Each sender gets the chance to give at least bandwidthPerSender gas worth of transactions, unless "numRequested" limit is reached before iterating over all senders
 func (cache *TxCache) SelectTransactionsWithBandwidth(numRequested int, batchSizePerSender int, bandwidthPerSender uint64) []*WrappedTransaction {
 	result := cache.doSelectTransactions(numRequested, batchSizePerSender, bandwidthPerSender)
-	go cache.doAfterSelection()
 	return result
 }
 
@@ -141,10 +119,6 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 
 func (cache *TxCache) getSendersEligibleForSelection() []*txListForSender {
 	return cache.txListBySender.getSnapshotDescending()
-}
-
-func (cache *TxCache) doAfterSelection() {
-	cache.Diagnose(false)
 }
 
 // RemoveTxByHash removes tx by hash
