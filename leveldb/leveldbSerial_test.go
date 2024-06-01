@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -357,4 +358,88 @@ func TestSerialDB_ConcurrentOperations(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestSerialDB_PutRemoveGet(t *testing.T) {
+	if testing.Short() {
+		t.Skip("this is not a short test")
+	}
+
+	ldb := createSerialLevelDb(t, 100000, 1000000, 10)
+
+	numKeys := 10000
+	for i := 0; i < numKeys; i++ {
+		_ = ldb.Put([]byte(fmt.Sprintf("key %d", i)), []byte("val"))
+	}
+
+	time.Sleep(time.Second * 2)
+
+	numErr := uint32(0)
+
+	for i := 0; i < numKeys; i++ {
+		key := []byte(fmt.Sprintf("key %d", i))
+
+		recoveredVal, _ := ldb.Get(key)
+		assert.NotEmpty(t, recoveredVal)
+
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
+
+		// emulate the following scenario:
+		// the sequence Remove(key) -> Get(key) is done while the putBatch is called. So the actual edgecase is
+		// go routine 1: Remove(key) -----------------> Get(key)
+		// go routine 2:                putBatch()
+
+		go func() {
+			time.Sleep(time.Millisecond * 1)
+			ldb.PutBatch()
+			wg.Done()
+		}()
+		go func() {
+			_ = ldb.Remove(key)
+
+			time.Sleep(time.Millisecond * 1)
+
+			recoveredVal2, _ := ldb.Get(key)
+			if len(recoveredVal2) > 0 {
+				// the key-value was not removed
+				atomic.AddUint32(&numErr, 1)
+			}
+
+			wg.Done()
+		}()
+
+		wg.Wait()
+
+		require.Zero(t, atomic.LoadUint32(&numErr), "iteration %d out of %d", i, numKeys)
+	}
+
+	_ = ldb.Close()
+}
+
+func TestSerialDB_PutRemovePutHas(t *testing.T) {
+	ldb := createSerialLevelDb(t, 100000, 1000000, 10)
+
+	key := []byte("key")
+	value := []byte("value")
+
+	_ = ldb.Put(key, value)
+
+	// manually put the <key, value> pair in storage
+	ldb.PutBatch()
+	time.Sleep(time.Second)
+	assert.Nil(t, ldb.Has(key)) // key was found
+
+	// we now remove the key
+	_ = ldb.Remove(key)
+
+	// manually delete the key from the storage
+	ldb.PutBatch()
+	time.Sleep(time.Second)
+	assert.NotNil(t, ldb.Has(key)) // missing key
+
+	_ = ldb.Put(key, value)     // put the key again
+	assert.Nil(t, ldb.Has(key)) // key was found
+
+	_ = ldb.Close()
 }

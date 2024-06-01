@@ -19,13 +19,21 @@ import (
 
 var _ types.Persister = (*SerialDB)(nil)
 
+type keysRemovedHandler interface {
+	addRemovedKeys(keys map[string]struct{}, batchID uint64)
+	deleteRemovedKeys(batchID uint64)
+	hasRemovedKeys(key []byte) bool
+}
+
 // SerialDB holds a pointer to the leveldb database and the path to where it is stored.
 type SerialDB struct {
 	*baseLevelDb
+	keysRemovedHandler
 	maxBatchSize      int
 	batchDelaySeconds int
 	sizeBatch         int
 	batch             types.Batcher
+	batchID           uint64
 	mutBatch          sync.RWMutex
 	dbAccess          chan serialQueryer
 	cancel            context.CancelFunc
@@ -71,16 +79,18 @@ func NewSerialDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFi
 
 	ctx, cancel := context.WithCancel(context.Background())
 	dbStore := &SerialDB{
-		baseLevelDb:       bldb,
-		maxBatchSize:      maxBatchSize,
-		batchDelaySeconds: batchDelaySeconds,
-		sizeBatch:         0,
-		dbAccess:          make(chan serialQueryer),
-		cancel:            cancel,
-		closer:            closing.NewSafeChanCloser(),
+		keysRemovedHandler: newMapKeysRemovedHandler(),
+		baseLevelDb:        bldb,
+		maxBatchSize:       maxBatchSize,
+		batchDelaySeconds:  batchDelaySeconds,
+		sizeBatch:          0,
+		dbAccess:           make(chan serialQueryer),
+		cancel:             cancel,
+		closer:             closing.NewSafeChanCloser(),
+		batchID:            0,
 	}
 
-	dbStore.batch = NewBatch()
+	dbStore.batch = NewBatch(dbStore.batchID, dbStore.keysRemovedHandler)
 
 	go dbStore.batchTimeoutHandle(ctx)
 	go dbStore.processLoop(ctx)
@@ -246,7 +256,9 @@ func (s *SerialDB) putBatch() error {
 		return common.ErrInvalidBatch
 	}
 	s.sizeBatch = 0
-	s.batch = NewBatch()
+	s.batchID++
+	s.batch = NewBatch(s.batchID, s.keysRemovedHandler)
+	s.keysRemovedHandler.addRemovedKeys(dbBatch.removedData, dbBatch.ID())
 	s.mutBatch.Unlock()
 
 	ch := make(chan error)
@@ -261,6 +273,8 @@ func (s *SerialDB) putBatch() error {
 	}
 	result := <-ch
 	close(ch)
+
+	s.keysRemovedHandler.deleteRemovedKeys(dbBatch.ID())
 
 	return result
 }
