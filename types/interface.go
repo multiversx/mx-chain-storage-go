@@ -225,8 +225,14 @@ type ShardIDProvider interface {
 	IsInterfaceNil() bool
 }
 
-// PersisterCreator defines the behavour of a component which is able to create a persister
+// PersisterCreator defines the behaviour of a component which is able to create a persister
 type PersisterCreator interface {
 	CreateBasePersister(path string) (Persister, error)
+	IsInterfaceNil() bool
+}
+
+// EvictionNotifier defines the behaviour of a component which is able to handle an evicted transaction
+type EvictionNotifier interface {
+	NotifyEviction(txHash []byte)
 	IsInterfaceNil() bool
 }
