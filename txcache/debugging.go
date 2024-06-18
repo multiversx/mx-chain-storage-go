@@ -171,6 +171,8 @@ func txListForSenderToDumpedSender(sender *txListForSender) *dumpedSender {
 }
 
 func saveJson(outfile string, data interface{}) error {
+	log.Info("saving debugging data", "file", outfile, "data", data)
+
 	outcomeJSON, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
@@ -219,6 +221,8 @@ func limitDebuggingFiles(directory string) error {
 	}
 
 	for i := 0; i < numOldestFilesToRemove; i++ {
+		log.Info("removing old debugging file", "file", files[i].Name)
+
 		err = os.Remove(files[i].Name)
 		if err != nil {
 			return err

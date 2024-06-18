@@ -20,6 +20,7 @@ type txListForSender struct {
 	sweepable           atomic.Flag
 	copyPreviousNonce   uint64
 	sender              string
+	senderAddress       string
 	items               *list.List
 	copyBatchIndex      *list.Element
 	constraints         *senderConstraints
@@ -39,9 +40,12 @@ type scoreChangeCallback func(value *txListForSender, scoreParams senderScorePar
 
 // newTxListForSender creates a new (sorted) list of transactions
 func newTxListForSender(sender string, constraints *senderConstraints, onScoreChange scoreChangeCallback) *txListForSender {
+	senderAddress, _ := addressConverter.Encode([]byte(sender))
+
 	return &txListForSender{
 		items:         list.New(),
 		sender:        sender,
+		senderAddress: senderAddress,
 		constraints:   constraints,
 		onScoreChange: onScoreChange,
 	}
@@ -102,9 +106,14 @@ func (listForSender *txListForSender) isCapacityExceeded() bool {
 }
 
 func (listForSender *txListForSender) onAddedTransaction(tx *WrappedTransaction, gasHandler TxGasHandler, txFeeHelper feeHelper) {
+	gas := estimateTxGas(tx)
+	feeScore := estimateTxFeeScore(tx, gasHandler, txFeeHelper)
+
 	listForSender.totalBytes.Add(tx.Size)
-	listForSender.totalGas.Add(int64(estimateTxGas(tx)))
-	listForSender.totalFeeScore.Add(int64(estimateTxFeeScore(tx, gasHandler, txFeeHelper)))
+	listForSender.totalGas.Add(int64(gas))
+	listForSender.totalFeeScore.Add(int64(feeScore))
+
+	log.Info("TXPOOL_DEBUG txListForSender.onAddedTransaction()", "sender", listForSender.sender, "tx", tx.TxHash, "with gas", gas, "and fee score", feeScore)
 }
 
 func (listForSender *txListForSender) triggerScoreChange() {
