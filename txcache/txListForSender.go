@@ -280,6 +280,8 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 			break
 		}
 
+		log.Debug("TXPOOL_DEBUG txListForSender.selectBatchTo()", "sender", listForSender.senderAddress, "tx", value.TxHash, "nonce", txNonce, "gas", lastTxGasLimit, "copied", copied, "bandwidth", copiedBandwidth)
+
 		destination[copied] = value
 		element = element.Next()
 		previousNonce = txNonce

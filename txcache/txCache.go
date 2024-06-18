@@ -122,7 +122,11 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 
 	snapshotOfSenders := cache.getSendersEligibleForSelection()
 
+	log.Debug("TXPOOL_DEBUG starting selection loop", "name", cache.name, "numRequested", numRequested, "batchSizePerSender", batchSizePerSender, "bandwidthPerSender", bandwidthPerSender, "numSenders", len(snapshotOfSenders))
+
 	for pass := 0; !resultIsFull; pass++ {
+		log.Debug("TXPOOL_DEBUG selection loop pass", "pass", pass)
+
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
@@ -139,6 +143,9 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 			resultFillIndex += journal.copied
 			copiedInThisPass += journal.copied
 			resultIsFull = resultFillIndex == numRequested
+
+			log.Debug("TXPOOL_DEBUG selection loop pass for sender", "pass", pass, "sender", txList.senderAddress, "copied", journal.copied, "isFirstBatch", isFirstBatch, "hasInitialGap", journal.hasInitialGap, "hasMiddleGap", journal.hasMiddleGap, "isGracePeriod", journal.isGracePeriod, "resultFillIndex", resultFillIndex, "resultIsFull", resultIsFull)
+
 			if resultIsFull {
 				break
 			}
