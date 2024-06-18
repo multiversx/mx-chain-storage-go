@@ -59,6 +59,8 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	}
 
 	txCache.initSweepable()
+	txCache.continuouslyDebug()
+
 	return txCache, nil
 }
 
