@@ -17,7 +17,7 @@ import (
 var debuggingPeriod = 6 * time.Second
 var addressConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, "erd")
 var debuggingFolder = "txcache_debugging"
-var debuggingFolderSizeLimitInBytes = uint64(5_000_000_000)
+var debuggingFolderSizeLimitInBytes = uint64(10_000_000_000)
 var numOldestFilesToRemove = 100
 
 // MaxNumOfTxsToSelect defines the maximum number of transactions that should be selected from the cache
@@ -85,8 +85,8 @@ func (cache *TxCache) continuouslyDebug() {
 				log.Error("error limiting debugging files", "error", err)
 			}
 
-			// Simulate selection
-			cache.SelectTransactionsWithBandwidth(MaxNumOfTxsToSelect, NumTxPerSenderBatchForFillingMiniblock, MaxGasBandwidthPerBatchPerSender)
+			// // Simulate selection
+			// cache.SelectTransactionsWithBandwidth(MaxNumOfTxsToSelect, NumTxPerSenderBatchForFillingMiniblock, MaxGasBandwidthPerBatchPerSender)
 
 			time.Sleep(debuggingPeriod)
 		}
