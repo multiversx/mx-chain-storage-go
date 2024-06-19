@@ -19,7 +19,7 @@ var minPrice = uint64(1000000000)
 var minGasLimit = uint64(50000)
 var gasProcessingDivisor = uint64(100)
 
-func TestScoresOfSenders(t *testing.T) {
+func TestUsage(t *testing.T) {
 	_ = logger.SetLogLevel("*:DEBUG")
 
 	config := ConfigSourceMe{
