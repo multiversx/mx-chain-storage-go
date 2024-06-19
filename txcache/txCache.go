@@ -59,6 +59,8 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	}
 
 	txCache.initSweepable()
+	go txCache.continuouslyDebug()
+
 	return txCache, nil
 }
 
@@ -120,10 +122,22 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 
 	snapshotOfSenders := cache.getSendersEligibleForSelection()
 
+	log.Debug("TXPOOL_DEBUG senders (below)")
+
+	for i, sender := range snapshotOfSenders {
+		log.Debug("TXPOOL_DEBUG sender", "i", i, "sender", sender.senderAddress, "score", sender.getLastComputedScore(), "totalGas", sender.totalGas, "totalFeeScore", sender.totalFeeScore)
+	}
+
+	log.Debug("TXPOOL_DEBUG starting selection loop", "name", cache.name, "numRequested", numRequested, "batchSizePerSender", batchSizePerSender, "bandwidthPerSender", bandwidthPerSender, "numSenders", len(snapshotOfSenders))
+
 	for pass := 0; !resultIsFull; pass++ {
+		log.Debug("TXPOOL_DEBUG selection LOOP PASS", "pass", pass)
+
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
+			log.Debug("selection loop pass (started) for sender", "sender", txList.senderAddress)
+
 			batchSizeWithScoreCoefficient := batchSizePerSender * int(txList.getLastComputedScore()+1)
 			// Reset happens on first pass only
 			isFirstBatch := pass == 0
@@ -137,6 +151,9 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 			resultFillIndex += journal.copied
 			copiedInThisPass += journal.copied
 			resultIsFull = resultFillIndex == numRequested
+
+			log.Debug("selection loop pass (ended) for sender", "copied", journal.copied, "isFirstBatch", isFirstBatch, "resultFillIndex", resultFillIndex, "resultIsFull", resultIsFull)
+
 			if resultIsFull {
 				break
 			}

@@ -87,6 +87,9 @@ func (txMap *txListBySenderMap) addSender(sender string) *txListForSender {
 func (txMap *txListBySenderMap) notifyScoreChange(txList *txListForSender, scoreParams senderScoreParams) {
 	score := txMap.scoreComputer.computeScore(scoreParams)
 	txList.setLastComputedScore(score)
+
+	log.Info("TXPOOL_DEBUG txListBySenderMap.notifyScoreChange()", "sender", txList.senderAddress, "score", score)
+
 	txMap.backingMap.NotifyScoreChange(txList, score)
 }
 
