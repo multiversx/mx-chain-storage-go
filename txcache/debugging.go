@@ -20,6 +20,17 @@ var debuggingFolder = "txcache_debugging"
 var debuggingFolderSizeLimitInBytes = uint64(5_000_000_000)
 var numOldestFilesToRemove = 100
 
+// MaxNumOfTxsToSelect defines the maximum number of transactions that should be selected from the cache
+const MaxNumOfTxsToSelect = 30000
+
+// NumTxPerSenderBatchForFillingMiniblock defines the number of transactions to be drawn
+// from the transactions pool, for a specific sender, in a single pass.
+// Drawing transactions for a miniblock happens in multiple passes, until "MaxItemsInBlock" are drawn.
+const NumTxPerSenderBatchForFillingMiniblock = 10
+
+// MaxGasBandwidthPerBatchPerSender defines the maximum gas bandwidth that should be selected for a sender per batch from the cache
+const MaxGasBandwidthPerBatchPerSender = 5000000
+
 type debuggingFileInfo struct {
 	Name    string
 	Size    int64
@@ -74,6 +85,9 @@ func (cache *TxCache) continuouslyDebug() {
 				log.Error("error limiting debugging files", "error", err)
 			}
 
+			// Simulate selection
+			cache.SelectTransactionsWithBandwidth(MaxNumOfTxsToSelect, NumTxPerSenderBatchForFillingMiniblock, MaxGasBandwidthPerBatchPerSender)
+
 			time.Sleep(debuggingPeriod)
 		}
 	}()
@@ -81,8 +95,8 @@ func (cache *TxCache) continuouslyDebug() {
 
 func (cache *TxCache) saveTransactionsToFile() {
 	timestamp := time.Now().Format("20060102150405")
-	outfileTxs := path.Join(debuggingFolder, fmt.Sprintf("txcache_%s_%s.json", cache.name, timestamp))
-	outfileSenders := path.Join(debuggingFolder, fmt.Sprintf("txcache_senders_%s_%s.json", cache.name, timestamp))
+	outfileTxs := path.Join(debuggingFolder, fmt.Sprintf("%s_txcache_%s.json", timestamp, cache.name))
+	outfileSenders := path.Join(debuggingFolder, fmt.Sprintf("%s_txcache_senders_%s.json", timestamp, cache.name))
 
 	numTxs := cache.txByHash.counter.Get()
 	numSenders := cache.txListBySender.counter.Get()

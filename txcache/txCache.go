@@ -59,7 +59,7 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	}
 
 	txCache.initSweepable()
-	go txCache.continuouslyDebug()
+	// go txCache.continuouslyDebug()
 
 	return txCache, nil
 }
@@ -131,11 +131,13 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 	log.Debug("TXPOOL_DEBUG starting selection loop", "name", cache.name, "numRequested", numRequested, "batchSizePerSender", batchSizePerSender, "bandwidthPerSender", bandwidthPerSender, "numSenders", len(snapshotOfSenders))
 
 	for pass := 0; !resultIsFull; pass++ {
-		log.Debug("TXPOOL_DEBUG selection loop pass", "pass", pass)
+		log.Debug("TXPOOL_DEBUG selection LOOP PASS", "pass", pass)
 
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
+			log.Debug("selection loop pass (started) for sender", "sender", txList.senderAddress)
+
 			batchSizeWithScoreCoefficient := batchSizePerSender * int(txList.getLastComputedScore()+1)
 			// Reset happens on first pass only
 			isFirstBatch := pass == 0
@@ -150,7 +152,7 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 			copiedInThisPass += journal.copied
 			resultIsFull = resultFillIndex == numRequested
 
-			log.Debug("TXPOOL_DEBUG selection loop pass (ended) for sender", "pass", pass, "sender", txList.senderAddress, "copied", journal.copied, "isFirstBatch", isFirstBatch, "hasInitialGap", journal.hasInitialGap, "hasMiddleGap", journal.hasMiddleGap, "isGracePeriod", journal.isGracePeriod, "resultFillIndex", resultFillIndex, "resultIsFull", resultIsFull)
+			log.Debug("selection loop pass (ended) for sender", "copied", journal.copied, "isFirstBatch", isFirstBatch, "resultFillIndex", resultFillIndex, "resultIsFull", resultIsFull)
 
 			if resultIsFull {
 				break
