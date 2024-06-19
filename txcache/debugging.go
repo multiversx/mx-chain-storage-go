@@ -70,6 +70,8 @@ type dumpedSender struct {
 }
 
 func (cache *TxCache) continuouslyDebug() {
+	log.Info("TXPOOL starting debugging")
+
 	// Create folder if it doesn't exist:
 	err := os.MkdirAll(debuggingFolder, 0755)
 	if err != nil {
@@ -185,7 +187,7 @@ func txListForSenderToDumpedSender(sender *txListForSender) *dumpedSender {
 }
 
 func saveJson(outfile string, data interface{}) error {
-	log.Info("saving debugging data", "file", outfile, "data", data)
+	log.Info("saving debugging data", "file", outfile)
 
 	outcomeJSON, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
