@@ -78,21 +78,12 @@ func (cache *TxCache) continuouslyDebug() {
 		log.Error("error creating debugging folder", "error", err)
 	}
 
-	func() {
-		for {
-			cache.saveTransactionsToFile()
+	cache.saveTransactionsToFile()
 
-			err := limitDebuggingFiles(debuggingFolder)
-			if err != nil {
-				log.Error("error limiting debugging files", "error", err)
-			}
-
-			// // Simulate selection
-			// cache.SelectTransactionsWithBandwidth(MaxNumOfTxsToSelect, NumTxPerSenderBatchForFillingMiniblock, MaxGasBandwidthPerBatchPerSender)
-
-			time.Sleep(debuggingPeriod)
-		}
-	}()
+	err = limitDebuggingFiles(debuggingFolder)
+	if err != nil {
+		log.Error("error limiting debugging files", "error", err)
+	}
 }
 
 func (cache *TxCache) saveTransactionsToFile() {
