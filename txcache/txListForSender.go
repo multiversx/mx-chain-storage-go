@@ -113,7 +113,7 @@ func (listForSender *txListForSender) onAddedTransaction(tx *WrappedTransaction,
 	listForSender.totalGas.Add(int64(gas))
 	listForSender.totalFeeScore.Add(int64(feeScore))
 
-	log.Info("TXPOOL_DEBUG txListForSender.onAddedTransaction()", "sender", listForSender.sender, "tx", tx.TxHash, "with gas", gas, "and fee score", feeScore)
+	log.Info("TXPOOL_DEBUG txListForSender.onAddedTransaction()", "sender", listForSender.sender, "tx", tx.TxHash, "nonce", tx.Tx.GetNonce(), "gas", gas, "fee score", feeScore)
 }
 
 func (listForSender *txListForSender) triggerScoreChange() {

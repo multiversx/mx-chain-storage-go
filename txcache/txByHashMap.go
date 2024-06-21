@@ -68,6 +68,8 @@ func (txMap *txByHashMap) RemoveTxsBulk(txHashes [][]byte) uint32 {
 	numRemoved := uint32(0)
 
 	for _, txHash := range txHashes {
+		log.Debug("txByHashMap.RemoveTxsBulk", "txHash", txHash)
+
 		_, removed := txMap.removeTx(string(txHash))
 		if removed {
 			numRemoved++

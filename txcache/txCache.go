@@ -66,6 +66,8 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 // AddTx adds a transaction in the cache
 // Eviction happens if maximum capacity is reached
 func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
+	log.Debug("TxCache.AddTx", "name", cache.name, "tx", tx.TxHash, "nonce", tx.Tx.GetNonce(), "sender", tx.Tx.GetSndAddr())
+
 	if tx == nil || check.IfNil(tx.Tx) {
 		return false, false
 	}
@@ -88,6 +90,8 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 	}
 
 	if len(evicted) > 0 {
+		log.Debug("TxCache.AddTx(): evicted transactions", "name", cache.name, "evicted", len(evicted))
+
 		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
 		cache.txByHash.RemoveTxsBulk(evicted)
 	}
