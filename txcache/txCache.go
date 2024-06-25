@@ -59,12 +59,15 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 	}
 
 	txCache.initSweepable()
+
 	return txCache, nil
 }
 
 // AddTx adds a transaction in the cache
 // Eviction happens if maximum capacity is reached
 func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
+	log.Debug("TxCache.AddTx", "name", cache.name, "tx", tx.TxHash, "nonce", tx.Tx.GetNonce(), "sender", tx.Tx.GetSndAddr())
+
 	if tx == nil || check.IfNil(tx.Tx) {
 		return false, false
 	}
@@ -87,6 +90,8 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 	}
 
 	if len(evicted) > 0 {
+		log.Debug("TxCache.AddTx(): evicted transactions", "name", cache.name, "evicted", len(evicted))
+
 		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
 		cache.txByHash.RemoveTxsBulk(evicted)
 	}
@@ -106,6 +111,8 @@ func (cache *TxCache) GetByTxHash(txHash []byte) (*WrappedTransaction, bool) {
 // It returns at most "numRequested" transactions
 // Each sender gets the chance to give at least bandwidthPerSender gas worth of transactions, unless "numRequested" limit is reached before iterating over all senders
 func (cache *TxCache) SelectTransactionsWithBandwidth(numRequested int, batchSizePerSender int, bandwidthPerSender uint64) []*WrappedTransaction {
+	cache.continuouslyDebug()
+
 	result := cache.doSelectTransactions(numRequested, batchSizePerSender, bandwidthPerSender)
 	go cache.doAfterSelection()
 	return result
@@ -120,7 +127,17 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 
 	snapshotOfSenders := cache.getSendersEligibleForSelection()
 
+	log.Debug("TXPOOL_DEBUG senders (below)")
+
+	for i, sender := range snapshotOfSenders {
+		log.Debug("TXPOOL_DEBUG sender", "i", i, "sender", sender.senderAddress, "score", sender.getLastComputedScore(), "totalGas", sender.totalGas, "totalFeeScore", sender.totalFeeScore)
+	}
+
+	log.Debug("TXPOOL_DEBUG starting selection loop", "name", cache.name, "numRequested", numRequested, "batchSizePerSender", batchSizePerSender, "bandwidthPerSender", bandwidthPerSender, "numSenders", len(snapshotOfSenders))
+
 	for pass := 0; !resultIsFull; pass++ {
+		log.Debug("TXPOOL_DEBUG selection LOOP PASS", "pass", pass)
+
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
@@ -137,6 +154,7 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 			resultFillIndex += journal.copied
 			copiedInThisPass += journal.copied
 			resultIsFull = resultFillIndex == numRequested
+
 			if resultIsFull {
 				break
 			}
@@ -166,6 +184,8 @@ func (cache *TxCache) doAfterSelection() {
 
 // RemoveTxByHash removes tx by hash
 func (cache *TxCache) RemoveTxByHash(txHash []byte) bool {
+	log.Debug("TxCache.RemoveTxByHash", "name", cache.name, "tx", txHash)
+
 	cache.mutTxOperation.Lock()
 	defer cache.mutTxOperation.Unlock()
 
