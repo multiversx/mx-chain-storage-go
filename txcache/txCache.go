@@ -141,8 +141,6 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
-			log.Debug("selection loop pass (started) for sender", "sender", txList.senderAddress)
-
 			batchSizeWithScoreCoefficient := batchSizePerSender * int(txList.getLastComputedScore()+1)
 			// Reset happens on first pass only
 			isFirstBatch := pass == 0
@@ -156,8 +154,6 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 			resultFillIndex += journal.copied
 			copiedInThisPass += journal.copied
 			resultIsFull = resultFillIndex == numRequested
-
-			log.Debug("selection loop pass (ended) for sender", "copied", journal.copied, "isFirstBatch", isFirstBatch, "resultFillIndex", resultFillIndex, "resultIsFull", resultIsFull)
 
 			if resultIsFull {
 				break

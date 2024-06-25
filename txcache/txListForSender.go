@@ -280,7 +280,7 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 			break
 		}
 
-		log.Debug("txListForSender.selectBatchTo()", "tx", value.TxHash, "nonce", txNonce, "gas", lastTxGasLimit, "copied", copied, "bandwidth", copiedBandwidth)
+		log.Debug("txListForSender.selectBatchTo()", "tx", value.TxHash, "nonce", txNonce, "gas", lastTxGasLimit)
 
 		destination[copied] = value
 		element = element.Next()
