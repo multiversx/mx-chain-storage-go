@@ -53,7 +53,6 @@ func TestDefaultScoreComputer_computeRawScoreOfTxListForSender(t *testing.T) {
 	list.AddTx(createTxWithParams([]byte("c"), ".", 1, 500, 100000, oneBillion), txGasHandler, txFeeHelper)
 
 	require.Equal(t, uint64(3), list.countTx())
-	require.Equal(t, int64(2000), list.totalBytes.Get())
 	require.Equal(t, int64(250000), list.totalGas.Get())
 	require.Equal(t, int64(51588), list.totalFeeScore.Get())
 

@@ -24,7 +24,6 @@ type txListForSender struct {
 	copyBatchIndex      *list.Element
 	scoreChunk          *maps.MapChunk
 	accountNonce        atomic.Uint64
-	totalBytes          atomic.Counter
 	totalGas            atomic.Counter
 	totalFeeScore       atomic.Counter
 	numFailedSelections atomic.Counter
@@ -69,7 +68,6 @@ func (listForSender *txListForSender) AddTx(tx *WrappedTransaction, gasHandler T
 }
 
 func (listForSender *txListForSender) onAddedTransaction(tx *WrappedTransaction, gasHandler TxGasHandler, txFeeHelper feeHelper) {
-	listForSender.totalBytes.Add(tx.Size)
 	listForSender.totalGas.Add(int64(estimateTxGas(tx)))
 	listForSender.totalFeeScore.Add(int64(estimateTxFeeScore(tx, gasHandler, txFeeHelper)))
 }
@@ -150,7 +148,6 @@ func (listForSender *txListForSender) RemoveTx(tx *WrappedTransaction) bool {
 func (listForSender *txListForSender) onRemovedListElement(element *list.Element) {
 	value := element.Value.(*WrappedTransaction)
 
-	listForSender.totalBytes.Subtract(value.Size)
 	listForSender.totalGas.Subtract(int64(estimateTxGas(value)))
 	listForSender.totalFeeScore.Subtract(int64(value.TxFeeScoreNormalized))
 }
