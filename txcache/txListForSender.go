@@ -22,7 +22,6 @@ type txListForSender struct {
 	sender              string
 	items               *list.List
 	copyBatchIndex      *list.Element
-	constraints         *senderConstraints
 	scoreChunk          *maps.MapChunk
 	accountNonce        atomic.Uint64
 	totalBytes          atomic.Counter
@@ -38,25 +37,24 @@ type txListForSender struct {
 type scoreChangeCallback func(value *txListForSender, scoreParams senderScoreParams)
 
 // newTxListForSender creates a new (sorted) list of transactions
-func newTxListForSender(sender string, constraints *senderConstraints, onScoreChange scoreChangeCallback) *txListForSender {
+func newTxListForSender(sender string, onScoreChange scoreChangeCallback) *txListForSender {
 	return &txListForSender{
 		items:         list.New(),
 		sender:        sender,
-		constraints:   constraints,
 		onScoreChange: onScoreChange,
 	}
 }
 
 // AddTx adds a transaction in sender's list
 // This is a "sorted" insert
-func (listForSender *txListForSender) AddTx(tx *WrappedTransaction, gasHandler TxGasHandler, txFeeHelper feeHelper) (bool, [][]byte) {
+func (listForSender *txListForSender) AddTx(tx *WrappedTransaction, gasHandler TxGasHandler, txFeeHelper feeHelper) bool {
 	// We don't allow concurrent interceptor goroutines to mutate a given sender's list
 	listForSender.mutex.Lock()
 	defer listForSender.mutex.Unlock()
 
 	insertionPlace, err := listForSender.findInsertionPlace(tx)
 	if err != nil {
-		return false, nil
+		return false
 	}
 
 	if insertionPlace == nil {
@@ -66,39 +64,8 @@ func (listForSender *txListForSender) AddTx(tx *WrappedTransaction, gasHandler T
 	}
 
 	listForSender.onAddedTransaction(tx, gasHandler, txFeeHelper)
-	evicted := listForSender.applySizeConstraints()
 	listForSender.triggerScoreChange()
-	return true, evicted
-}
-
-// This function should only be used in critical section (listForSender.mutex)
-func (listForSender *txListForSender) applySizeConstraints() [][]byte {
-	evictedTxHashes := make([][]byte, 0)
-
-	// Iterate back to front
-	for element := listForSender.items.Back(); element != nil; element = element.Prev() {
-		if !listForSender.isCapacityExceeded() {
-			break
-		}
-
-		listForSender.items.Remove(element)
-		listForSender.onRemovedListElement(element)
-
-		// Keep track of removed transactions
-		value := element.Value.(*WrappedTransaction)
-		evictedTxHashes = append(evictedTxHashes, value.TxHash)
-	}
-
-	return evictedTxHashes
-}
-
-func (listForSender *txListForSender) isCapacityExceeded() bool {
-	maxBytes := int64(listForSender.constraints.maxNumBytes)
-	maxNumTxs := uint64(listForSender.constraints.maxNumTxs)
-	tooManyBytes := listForSender.totalBytes.Get() > maxBytes
-	tooManyTxs := listForSender.countTx() > maxNumTxs
-
-	return tooManyBytes || tooManyTxs
+	return true
 }
 
 func (listForSender *txListForSender) onAddedTransaction(tx *WrappedTransaction, gasHandler TxGasHandler, txFeeHelper feeHelper) {

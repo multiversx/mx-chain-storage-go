@@ -2,7 +2,6 @@ package txcache
 
 import (
 	"fmt"
-	"math"
 	"sync"
 	"testing"
 
@@ -177,8 +176,5 @@ func createTxListBySenderMap(numSenders int) *txListBySenderMap {
 
 func newSendersMapToTest() *txListBySenderMap {
 	txGasHandler, txFeeHelper := dummyParams()
-	return newTxListBySenderMap(4, senderConstraints{
-		maxNumBytes: math.MaxUint32,
-		maxNumTxs:   math.MaxUint32,
-	}, &disabledScoreComputer{}, txGasHandler, txFeeHelper)
+	return newTxListBySenderMap(4, &disabledScoreComputer{}, txGasHandler, txFeeHelper)
 }

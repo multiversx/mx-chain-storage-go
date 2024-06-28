@@ -13,10 +13,8 @@ func TestEviction_EvictSendersWhileTooManyTxs(t *testing.T) {
 		Name:                          "untitled",
 		NumChunks:                     16,
 		CountThreshold:                100,
-		CountPerSenderThreshold:       math.MaxUint32,
 		NumSendersToPreemptivelyEvict: 20,
 		NumBytesThreshold:             maxNumBytesUpperBound,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
 	}
 
 	txGasHandler, _ := dummyParams()
@@ -51,9 +49,7 @@ func TestEviction_EvictSendersWhileTooManyBytes(t *testing.T) {
 		Name:                          "untitled",
 		NumChunks:                     16,
 		CountThreshold:                math.MaxUint32,
-		CountPerSenderThreshold:       math.MaxUint32,
 		NumBytesThreshold:             numBytesPerTx * 100,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
 		NumSendersToPreemptivelyEvict: 20,
 	}
 	txGasHandler, _ := dummyParams()
@@ -86,9 +82,7 @@ func TestEviction_DoEvictionDoneInPassTwo_BecauseOfCount(t *testing.T) {
 		Name:                          "untitled",
 		NumChunks:                     16,
 		NumBytesThreshold:             maxNumBytesUpperBound,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
 		CountThreshold:                2,
-		CountPerSenderThreshold:       math.MaxUint32,
 		NumSendersToPreemptivelyEvict: 2,
 	}
 	txGasHandler, _ := dummyParamsWithGasPrice(100 * oneBillion)
@@ -117,9 +111,7 @@ func TestEviction_DoEvictionDoneInPassTwo_BecauseOfSize(t *testing.T) {
 		Name:                          "untitled",
 		NumChunks:                     16,
 		CountThreshold:                math.MaxUint32,
-		CountPerSenderThreshold:       math.MaxUint32,
 		NumBytesThreshold:             1000,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
 		NumSendersToPreemptivelyEvict: 2,
 	}
 
@@ -172,8 +164,6 @@ func TestEviction_doEvictionDoesNothingWhenAlreadyInProgress(t *testing.T) {
 		NumChunks:                     1,
 		CountThreshold:                0,
 		NumSendersToPreemptivelyEvict: 1,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
-		CountPerSenderThreshold:       math.MaxUint32,
 	}
 
 	txGasHandler, _ := dummyParams()
@@ -195,8 +185,6 @@ func TestEviction_evictSendersInLoop_CoverLoopBreak_WhenSmallBatch(t *testing.T)
 		NumChunks:                     1,
 		CountThreshold:                0,
 		NumSendersToPreemptivelyEvict: 42,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
-		CountPerSenderThreshold:       math.MaxUint32,
 	}
 
 	txGasHandler, _ := dummyParams()
@@ -220,8 +208,6 @@ func TestEviction_evictSendersWhile_ShouldContinueBreak(t *testing.T) {
 		NumChunks:                     1,
 		CountThreshold:                0,
 		NumSendersToPreemptivelyEvict: 1,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
-		CountPerSenderThreshold:       math.MaxUint32,
 	}
 
 	txGasHandler, _ := dummyParams()
@@ -254,8 +240,6 @@ func Test_AddWithEviction_UniformDistribution_25000x10(t *testing.T) {
 		NumBytesThreshold:             1000000000,
 		CountThreshold:                240000,
 		NumSendersToPreemptivelyEvict: 1000,
-		NumBytesPerSenderThreshold:    maxNumBytesPerSenderUpperBound,
-		CountPerSenderThreshold:       math.MaxUint32,
 	}
 
 	txGasHandler, _ := dummyParams()

@@ -10,7 +10,7 @@ import (
 )
 
 func TestListForSender_AddTx_Sorts(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
 	list.AddTx(createTx([]byte("a"), ".", 1), txGasHandler, txFeeHelper)
@@ -22,7 +22,7 @@ func TestListForSender_AddTx_Sorts(t *testing.T) {
 }
 
 func TestListForSender_AddTx_GivesPriorityToHigherGas(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
 	list.AddTx(createTxWithParams([]byte("a"), ".", 1, 128, 42, 42), txGasHandler, txFeeHelper)
@@ -35,7 +35,7 @@ func TestListForSender_AddTx_GivesPriorityToHigherGas(t *testing.T) {
 }
 
 func TestListForSender_AddTx_SortsCorrectlyWhenSameNonceSamePrice(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
 	list.AddTx(createTxWithParams([]byte("a"), ".", 1, 128, 42, 42), txGasHandler, txFeeHelper)
@@ -51,71 +51,21 @@ func TestListForSender_AddTx_SortsCorrectlyWhenSameNonceSamePrice(t *testing.T) 
 }
 
 func TestListForSender_AddTx_IgnoresDuplicates(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
-	added, _ := list.AddTx(createTx([]byte("tx1"), ".", 1), txGasHandler, txFeeHelper)
+	added := list.AddTx(createTx([]byte("tx1"), ".", 1), txGasHandler, txFeeHelper)
 	require.True(t, added)
-	added, _ = list.AddTx(createTx([]byte("tx2"), ".", 2), txGasHandler, txFeeHelper)
+	added = list.AddTx(createTx([]byte("tx2"), ".", 2), txGasHandler, txFeeHelper)
 	require.True(t, added)
-	added, _ = list.AddTx(createTx([]byte("tx3"), ".", 3), txGasHandler, txFeeHelper)
+	added = list.AddTx(createTx([]byte("tx3"), ".", 3), txGasHandler, txFeeHelper)
 	require.True(t, added)
-	added, _ = list.AddTx(createTx([]byte("tx2"), ".", 2), txGasHandler, txFeeHelper)
+	added = list.AddTx(createTx([]byte("tx2"), ".", 2), txGasHandler, txFeeHelper)
 	require.False(t, added)
 }
 
-func TestListForSender_AddTx_AppliesSizeConstraintsForNumTransactions(t *testing.T) {
-	list := newListToTest(math.MaxUint32, 3)
-	txGasHandler, txFeeHelper := dummyParams()
-
-	list.AddTx(createTx([]byte("tx1"), ".", 1), txGasHandler, txFeeHelper)
-	list.AddTx(createTx([]byte("tx5"), ".", 5), txGasHandler, txFeeHelper)
-	list.AddTx(createTx([]byte("tx4"), ".", 4), txGasHandler, txFeeHelper)
-	list.AddTx(createTx([]byte("tx2"), ".", 2), txGasHandler, txFeeHelper)
-	require.Equal(t, []string{"tx1", "tx2", "tx4"}, list.getTxHashesAsStrings())
-
-	_, evicted := list.AddTx(createTx([]byte("tx3"), ".", 3), txGasHandler, txFeeHelper)
-	require.Equal(t, []string{"tx1", "tx2", "tx3"}, list.getTxHashesAsStrings())
-	require.Equal(t, []string{"tx4"}, hashesAsStrings(evicted))
-
-	// Gives priority to higher gas - though undesirably to some extent, "tx3" is evicted
-	_, evicted = list.AddTx(createTxWithParams([]byte("tx2++"), ".", 2, 128, 42, 42), txGasHandler, txFeeHelper)
-	require.Equal(t, []string{"tx1", "tx2++", "tx2"}, list.getTxHashesAsStrings())
-	require.Equal(t, []string{"tx3"}, hashesAsStrings(evicted))
-
-	// Though Undesirably to some extent, "tx3++"" is added, then evicted
-	_, evicted = list.AddTx(createTxWithParams([]byte("tx3++"), ".", 3, 128, 42, 42), txGasHandler, txFeeHelper)
-	require.Equal(t, []string{"tx1", "tx2++", "tx2"}, list.getTxHashesAsStrings())
-	require.Equal(t, []string{"tx3++"}, hashesAsStrings(evicted))
-}
-
-func TestListForSender_AddTx_AppliesSizeConstraintsForNumBytes(t *testing.T) {
-	list := newListToTest(1024, math.MaxUint32)
-	txGasHandler, txFeeHelper := dummyParams()
-
-	list.AddTx(createTxWithParams([]byte("tx1"), ".", 1, 128, 42, 42), txGasHandler, txFeeHelper)
-	list.AddTx(createTxWithParams([]byte("tx2"), ".", 2, 512, 42, 42), txGasHandler, txFeeHelper)
-	list.AddTx(createTxWithParams([]byte("tx3"), ".", 3, 256, 42, 42), txGasHandler, txFeeHelper)
-	_, evicted := list.AddTx(createTxWithParams([]byte("tx5"), ".", 4, 256, 42, 42), txGasHandler, txFeeHelper)
-	require.Equal(t, []string{"tx1", "tx2", "tx3"}, list.getTxHashesAsStrings())
-	require.Equal(t, []string{"tx5"}, hashesAsStrings(evicted))
-
-	_, evicted = list.AddTx(createTxWithParams([]byte("tx5--"), ".", 4, 128, 42, 42), txGasHandler, txFeeHelper)
-	require.Equal(t, []string{"tx1", "tx2", "tx3", "tx5--"}, list.getTxHashesAsStrings())
-	require.Equal(t, []string{}, hashesAsStrings(evicted))
-
-	_, evicted = list.AddTx(createTxWithParams([]byte("tx4"), ".", 4, 128, 42, 42), txGasHandler, txFeeHelper)
-	require.Equal(t, []string{"tx1", "tx2", "tx3", "tx4"}, list.getTxHashesAsStrings())
-	require.Equal(t, []string{"tx5--"}, hashesAsStrings(evicted))
-
-	// Gives priority to higher gas - though undesirably to some extent, "tx4" is evicted
-	_, evicted = list.AddTx(createTxWithParams([]byte("tx3++"), ".", 3, 256, 42, 100), txGasHandler, txFeeHelper)
-	require.Equal(t, []string{"tx1", "tx2", "tx3++", "tx3"}, list.getTxHashesAsStrings())
-	require.Equal(t, []string{"tx4"}, hashesAsStrings(evicted))
-}
-
 func TestListForSender_findTx(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
 	txA := createTx([]byte("A"), ".", 41)
@@ -142,7 +92,7 @@ func TestListForSender_findTx(t *testing.T) {
 }
 
 func TestListForSender_findTx_CoverNonceComparisonOptimization(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 	list.AddTx(createTx([]byte("A"), ".", 42), txGasHandler, txFeeHelper)
 
@@ -152,7 +102,7 @@ func TestListForSender_findTx_CoverNonceComparisonOptimization(t *testing.T) {
 }
 
 func TestListForSender_RemoveTransaction(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	tx := createTx([]byte("a"), ".", 1)
 	txGasHandler, txFeeHelper := dummyParams()
 
@@ -164,7 +114,7 @@ func TestListForSender_RemoveTransaction(t *testing.T) {
 }
 
 func TestListForSender_RemoveTransaction_NoPanicWhenTxMissing(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	tx := createTx([]byte(""), ".", 1)
 
 	list.RemoveTx(tx)
@@ -172,7 +122,7 @@ func TestListForSender_RemoveTransaction_NoPanicWhenTxMissing(t *testing.T) {
 }
 
 func TestListForSender_SelectBatchTo(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
 	for index := 0; index < 100; index++ {
@@ -202,7 +152,7 @@ func TestListForSender_SelectBatchTo(t *testing.T) {
 }
 
 func TestListForSender_SelectBatchToWithLimitedGasBandwidth(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
 	for index := 0; index < 40; index++ {
@@ -236,7 +186,7 @@ func TestListForSender_SelectBatchToWithLimitedGasBandwidth(t *testing.T) {
 }
 
 func TestListForSender_SelectBatchTo_NoPanicWhenCornerCases(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
 	for index := 0; index < 100; index++ {
@@ -255,7 +205,7 @@ func TestListForSender_SelectBatchTo_NoPanicWhenCornerCases(t *testing.T) {
 }
 
 func TestListForSender_SelectBatchTo_WhenInitialGap(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 	list.notifyAccountNonce(1)
 
@@ -286,7 +236,7 @@ func TestListForSender_SelectBatchTo_WhenInitialGap(t *testing.T) {
 }
 
 func TestListForSender_SelectBatchTo_WhenGracePeriodWithGapResolve(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 	list.notifyAccountNonce(1)
 
@@ -319,7 +269,7 @@ func TestListForSender_SelectBatchTo_WhenGracePeriodWithGapResolve(t *testing.T)
 }
 
 func TestListForSender_SelectBatchTo_WhenGracePeriodWithNoGapResolve(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 	list.notifyAccountNonce(1)
 
@@ -351,7 +301,7 @@ func TestListForSender_SelectBatchTo_WhenGracePeriodWithNoGapResolve(t *testing.
 }
 
 func TestListForSender_NotifyAccountNonce(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 
 	require.Equal(t, uint64(0), list.accountNonce.Get())
 	require.False(t, list.accountNonceKnown.IsSet())
@@ -363,7 +313,7 @@ func TestListForSender_NotifyAccountNonce(t *testing.T) {
 }
 
 func TestListForSender_hasInitialGap(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	list.notifyAccountNonce(42)
 	txGasHandler, txFeeHelper := dummyParams()
 
@@ -378,7 +328,7 @@ func TestListForSender_hasInitialGap(t *testing.T) {
 }
 
 func TestListForSender_getTxHashes(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	require.Len(t, list.getTxHashes(), 0)
 	txGasHandler, txFeeHelper := dummyParams()
 
@@ -391,7 +341,7 @@ func TestListForSender_getTxHashes(t *testing.T) {
 }
 
 func TestListForSender_DetectRaceConditions(t *testing.T) {
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 	txGasHandler, txFeeHelper := dummyParams()
 
 	go func() {
@@ -428,16 +378,6 @@ func dummyParams() (TxGasHandler, feeHelper) {
 	return dummyParamsWithGasPriceAndGasLimit(minPrice, minGasLimit)
 }
 
-func newUnconstrainedListToTest() *txListForSender {
-	return newTxListForSender(".", &senderConstraints{
-		maxNumBytes: math.MaxUint32,
-		maxNumTxs:   math.MaxUint32,
-	}, func(_ *txListForSender, _ senderScoreParams) {})
-}
-
-func newListToTest(maxNumBytes uint32, maxNumTxs uint32) *txListForSender {
-	return newTxListForSender(".", &senderConstraints{
-		maxNumBytes: maxNumBytes,
-		maxNumTxs:   maxNumTxs,
-	}, func(_ *txListForSender, _ senderScoreParams) {})
+func newListToTest() *txListForSender {
+	return newTxListForSender(".", func(_ *txListForSender, _ senderScoreParams) {})
 }

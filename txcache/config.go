@@ -12,9 +12,6 @@ const numChunksUpperBound = 128
 const maxNumItemsLowerBound = 4
 const maxNumBytesLowerBound = maxNumItemsLowerBound * 1
 const maxNumBytesUpperBound = 1_073_741_824 // one GB
-const maxNumItemsPerSenderLowerBound = 1
-const maxNumBytesPerSenderLowerBound = maxNumItemsPerSenderLowerBound * 1
-const maxNumBytesPerSenderUpperBound = 33_554_432 // 32 MB
 const numTxsToPreemptivelyEvictLowerBound = 1
 const numSendersToPreemptivelyEvictLowerBound = 1
 
@@ -24,15 +21,8 @@ type ConfigSourceMe struct {
 	NumChunks                     uint32
 	EvictionEnabled               bool
 	NumBytesThreshold             uint32
-	NumBytesPerSenderThreshold    uint32
 	CountThreshold                uint32
-	CountPerSenderThreshold       uint32
 	NumSendersToPreemptivelyEvict uint32
-}
-
-type senderConstraints struct {
-	maxNumTxs   uint32
-	maxNumBytes uint32
 }
 
 // TODO: Upon further analysis and brainstorming, add some sensible minimum accepted values for the appropriate fields.
@@ -42,12 +32,6 @@ func (config *ConfigSourceMe) verify() error {
 	}
 	if config.NumChunks < numChunksLowerBound || config.NumChunks > numChunksUpperBound {
 		return fmt.Errorf("%w: config.NumChunks is invalid", common.ErrInvalidConfig)
-	}
-	if config.NumBytesPerSenderThreshold < maxNumBytesPerSenderLowerBound || config.NumBytesPerSenderThreshold > maxNumBytesPerSenderUpperBound {
-		return fmt.Errorf("%w: config.NumBytesPerSenderThreshold is invalid", common.ErrInvalidConfig)
-	}
-	if config.CountPerSenderThreshold < maxNumItemsPerSenderLowerBound {
-		return fmt.Errorf("%w: config.CountPerSenderThreshold is invalid", common.ErrInvalidConfig)
 	}
 	if config.EvictionEnabled {
 		if config.NumBytesThreshold < maxNumBytesLowerBound || config.NumBytesThreshold > maxNumBytesUpperBound {
@@ -62,13 +46,6 @@ func (config *ConfigSourceMe) verify() error {
 	}
 
 	return nil
-}
-
-func (config *ConfigSourceMe) getSenderConstraints() senderConstraints {
-	return senderConstraints{
-		maxNumBytes: config.NumBytesPerSenderThreshold,
-		maxNumTxs:   config.CountPerSenderThreshold,
-	}
 }
 
 // String returns a readable representation of the object

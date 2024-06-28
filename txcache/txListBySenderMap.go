@@ -11,19 +11,17 @@ const numberOfScoreChunks = uint32(100)
 
 // txListBySenderMap is a map-like structure for holding and accessing transactions by sender
 type txListBySenderMap struct {
-	backingMap        *maps.BucketSortedMap
-	senderConstraints senderConstraints
-	counter           atomic.Counter
-	scoreComputer     scoreComputer
-	txGasHandler      TxGasHandler
-	txFeeHelper       feeHelper
-	mutex             sync.Mutex
+	backingMap    *maps.BucketSortedMap
+	counter       atomic.Counter
+	scoreComputer scoreComputer
+	txGasHandler  TxGasHandler
+	txFeeHelper   feeHelper
+	mutex         sync.Mutex
 }
 
 // newTxListBySenderMap creates a new instance of TxListBySenderMap
 func newTxListBySenderMap(
 	nChunksHint uint32,
-	senderConstraints senderConstraints,
 	scoreComputer scoreComputer,
 	txGasHandler TxGasHandler,
 	txFeeHelper feeHelper,
@@ -31,16 +29,15 @@ func newTxListBySenderMap(
 	backingMap := maps.NewBucketSortedMap(nChunksHint, numberOfScoreChunks)
 
 	return &txListBySenderMap{
-		backingMap:        backingMap,
-		senderConstraints: senderConstraints,
-		scoreComputer:     scoreComputer,
-		txGasHandler:      txGasHandler,
-		txFeeHelper:       txFeeHelper,
+		backingMap:    backingMap,
+		scoreComputer: scoreComputer,
+		txGasHandler:  txGasHandler,
+		txFeeHelper:   txFeeHelper,
 	}
 }
 
 // addTx adds a transaction in the map, in the corresponding list (selected by its sender)
-func (txMap *txListBySenderMap) addTx(tx *WrappedTransaction) (bool, [][]byte) {
+func (txMap *txListBySenderMap) addTx(tx *WrappedTransaction) bool {
 	sender := string(tx.Tx.GetSndAddr())
 	listForSender := txMap.getOrAddListForSender(sender)
 	return listForSender.AddTx(tx, txMap.txGasHandler, txMap.txFeeHelper)
@@ -75,7 +72,7 @@ func (txMap *txListBySenderMap) getListForSender(sender string) (*txListForSende
 }
 
 func (txMap *txListBySenderMap) addSender(sender string) *txListForSender {
-	listForSender := newTxListForSender(sender, &txMap.senderConstraints, txMap.notifyScoreChange)
+	listForSender := newTxListForSender(sender, txMap.notifyScoreChange)
 
 	txMap.backingMap.Set(listForSender)
 	txMap.counter.Increment()

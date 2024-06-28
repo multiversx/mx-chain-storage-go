@@ -46,13 +46,12 @@ func NewTxCache(config ConfigSourceMe, txGasHandler TxGasHandler) (*TxCache, err
 
 	// Note: for simplicity, we use the same "numChunks" for both internal concurrent maps
 	numChunks := config.NumChunks
-	senderConstraintsObj := config.getSenderConstraints()
 	txFeeHelper := newFeeComputationHelper(txGasHandler.MinGasPrice(), txGasHandler.MinGasLimit(), txGasHandler.MinGasPriceForProcessing())
 	scoreComputerObj := newDefaultScoreComputer(txFeeHelper)
 
 	txCache := &TxCache{
 		name:            config.Name,
-		txListBySender:  newTxListBySenderMap(numChunks, senderConstraintsObj, scoreComputerObj, txGasHandler, txFeeHelper),
+		txListBySender:  newTxListBySenderMap(numChunks, scoreComputerObj, txGasHandler, txFeeHelper),
 		txByHash:        newTxByHashMap(numChunks),
 		config:          config,
 		evictionJournal: evictionJournal{},
@@ -75,7 +74,7 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 
 	cache.mutTxOperation.Lock()
 	addedInByHash := cache.txByHash.addTx(tx)
-	addedInBySender, evicted := cache.txListBySender.addTx(tx)
+	addedInBySender := cache.txListBySender.addTx(tx)
 	cache.mutTxOperation.Unlock()
 	if addedInByHash != addedInBySender {
 		// This can happen  when two go-routines concur to add the same transaction:
@@ -84,11 +83,6 @@ func (cache *TxCache) AddTx(tx *WrappedTransaction) (ok bool, added bool) {
 		// - B adds to "txListBySender"
 		// - A won't add to "txListBySender" (duplicate)
 		log.Trace("TxCache.AddTx(): slight inconsistency detected:", "name", cache.name, "tx", tx.TxHash, "sender", tx.Tx.GetSndAddr(), "addedInByHash", addedInByHash, "addedInBySender", addedInBySender)
-	}
-
-	if len(evicted) > 0 {
-		cache.monitorEvictionWrtSenderLimit(tx.Tx.GetSndAddr(), evicted)
-		cache.txByHash.RemoveTxsBulk(evicted)
 	}
 
 	// The return value "added" is true even if transaction added, but then removed due to limits be sender.

@@ -46,7 +46,7 @@ func BenchmarkScoreComputer_computeRawScore(b *testing.B) {
 func TestDefaultScoreComputer_computeRawScoreOfTxListForSender(t *testing.T) {
 	txGasHandler, txFeeHelper := dummyParamsWithGasPrice(oneBillion)
 	computer := newDefaultScoreComputer(txFeeHelper)
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 
 	list.AddTx(createTxWithParams([]byte("a"), ".", 1, 1000, 50000, oneBillion), txGasHandler, txFeeHelper)
 	list.AddTx(createTxWithParams([]byte("b"), ".", 1, 500, 100000, oneBillion), txGasHandler, txFeeHelper)
@@ -65,7 +65,7 @@ func TestDefaultScoreComputer_computeRawScoreOfTxListForSender(t *testing.T) {
 func TestDefaultScoreComputer_scoreFluctuatesDeterministicallyWhileTxListForSenderMutates(t *testing.T) {
 	txGasHandler, txFeeHelper := dummyParamsWithGasPrice(oneBillion)
 	computer := newDefaultScoreComputer(txFeeHelper)
-	list := newUnconstrainedListToTest()
+	list := newListToTest()
 
 	A := createTxWithParams([]byte("A"), ".", 1, 1000, 200000, oneBillion)
 	B := createTxWithParams([]byte("b"), ".", 1, 500, 100000, oneBillion)
@@ -112,19 +112,19 @@ func TestDefaultScoreComputer_DifferentSenders(t *testing.T) {
 	C := createTxWithParams([]byte("c"), "c", 1, 128, 10000000, oneBillion)             // min value SC call
 	D := createTxWithParams([]byte("d"), "d", 1, 128, 10000000, uint64(1.5*oneBillion)) // 50% higher value SC call
 
-	listA := newUnconstrainedListToTest()
+	listA := newListToTest()
 	listA.AddTx(A, txGasHandler, txFeeHelper)
 	scoreA := int(computer.computeScore(listA.getScoreParams()))
 
-	listB := newUnconstrainedListToTest()
+	listB := newListToTest()
 	listB.AddTx(B, txGasHandler, txFeeHelper)
 	scoreB := int(computer.computeScore(listB.getScoreParams()))
 
-	listC := newUnconstrainedListToTest()
+	listC := newListToTest()
 	listC.AddTx(C, txGasHandler, txFeeHelper)
 	scoreC := int(computer.computeScore(listC.getScoreParams()))
 
-	listD := newUnconstrainedListToTest()
+	listD := newListToTest()
 	listD.AddTx(D, txGasHandler, txFeeHelper)
 	scoreD := int(computer.computeScore(listD.getScoreParams()))
 
