@@ -85,13 +85,11 @@ type UnitConfig struct {
 
 // CacheConfig holds the configurable elements of a cache
 type CacheConfig struct {
-	Name                 string
-	Type                 CacheType
-	SizeInBytes          uint64
-	SizeInBytesPerSender uint32
-	Capacity             uint32
-	SizePerSender        uint32
-	Shards               uint32
+	Name        string
+	Type        CacheType
+	SizeInBytes uint64
+	Capacity    uint32
+	Shards      uint32
 }
 
 // String returns a readable representation of the object
