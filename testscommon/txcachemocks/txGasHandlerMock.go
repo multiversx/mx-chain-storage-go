@@ -35,14 +35,16 @@ func NewTxGasHandlerMock() *TxGasHandlerMock {
 	}
 }
 
-// SetMinGasLimit -
-func (ghm *TxGasHandlerMock) SetMinGasLimit(minGasLimit uint64) {
+// WithMinGasLimit -
+func (ghm *TxGasHandlerMock) WithMinGasLimit(minGasLimit uint64) *TxGasHandlerMock {
 	ghm.minGasLimit = minGasLimit
+	return ghm
 }
 
-// SetMinGasPrice -
-func (ghm *TxGasHandlerMock) SetMinGasPrice(minGasPrice uint64) {
+// WithMinGasPrice -
+func (ghm *TxGasHandlerMock) WithMinGasPrice(minGasPrice uint64) *TxGasHandlerMock {
 	ghm.minGasPrice = minGasPrice
+	return ghm
 }
 
 // MinGasPrice -
