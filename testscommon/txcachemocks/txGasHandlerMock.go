@@ -64,11 +64,11 @@ func (ghm *TxGasHandlerMock) ComputeTxFee(tx data.TransactionWithFeeHandler) *bi
 	gasPriceForProcessing := uint64(float64(gasPriceForMovement) * ghm.gasPriceModifier)
 
 	gasLimitForMovement := ghm.minGasLimit + dataLength*ghm.gasPerDataByte
-	gasLimitForProcessing, err := core.SafeSubUint64(tx.GetGasLimit(), gasLimitForMovement)
-	if err != nil {
-		panic(err)
+	if tx.GetGasLimit() < gasLimitForMovement {
+		panic("tx.GetGasLimit() < gasLimitForMovement")
 	}
 
+	gasLimitForProcessing := tx.GetGasLimit() - gasLimitForMovement
 	feeForMovement := core.SafeMul(gasPriceForMovement, gasLimitForMovement)
 	feeForProcessing := core.SafeMul(gasPriceForProcessing, gasLimitForProcessing)
 	fee := big.NewInt(0).Add(feeForMovement, feeForProcessing)
