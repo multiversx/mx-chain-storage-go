@@ -47,6 +47,12 @@ func (ghm *TxGasHandlerMock) WithMinGasPrice(minGasPrice uint64) *TxGasHandlerMo
 	return ghm
 }
 
+// WithGasPriceModifier -
+func (ghm *TxGasHandlerMock) WithGasPriceModifier(gasPriceModifier float64) *TxGasHandlerMock {
+	ghm.gasPriceModifier = gasPriceModifier
+	return ghm
+}
+
 // MinGasPrice -
 func (ghm *TxGasHandlerMock) MinGasPrice() uint64 {
 	return ghm.minGasPrice
