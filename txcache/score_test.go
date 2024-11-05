@@ -71,6 +71,91 @@ func TestDefaultScoreComputer_computeRawScoreOfTxListForSender(t *testing.T) {
 	require.InDelta(t, float64(12.4595615805), rawScore, delta)
 }
 
+func TestDefaultScoreComputer_computeRawScoreOfTxListForSender_realWorld(t *testing.T) {
+	txGasHandler, txFeeHelper := dummyParamsWithGasPrice(oneBillion)
+	computer := newDefaultScoreComputer(txFeeHelper)
+
+	t.Run("a", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("a"), ".", 1, 1000, 50000, oneBillion), txGasHandler, txFeeHelper)
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 500, 100000, oneBillion), txGasHandler, txFeeHelper)
+		list.AddTx(createTxWithParams([]byte("c"), ".", 1, 500, 100000, oneBillion), txGasHandler, txFeeHelper)
+
+		require.Equal(t, 12, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("b", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("a"), ".", 1, 1000, 50000, 2*oneBillion), txGasHandler, txFeeHelper)
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 500, 100000, 2*oneBillion), txGasHandler, txFeeHelper)
+		list.AddTx(createTxWithParams([]byte("c"), ".", 1, 500, 100000, 2*oneBillion), txGasHandler, txFeeHelper)
+
+		require.Equal(t, 53, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("c", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("a"), ".", 1, 1000, 50000, 3*oneBillion), txGasHandler, txFeeHelper)
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 500, 100000, 3*oneBillion), txGasHandler, txFeeHelper)
+
+		require.Equal(t, 98, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("d", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 500, 100000, 5*oneBillion), txGasHandler, txFeeHelper)
+
+		require.Equal(t, 99, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("e", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 500, 600_000_000, 1*oneBillion), txGasHandler, txFeeHelper)
+
+		require.Equal(t, 15, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("f", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 200, 600_000_000, 1*oneBillion), txGasHandler, txFeeHelper)
+
+		// Ideally, should have been much lower.
+		require.Equal(t, 15, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("g", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 300, 100_000_000, 1*oneBillion), txGasHandler, txFeeHelper)
+
+		// Ideally, should have been much lower.
+		require.Equal(t, 15, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("h", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 300, 100_000_000, 100*oneBillion), txGasHandler, txFeeHelper)
+
+		// This is completely wrong.
+		require.Equal(t, 0, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("i", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 300, 50_000_000, 90*oneBillion), txGasHandler, txFeeHelper)
+
+		// This is completely wrong.
+		require.Equal(t, 0, int(computer.computeScore(list.getScoreParams())))
+	})
+
+	t.Run("j", func(t *testing.T) {
+		list := newUnconstrainedListToTest()
+		list.AddTx(createTxWithParams([]byte("b"), ".", 1, 300, 10_000_000, 101*oneBillion), txGasHandler, txFeeHelper)
+
+		// This is completely wrong.
+		require.Equal(t, 4, int(computer.computeScore(list.getScoreParams())))
+	})
+}
+
 func TestDefaultScoreComputer_scoreFluctuatesDeterministicallyWhileTxListForSenderMutates(t *testing.T) {
 	txGasHandler, txFeeHelper := dummyParamsWithGasPrice(oneBillion)
 	computer := newDefaultScoreComputer(txFeeHelper)
