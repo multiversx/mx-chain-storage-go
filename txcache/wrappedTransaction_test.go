@@ -8,20 +8,25 @@ import (
 )
 
 func Test_estimateTxFeeScore(t *testing.T) {
-	txGasHandler, txFeeHelper := dummyParamsWithGasPrice(100 * oneBillion)
-	A := createTxWithParams([]byte("a"), "a", 1, 200, 50000, 100*oneBillion)
-	B := createTxWithParams([]byte("b"), "b", 1, 200, 50000000, 100*oneBillion)
-	C := createTxWithParams([]byte("C"), "c", 1, 200, 1500000000, 100*oneBillion)
+	txGasHandler, txFeeHelper := dummyParamsWithGasPrice(oneBillion)
+	A := createTxWithParams([]byte("a"), "a", 1, 200, 50_000, oneBillion)
+	B := createTxWithParams([]byte("b"), "b", 1, 200, 50_000_000, oneBillion)
+	C := createTxWithParams([]byte("C"), "c", 1, 200, 500_000_000, oneBillion)
+	D := createTxWithParams([]byte("D"), "d", 1, 200, 500_000_000, 2*oneBillion)
 
 	scoreA := estimateTxFeeScore(A, txGasHandler, txFeeHelper)
 	scoreB := estimateTxFeeScore(B, txGasHandler, txFeeHelper)
 	scoreC := estimateTxFeeScore(C, txGasHandler, txFeeHelper)
-	require.Equal(t, uint64(8940), scoreA)
-	require.Equal(t, uint64(8940), A.TxFeeScoreNormalized)
-	require.Equal(t, uint64(6837580), scoreB)
-	require.Equal(t, uint64(6837580), B.TxFeeScoreNormalized)
-	require.Equal(t, uint64(205079820), scoreC)
-	require.Equal(t, uint64(205079820), C.TxFeeScoreNormalized)
+	scoreD := estimateTxFeeScore(D, txGasHandler, txFeeHelper)
+
+	require.Equal(t, 11436, int(scoreA))
+	require.Equal(t, 11436, int(A.TxFeeScoreNormalized))
+	require.Equal(t, 8791116, int(scoreB))
+	require.Equal(t, 8791116, int(B.TxFeeScoreNormalized))
+	require.Equal(t, 87893196, int(scoreC))
+	require.Equal(t, 87893196, int(C.TxFeeScoreNormalized))
+	require.Equal(t, 92786964, int(scoreD))
+	require.Equal(t, 92786964, int(D.TxFeeScoreNormalized))
 }
 
 func Test_normalizeGasPriceProcessing(t *testing.T) {

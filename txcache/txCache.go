@@ -105,8 +105,8 @@ func (cache *TxCache) GetByTxHash(txHash []byte) (*WrappedTransaction, bool) {
 // SelectTransactionsWithBandwidth selects a reasonably fair list of transactions to be included in the next miniblock
 // It returns at most "numRequested" transactions
 // Each sender gets the chance to give at least bandwidthPerSender gas worth of transactions, unless "numRequested" limit is reached before iterating over all senders
-func (cache *TxCache) SelectTransactionsWithBandwidth(numRequested int, batchSizePerSender int, bandwidthPerSender uint64) []*WrappedTransaction {
-	result := cache.doSelectTransactions(numRequested, batchSizePerSender, bandwidthPerSender)
+func (cache *TxCache) SelectTransactionsWithBandwidth(numRequested int, _ int, bandwidthPerSender uint64) []*WrappedTransaction {
+	result := cache.doSelectTransactions(numRequested, overridenBatchSizePerSender, bandwidthPerSender)
 	go cache.doAfterSelection()
 	return result
 }
@@ -117,6 +117,7 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 	result := make([]*WrappedTransaction, numRequested)
 	resultFillIndex := 0
 	resultIsFull := false
+	accumulatedGas := uint64(0)
 
 	snapshotOfSenders := cache.getSendersEligibleForSelection()
 
@@ -124,10 +125,9 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 		copiedInThisPass := 0
 
 		for _, txList := range snapshotOfSenders {
-			batchSizeWithScoreCoefficient := batchSizePerSender * int(txList.getLastComputedScore()+1)
 			// Reset happens on first pass only
 			isFirstBatch := pass == 0
-			journal := txList.selectBatchTo(isFirstBatch, result[resultFillIndex:], batchSizeWithScoreCoefficient, bandwidthPerSender)
+			journal := txList.selectBatchTo(isFirstBatch, result[resultFillIndex:], batchSizePerSender, bandwidthPerSender)
 			cache.monitorBatchSelectionEnd(journal)
 
 			if isFirstBatch {
@@ -136,7 +136,8 @@ func (cache *TxCache) doSelectTransactions(numRequested int, batchSizePerSender 
 
 			resultFillIndex += journal.copied
 			copiedInThisPass += journal.copied
-			resultIsFull = resultFillIndex == numRequested
+			accumulatedGas += journal.copiedGas
+			resultIsFull = resultFillIndex == numRequested || accumulatedGas >= maxGasRequested
 			if resultIsFull {
 				break
 			}

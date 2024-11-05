@@ -30,6 +30,12 @@ func TestDefaultScoreComputer_computeRawScore(t *testing.T) {
 
 	score = computer.computeRawScore(senderScoreParams{count: 10000, feeScore: 180000000, gas: 1000000000})
 	assert.InDelta(t, float64(1.4129614707), score, delta)
+
+	score = computer.computeRawScore(senderScoreParams{count: 1, feeScore: 87893196, gas: 500_000_000})
+	assert.InDelta(t, float64(15.005599854444185), score, delta)
+
+	score = computer.computeRawScore(senderScoreParams{count: 1, feeScore: 92786964, gas: 500_000_000})
+	assert.InDelta(t, float64(17.554738697485206), score, delta)
 }
 
 func BenchmarkScoreComputer_computeRawScore(b *testing.B) {

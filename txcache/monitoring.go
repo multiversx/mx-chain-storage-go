@@ -62,6 +62,7 @@ func (cache *TxCache) monitorSelectionEnd(selection []*WrappedTransaction, stopW
 
 type batchSelectionJournal struct {
 	copied        int
+	copiedGas     uint64
 	isFirstBatch  bool
 	hasInitialGap bool
 	hasMiddleGap  bool

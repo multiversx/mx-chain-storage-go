@@ -256,6 +256,8 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 	copiedBandwidth := uint64(0)
 	lastTxGasLimit := uint64(0)
 	copied := 0
+	copiedGas := uint64(0)
+
 	for ; ; copied, copiedBandwidth = copied+1, copiedBandwidth+lastTxGasLimit {
 		if element == nil || copied == batchSize || copied == availableSpace || copiedBandwidth >= bandwidth {
 			break
@@ -272,6 +274,7 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 		}
 
 		destination[copied] = value
+		copiedGas += lastTxGasLimit
 		element = element.Next()
 		previousNonce = txNonce
 	}
@@ -279,6 +282,7 @@ func (listForSender *txListForSender) selectBatchTo(isFirstBatch bool, destinati
 	listForSender.copyBatchIndex = element
 	listForSender.copyPreviousNonce = previousNonce
 	journal.copied = copied
+	journal.copiedGas = copiedGas
 	return journal
 }
 
