@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+
 	"github.com/multiversx/mx-chain-core-go/core"
 )
 
@@ -73,6 +74,9 @@ var ErrNilTimeCache = errors.New("nil time cache")
 
 // ErrNilTxGasHandler signals that a nil tx gas handler was provided
 var ErrNilTxGasHandler = errors.New("nil tx gas handler")
+
+// ErrNilAccountNonceProvider signals that a nil account nonce provider was provided
+var ErrNilAccountNonceProvider = errors.New("nil account nonce provider")
 
 // ErrNilStoredDataFactory signals that a nil stored data factory has been provided
 var ErrNilStoredDataFactory = errors.New("nil stored data factory")
