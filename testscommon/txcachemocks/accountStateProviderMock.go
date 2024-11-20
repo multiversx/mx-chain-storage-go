@@ -1,7 +1,7 @@
 package txcachemocks
 
 import (
-	"errors"
+	"math/big"
 
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -19,21 +19,62 @@ func NewAccountStateProviderMock() *AccountStateProviderMock {
 	}
 }
 
+// SetNonce -
+func (mock *AccountStateProviderMock) SetNonce(address []byte, nonce uint64) {
+	key := string(address)
+
+	if mock.AccountStateByAddress[key] == nil {
+		mock.AccountStateByAddress[key] = newDefaultAccountState()
+	}
+
+	mock.AccountStateByAddress[key].Nonce = nonce
+}
+
+// SetBalance -
+func (mock *AccountStateProviderMock) SetBalance(address []byte, balance *big.Int) {
+	key := string(address)
+
+	if mock.AccountStateByAddress[key] == nil {
+		mock.AccountStateByAddress[key] = newDefaultAccountState()
+	}
+
+	mock.AccountStateByAddress[key].Balance = balance
+}
+
+// SetGuardian -
+func (mock *AccountStateProviderMock) SetGuardian(address []byte, guardian []byte) {
+	key := string(address)
+
+	if mock.AccountStateByAddress[key] == nil {
+		mock.AccountStateByAddress[key] = newDefaultAccountState()
+	}
+
+	mock.AccountStateByAddress[key].Guardian = guardian
+}
+
 // GetAccountState -
-func (stub *AccountStateProviderMock) GetAccountState(address []byte) (*types.AccountState, error) {
-	if stub.GetAccountStateCalled != nil {
-		return stub.GetAccountStateCalled(address)
+func (mock *AccountStateProviderMock) GetAccountState(address []byte) (*types.AccountState, error) {
+	if mock.GetAccountStateCalled != nil {
+		return mock.GetAccountStateCalled(address)
 	}
 
-	state, ok := stub.AccountStateByAddress[string(address)]
-	if !ok {
-		return nil, errors.New("cannot get state")
+	state, ok := mock.AccountStateByAddress[string(address)]
+	if ok {
+		return state, nil
 	}
 
-	return state, nil
+	return newDefaultAccountState(), nil
 }
 
 // IsInterfaceNil -
-func (stub *AccountStateProviderMock) IsInterfaceNil() bool {
-	return stub == nil
+func (mock *AccountStateProviderMock) IsInterfaceNil() bool {
+	return mock == nil
+}
+
+func newDefaultAccountState() *types.AccountState {
+	return &types.AccountState{
+		Nonce:    0,
+		Balance:  big.NewInt(1000000000000000000),
+		Guardian: nil,
+	}
 }
