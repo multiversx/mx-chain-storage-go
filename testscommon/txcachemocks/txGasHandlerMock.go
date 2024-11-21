@@ -1,56 +1,52 @@
 package txcachemocks
 
 import (
+	"math/big"
+
+	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/data"
 )
 
-// TxGasHandler -
-type TxGasHandler interface {
-	SplitTxGasInCategories(tx data.TransactionWithFeeHandler) (uint64, uint64)
-	GasPriceForProcessing(tx data.TransactionWithFeeHandler) uint64
-	GasPriceForMove(tx data.TransactionWithFeeHandler) uint64
-	MinGasPrice() uint64
-	MinGasLimit() uint64
-	MinGasPriceForProcessing() uint64
-	IsInterfaceNil() bool
-}
-
 // TxGasHandlerMock -
 type TxGasHandlerMock struct {
-	MinimumGasMove       uint64
-	MinimumGasPrice      uint64
-	GasProcessingDivisor uint64
+	minGasLimit      uint64
+	minGasPrice      uint64
+	gasPerDataByte   uint64
+	gasPriceModifier float64
 }
 
-// SplitTxGasInCategories -
-func (ghm *TxGasHandlerMock) SplitTxGasInCategories(tx data.TransactionWithFeeHandler) (uint64, uint64) {
-	moveGas := ghm.MinimumGasMove
-	return moveGas, tx.GetGasLimit() - moveGas
+// NewTxGasHandlerMock -
+func NewTxGasHandlerMock() *TxGasHandlerMock {
+	return &TxGasHandlerMock{
+		minGasLimit:      50000,
+		minGasPrice:      1000000000,
+		gasPerDataByte:   1500,
+		gasPriceModifier: 0.01,
+	}
 }
 
-// GasPriceForProcessing -
-func (ghm *TxGasHandlerMock) GasPriceForProcessing(tx data.TransactionWithFeeHandler) uint64 {
-	return tx.GetGasPrice() / ghm.GasProcessingDivisor
+// WithGasPriceModifier -
+func (ghm *TxGasHandlerMock) WithGasPriceModifier(gasPriceModifier float64) *TxGasHandlerMock {
+	ghm.gasPriceModifier = gasPriceModifier
+	return ghm
 }
 
-// GasPriceForMove -
-func (ghm *TxGasHandlerMock) GasPriceForMove(tx data.TransactionWithFeeHandler) uint64 {
-	return tx.GetGasPrice()
-}
+// ComputeTxFee -
+func (ghm *TxGasHandlerMock) ComputeTxFee(tx data.TransactionWithFeeHandler) *big.Int {
+	dataLength := uint64(len(tx.GetData()))
+	gasPriceForMovement := tx.GetGasPrice()
+	gasPriceForProcessing := uint64(float64(gasPriceForMovement) * ghm.gasPriceModifier)
 
-// MinGasPrice -
-func (ghm *TxGasHandlerMock) MinGasPrice() uint64 {
-	return ghm.MinimumGasPrice
-}
+	gasLimitForMovement := ghm.minGasLimit + dataLength*ghm.gasPerDataByte
+	if tx.GetGasLimit() < gasLimitForMovement {
+		panic("tx.GetGasLimit() < gasLimitForMovement")
+	}
 
-// MinGasLimit -
-func (ghm *TxGasHandlerMock) MinGasLimit() uint64 {
-	return ghm.MinimumGasMove
-}
-
-// MinGasPriceProcessing -
-func (ghm *TxGasHandlerMock) MinGasPriceForProcessing() uint64 {
-	return ghm.MinimumGasPrice / ghm.GasProcessingDivisor
+	gasLimitForProcessing := tx.GetGasLimit() - gasLimitForMovement
+	feeForMovement := core.SafeMul(gasPriceForMovement, gasLimitForMovement)
+	feeForProcessing := core.SafeMul(gasPriceForProcessing, gasLimitForProcessing)
+	fee := big.NewInt(0).Add(feeForMovement, feeForProcessing)
+	return fee
 }
 
 // IsInterfaceNil -
