@@ -2,12 +2,15 @@ package txcachemocks
 
 import (
 	"math/big"
+	"sync"
 
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
 // AccountStateProviderMock -
 type AccountStateProviderMock struct {
+	mutex sync.Mutex
+
 	AccountStateByAddress map[string]*types.AccountState
 	GetAccountStateCalled func(address []byte) (*types.AccountState, error)
 }
@@ -21,6 +24,9 @@ func NewAccountStateProviderMock() *AccountStateProviderMock {
 
 // SetNonce -
 func (mock *AccountStateProviderMock) SetNonce(address []byte, nonce uint64) {
+	mock.mutex.Lock()
+	defer mock.mutex.Unlock()
+
 	key := string(address)
 
 	if mock.AccountStateByAddress[key] == nil {
@@ -32,6 +38,9 @@ func (mock *AccountStateProviderMock) SetNonce(address []byte, nonce uint64) {
 
 // SetBalance -
 func (mock *AccountStateProviderMock) SetBalance(address []byte, balance *big.Int) {
+	mock.mutex.Lock()
+	defer mock.mutex.Unlock()
+
 	key := string(address)
 
 	if mock.AccountStateByAddress[key] == nil {
@@ -41,19 +50,11 @@ func (mock *AccountStateProviderMock) SetBalance(address []byte, balance *big.In
 	mock.AccountStateByAddress[key].Balance = balance
 }
 
-// SetGuardian -
-func (mock *AccountStateProviderMock) SetGuardian(address []byte, guardian []byte) {
-	key := string(address)
-
-	if mock.AccountStateByAddress[key] == nil {
-		mock.AccountStateByAddress[key] = newDefaultAccountState()
-	}
-
-	mock.AccountStateByAddress[key].Guardian = guardian
-}
-
 // GetAccountState -
 func (mock *AccountStateProviderMock) GetAccountState(address []byte) (*types.AccountState, error) {
+	mock.mutex.Lock()
+	defer mock.mutex.Unlock()
+
 	if mock.GetAccountStateCalled != nil {
 		return mock.GetAccountStateCalled(address)
 	}
@@ -73,8 +74,7 @@ func (mock *AccountStateProviderMock) IsInterfaceNil() bool {
 
 func newDefaultAccountState() *types.AccountState {
 	return &types.AccountState{
-		Nonce:    0,
-		Balance:  big.NewInt(1000000000000000000),
-		Guardian: nil,
+		Nonce:   0,
+		Balance: big.NewInt(1000000000000000000),
 	}
 }
