@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/multiversx/mx-chain-core-go/data"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
@@ -13,6 +14,7 @@ type AccountStateProviderMock struct {
 
 	AccountStateByAddress map[string]*types.AccountState
 	GetAccountStateCalled func(address []byte) (*types.AccountState, error)
+	IsBadlyGuardedCalled  func(tx data.TransactionHandler) bool
 }
 
 // NewAccountStateProviderMock -
@@ -65,6 +67,15 @@ func (mock *AccountStateProviderMock) GetAccountState(address []byte) (*types.Ac
 	}
 
 	return newDefaultAccountState(), nil
+}
+
+// IsBadlyGuarded -
+func (mock *AccountStateProviderMock) IsBadlyGuarded(tx data.TransactionHandler) bool {
+	if mock.IsBadlyGuardedCalled != nil {
+		return mock.IsBadlyGuardedCalled(tx)
+	}
+
+	return false
 }
 
 // IsInterfaceNil -
