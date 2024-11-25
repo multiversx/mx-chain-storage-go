@@ -12,9 +12,10 @@ import (
 type SelectionSessionMock struct {
 	mutex sync.Mutex
 
-	AccountStateByAddress map[string]*types.AccountState
-	GetAccountStateCalled func(address []byte) (*types.AccountState, error)
-	IsBadlyGuardedCalled  func(tx data.TransactionHandler) bool
+	AccountStateByAddress     map[string]*types.AccountState
+	GetAccountStateCalled     func(address []byte) (*types.AccountState, error)
+	IsBadlyGuardedCalled      func(tx data.TransactionHandler) bool
+	GetTransferredValueCalled func(tx data.TransactionHandler) *big.Int
 }
 
 // NewSelectionSessionMock -
@@ -76,6 +77,15 @@ func (mock *SelectionSessionMock) IsBadlyGuarded(tx data.TransactionHandler) boo
 	}
 
 	return false
+}
+
+// GetTransferredValue -
+func (mock *SelectionSessionMock) GetTransferredValue(tx data.TransactionHandler) *big.Int {
+	if mock.GetTransferredValueCalled != nil {
+		return mock.GetTransferredValueCalled(tx)
+	}
+
+	return tx.GetValue()
 }
 
 // IsInterfaceNil -
