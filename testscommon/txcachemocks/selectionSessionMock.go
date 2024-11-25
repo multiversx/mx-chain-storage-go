@@ -8,8 +8,8 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
-// AccountStateProviderMock -
-type AccountStateProviderMock struct {
+// SelectionSessionMock -
+type SelectionSessionMock struct {
 	mutex sync.Mutex
 
 	AccountStateByAddress map[string]*types.AccountState
@@ -17,15 +17,15 @@ type AccountStateProviderMock struct {
 	IsBadlyGuardedCalled  func(tx data.TransactionHandler) bool
 }
 
-// NewAccountStateProviderMock -
-func NewAccountStateProviderMock() *AccountStateProviderMock {
-	return &AccountStateProviderMock{
+// NewSelectionSessionMock -
+func NewSelectionSessionMock() *SelectionSessionMock {
+	return &SelectionSessionMock{
 		AccountStateByAddress: make(map[string]*types.AccountState),
 	}
 }
 
 // SetNonce -
-func (mock *AccountStateProviderMock) SetNonce(address []byte, nonce uint64) {
+func (mock *SelectionSessionMock) SetNonce(address []byte, nonce uint64) {
 	mock.mutex.Lock()
 	defer mock.mutex.Unlock()
 
@@ -39,7 +39,7 @@ func (mock *AccountStateProviderMock) SetNonce(address []byte, nonce uint64) {
 }
 
 // SetBalance -
-func (mock *AccountStateProviderMock) SetBalance(address []byte, balance *big.Int) {
+func (mock *SelectionSessionMock) SetBalance(address []byte, balance *big.Int) {
 	mock.mutex.Lock()
 	defer mock.mutex.Unlock()
 
@@ -53,7 +53,7 @@ func (mock *AccountStateProviderMock) SetBalance(address []byte, balance *big.In
 }
 
 // GetAccountState -
-func (mock *AccountStateProviderMock) GetAccountState(address []byte) (*types.AccountState, error) {
+func (mock *SelectionSessionMock) GetAccountState(address []byte) (*types.AccountState, error) {
 	mock.mutex.Lock()
 	defer mock.mutex.Unlock()
 
@@ -70,7 +70,7 @@ func (mock *AccountStateProviderMock) GetAccountState(address []byte) (*types.Ac
 }
 
 // IsBadlyGuarded -
-func (mock *AccountStateProviderMock) IsBadlyGuarded(tx data.TransactionHandler) bool {
+func (mock *SelectionSessionMock) IsBadlyGuarded(tx data.TransactionHandler) bool {
 	if mock.IsBadlyGuardedCalled != nil {
 		return mock.IsBadlyGuardedCalled(tx)
 	}
@@ -79,7 +79,7 @@ func (mock *AccountStateProviderMock) IsBadlyGuarded(tx data.TransactionHandler)
 }
 
 // IsInterfaceNil -
-func (mock *AccountStateProviderMock) IsInterfaceNil() bool {
+func (mock *SelectionSessionMock) IsInterfaceNil() bool {
 	return mock == nil
 }
 
