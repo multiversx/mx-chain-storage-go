@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+
 	"github.com/multiversx/mx-chain-core-go/core"
 )
 
@@ -50,9 +51,6 @@ var ErrFailedCacheEviction = errors.New("failed eviction within cache")
 // ErrImmuneItemsCapacityReached signals that capacity for immune items is reached
 var ErrImmuneItemsCapacityReached = errors.New("capacity reached for immune items")
 
-// ErrItemAlreadyInCache signals that an item is already in cache
-var ErrItemAlreadyInCache = errors.New("item already in cache")
-
 // ErrCacheSizeInvalid signals that size of cache is less than 1
 var ErrCacheSizeInvalid = errors.New("cache size is less than 1")
 
@@ -70,9 +68,6 @@ var ErrNegativeSizeInBytes = errors.New("negative size in bytes")
 
 // ErrNilTimeCache signals that a nil time cache has been provided
 var ErrNilTimeCache = errors.New("nil time cache")
-
-// ErrNilTxGasHandler signals that a nil tx gas handler was provided
-var ErrNilTxGasHandler = errors.New("nil tx gas handler")
 
 // ErrNilStoredDataFactory signals that a nil stored data factory has been provided
 var ErrNilStoredDataFactory = errors.New("nil stored data factory")
