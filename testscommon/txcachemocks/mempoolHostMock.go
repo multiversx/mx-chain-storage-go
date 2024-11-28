@@ -7,17 +7,17 @@ import (
 	"github.com/multiversx/mx-chain-core-go/data"
 )
 
-// TxGasHandlerMock -
-type TxGasHandlerMock struct {
+// MempoolHostMock -
+type MempoolHostMock struct {
 	minGasLimit      uint64
 	minGasPrice      uint64
 	gasPerDataByte   uint64
 	gasPriceModifier float64
 }
 
-// NewTxGasHandlerMock -
-func NewTxGasHandlerMock() *TxGasHandlerMock {
-	return &TxGasHandlerMock{
+// NewMempoolHostMock -
+func NewMempoolHostMock() *MempoolHostMock {
+	return &MempoolHostMock{
 		minGasLimit:      50000,
 		minGasPrice:      1000000000,
 		gasPerDataByte:   1500,
@@ -26,18 +26,18 @@ func NewTxGasHandlerMock() *TxGasHandlerMock {
 }
 
 // WithGasPriceModifier -
-func (ghm *TxGasHandlerMock) WithGasPriceModifier(gasPriceModifier float64) *TxGasHandlerMock {
-	ghm.gasPriceModifier = gasPriceModifier
-	return ghm
+func (mock *MempoolHostMock) WithGasPriceModifier(gasPriceModifier float64) *MempoolHostMock {
+	mock.gasPriceModifier = gasPriceModifier
+	return mock
 }
 
 // ComputeTxFee -
-func (ghm *TxGasHandlerMock) ComputeTxFee(tx data.TransactionWithFeeHandler) *big.Int {
+func (mock *MempoolHostMock) ComputeTxFee(tx data.TransactionWithFeeHandler) *big.Int {
 	dataLength := uint64(len(tx.GetData()))
 	gasPriceForMovement := tx.GetGasPrice()
-	gasPriceForProcessing := uint64(float64(gasPriceForMovement) * ghm.gasPriceModifier)
+	gasPriceForProcessing := uint64(float64(gasPriceForMovement) * mock.gasPriceModifier)
 
-	gasLimitForMovement := ghm.minGasLimit + dataLength*ghm.gasPerDataByte
+	gasLimitForMovement := mock.minGasLimit + dataLength*mock.gasPerDataByte
 	if tx.GetGasLimit() < gasLimitForMovement {
 		panic("tx.GetGasLimit() < gasLimitForMovement")
 	}
@@ -50,6 +50,6 @@ func (ghm *TxGasHandlerMock) ComputeTxFee(tx data.TransactionWithFeeHandler) *bi
 }
 
 // IsInterfaceNil -
-func (ghm *TxGasHandlerMock) IsInterfaceNil() bool {
-	return ghm == nil
+func (mock *MempoolHostMock) IsInterfaceNil() bool {
+	return mock == nil
 }
