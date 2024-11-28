@@ -15,6 +15,7 @@ type SelectionSessionMock struct {
 	AccountStateByAddress      map[string]*types.AccountState
 	GetAccountStateCalled      func(address []byte) (*types.AccountState, error)
 	IsIncorrectlyGuardedCalled func(tx data.TransactionHandler) bool
+	GetTransferredValueCalled  func(tx data.TransactionHandler) *big.Int
 }
 
 // NewSelectionSessionMock -
@@ -76,6 +77,15 @@ func (mock *SelectionSessionMock) IsIncorrectlyGuarded(tx data.TransactionHandle
 	}
 
 	return false
+}
+
+// GetTransferredValue -
+func (mock *SelectionSessionMock) GetTransferredValue(tx data.TransactionHandler) *big.Int {
+	if mock.GetTransferredValueCalled != nil {
+		return mock.GetTransferredValueCalled(tx)
+	}
+
+	return tx.GetValue()
 }
 
 // IsInterfaceNil -
