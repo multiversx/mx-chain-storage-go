@@ -13,6 +13,9 @@ type MempoolHostMock struct {
 	minGasPrice      uint64
 	gasPerDataByte   uint64
 	gasPriceModifier float64
+
+	ComputeTxFeeCalled        func(tx data.TransactionWithFeeHandler) *big.Int
+	GetTransferredValueCalled func(tx data.TransactionHandler) *big.Int
 }
 
 // NewMempoolHostMock -
@@ -25,14 +28,12 @@ func NewMempoolHostMock() *MempoolHostMock {
 	}
 }
 
-// WithGasPriceModifier -
-func (mock *MempoolHostMock) WithGasPriceModifier(gasPriceModifier float64) *MempoolHostMock {
-	mock.gasPriceModifier = gasPriceModifier
-	return mock
-}
-
 // ComputeTxFee -
 func (mock *MempoolHostMock) ComputeTxFee(tx data.TransactionWithFeeHandler) *big.Int {
+	if mock.ComputeTxFeeCalled != nil {
+		return mock.ComputeTxFeeCalled(tx)
+	}
+
 	dataLength := uint64(len(tx.GetData()))
 	gasPriceForMovement := tx.GetGasPrice()
 	gasPriceForProcessing := uint64(float64(gasPriceForMovement) * mock.gasPriceModifier)
@@ -47,6 +48,15 @@ func (mock *MempoolHostMock) ComputeTxFee(tx data.TransactionWithFeeHandler) *bi
 	feeForProcessing := core.SafeMul(gasPriceForProcessing, gasLimitForProcessing)
 	fee := big.NewInt(0).Add(feeForMovement, feeForProcessing)
 	return fee
+}
+
+// GetTransferredValue -
+func (mock *MempoolHostMock) GetTransferredValue(tx data.TransactionHandler) *big.Int {
+	if mock.GetTransferredValueCalled != nil {
+		return mock.GetTransferredValueCalled(tx)
+	}
+
+	return tx.GetValue()
 }
 
 // IsInterfaceNil -
