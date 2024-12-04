@@ -7,7 +7,7 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/txcache/maps"
 )
 
-const numberOfScoreChunks = uint32(100)
+const numberOfScoreChunks = uint32(1)
 
 // txListBySenderMap is a map-like structure for holding and accessing transactions by sender
 type txListBySenderMap struct {
@@ -75,20 +75,21 @@ func (txMap *txListBySenderMap) getListForSender(sender string) (*txListForSende
 }
 
 func (txMap *txListBySenderMap) addSender(sender string) *txListForSender {
-	listForSender := newTxListForSender(sender, &txMap.senderConstraints, txMap.notifyScoreChange)
+	listForSender := newTxListForSender(sender, &txMap.senderConstraints)
 
 	txMap.backingMap.Set(listForSender)
+	txMap.backingMap.NotifyScoreChange(listForSender, 0)
 	txMap.counter.Increment()
 
 	return listForSender
 }
 
-// This function should only be called in a critical section managed by a "txListForSender"
-func (txMap *txListBySenderMap) notifyScoreChange(txList *txListForSender, scoreParams senderScoreParams) {
-	score := txMap.scoreComputer.computeScore(scoreParams)
-	txList.setLastComputedScore(score)
-	txMap.backingMap.NotifyScoreChange(txList, score)
-}
+// // This function should only be called in a critical section managed by a "txListForSender"
+// func (txMap *txListBySenderMap) notifyScoreChange(txList *txListForSender, scoreParams senderScoreParams) {
+// 	score := uint32(0)
+// 	txList.setLastComputedScore(score)
+// 	txMap.backingMap.NotifyScoreChange(txList, score)
+// }
 
 // removeTx removes a transaction from the map
 func (txMap *txListBySenderMap) removeTx(tx *WrappedTransaction) bool {
