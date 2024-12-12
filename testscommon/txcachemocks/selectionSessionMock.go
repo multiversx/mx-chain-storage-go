@@ -12,6 +12,8 @@ import (
 type SelectionSessionMock struct {
 	mutex sync.Mutex
 
+	NumCallsGetAccountState int
+
 	AccountStateByAddress      map[string]*types.AccountState
 	GetAccountStateCalled      func(address []byte) (*types.AccountState, error)
 	IsIncorrectlyGuardedCalled func(tx data.TransactionHandler) bool
@@ -56,6 +58,8 @@ func (mock *SelectionSessionMock) SetBalance(address []byte, balance *big.Int) {
 func (mock *SelectionSessionMock) GetAccountState(address []byte) (*types.AccountState, error) {
 	mock.mutex.Lock()
 	defer mock.mutex.Unlock()
+
+	mock.NumCallsGetAccountState++
 
 	if mock.GetAccountStateCalled != nil {
 		return mock.GetAccountStateCalled(address)
