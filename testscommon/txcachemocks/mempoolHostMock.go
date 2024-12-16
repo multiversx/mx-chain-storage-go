@@ -9,10 +9,12 @@ import (
 
 // MempoolHostMock -
 type MempoolHostMock struct {
-	minGasLimit      uint64
-	minGasPrice      uint64
-	gasPerDataByte   uint64
-	gasPriceModifier float64
+	minGasLimit             uint64
+	minGasPrice             uint64
+	gasPerDataByte          uint64
+	gasPriceModifier        float64
+	extraGasLimitForGuarded uint64
+	extraGasLimitForRelayed uint64
 
 	ComputeTxFeeCalled        func(tx data.TransactionWithFeeHandler) *big.Int
 	GetTransferredValueCalled func(tx data.TransactionHandler) *big.Int
@@ -21,10 +23,12 @@ type MempoolHostMock struct {
 // NewMempoolHostMock -
 func NewMempoolHostMock() *MempoolHostMock {
 	return &MempoolHostMock{
-		minGasLimit:      50000,
-		minGasPrice:      1000000000,
-		gasPerDataByte:   1500,
-		gasPriceModifier: 0.01,
+		minGasLimit:             50_000,
+		minGasPrice:             1_000_000_000,
+		gasPerDataByte:          1500,
+		gasPriceModifier:        0.01,
+		extraGasLimitForGuarded: 50_000,
+		extraGasLimitForRelayed: 50_000,
 	}
 }
 
@@ -39,6 +43,15 @@ func (mock *MempoolHostMock) ComputeTxFee(tx data.TransactionWithFeeHandler) *bi
 	gasPriceForProcessing := uint64(float64(gasPriceForMovement) * mock.gasPriceModifier)
 
 	gasLimitForMovement := mock.minGasLimit + dataLength*mock.gasPerDataByte
+
+	if txAsGuarded, ok := tx.(data.GuardedTransactionHandler); ok && len(txAsGuarded.GetGuardianAddr()) > 0 {
+		gasLimitForMovement += mock.extraGasLimitForGuarded
+	}
+
+	if txAsRelayed, ok := tx.(data.RelayedTransactionHandler); ok && len(txAsRelayed.GetRelayerAddr()) > 0 {
+		gasLimitForMovement += mock.extraGasLimitForRelayed
+	}
+
 	if tx.GetGasLimit() < gasLimitForMovement {
 		panic("tx.GetGasLimit() < gasLimitForMovement")
 	}
