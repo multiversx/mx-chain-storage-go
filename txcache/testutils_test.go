@@ -1,23 +1,87 @@
 package txcache
 
 import (
+	cryptoRand "crypto/rand"
 	"encoding/binary"
-	"sync"
-	"testing"
+	"math"
+	"math/big"
+	"math/rand"
 	"time"
 
-	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/data/transaction"
+	"github.com/multiversx/mx-chain-storage-go/testscommon/txcachemocks"
 )
 
 const oneMilion = 1000000
 const oneBillion = oneMilion * 1000
-const delta = 0.00000001
+const oneQuintillion = 1_000_000_000_000_000_000
 const estimatedSizeOfBoundedTxFields = uint64(128)
+const hashLength = 32
+const addressLength = 32
+
+var oneQuintillionBig = big.NewInt(oneQuintillion)
+
+// The GitHub Actions runners are (extremely) slow.
+const selectionLoopMaximumDuration = 30 * time.Second
+
+var randomHashes = newRandomData(math.MaxUint16, hashLength)
+var randomAddresses = newRandomData(math.MaxUint16, addressLength)
+
+type randomData struct {
+	randomBytes []byte
+	numItems    int
+	itemSize    int
+}
+
+func newRandomData(numItems int, itemSize int) *randomData {
+	randomBytes := make([]byte, numItems*itemSize)
+
+	_, err := cryptoRand.Read(randomBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	return &randomData{
+		randomBytes: randomBytes,
+		numItems:    numItems,
+		itemSize:    itemSize,
+	}
+}
+
+func (data *randomData) getItem(index int) []byte {
+	start := index * data.itemSize
+	end := start + data.itemSize
+	return data.randomBytes[start:end]
+}
+
+func (data *randomData) getTailItem(index int) []byte {
+	start := (data.numItems - 1 - index) * data.itemSize
+	end := start + data.itemSize
+	return data.randomBytes[start:end]
+}
 
 func (cache *TxCache) areInternalMapsConsistent() bool {
-	journal := cache.checkInternalConsistency()
-	return journal.isFine()
+	internalMapByHash := cache.txByHash
+	internalMapBySender := cache.txListBySender
+
+	senders := internalMapBySender.getSenders()
+	numInMapByHash := len(internalMapByHash.keys())
+	numInMapBySender := 0
+	numMissingInMapByHash := 0
+
+	for _, sender := range senders {
+		numInMapBySender += int(sender.countTx())
+
+		for _, hash := range sender.getTxsHashes() {
+			_, ok := internalMapByHash.getTx(string(hash))
+			if !ok {
+				numMissingInMapByHash++
+			}
+		}
+	}
+
+	isFine := (numInMapByHash == numInMapBySender) && (numMissingInMapByHash == 0)
+	return isFine
 }
 
 func (cache *TxCache) getHashesForSender(sender string) []string {
@@ -37,30 +101,23 @@ func (txMap *txListBySenderMap) testGetListForSender(sender string) *txListForSe
 	return list
 }
 
-func (cache *TxCache) getScoreOfSender(sender string) uint32 {
-	list := cache.getListForSender(sender)
-	scoreParams := list.getScoreParams()
-	computer := cache.txListBySender.scoreComputer
-	return computer.computeScore(scoreParams)
+func (listForSender *txListForSender) getTxHashesAsStrings() []string {
+	hashes := listForSender.getTxsHashes()
+	return hashesAsStrings(hashes)
 }
 
-func (cache *TxCache) getNumFailedSelectionsOfSender(sender string) int {
-	return int(cache.getListForSender(sender).numFailedSelections.Get())
-}
+func (listForSender *txListForSender) getTxsHashes() [][]byte {
+	listForSender.mutex.RLock()
+	defer listForSender.mutex.RUnlock()
 
-func (cache *TxCache) isSenderSweepable(sender string) bool {
-	for _, item := range cache.sweepingListOfSenders {
-		if item.sender == sender {
-			return true
-		}
+	result := make([][]byte, 0, listForSender.countTx())
+
+	for element := listForSender.items.Front(); element != nil; element = element.Next() {
+		value := element.Value.(*WrappedTransaction)
+		result = append(result, value.TxHash)
 	}
 
-	return false
-}
-
-func (listForSender *txListForSender) getTxHashesAsStrings() []string {
-	hashes := listForSender.getTxHashes()
-	return hashesAsStrings(hashes)
+	return result
 }
 
 func hashesAsStrings(hashes [][]byte) []string {
@@ -85,31 +142,45 @@ func addManyTransactionsWithUniformDistribution(cache *TxCache, nSenders int, nT
 	for senderTag := 0; senderTag < nSenders; senderTag++ {
 		sender := createFakeSenderAddress(senderTag)
 
-		for txNonce := nTransactionsPerSender; txNonce > 0; txNonce-- {
-			txHash := createFakeTxHash(sender, txNonce)
-			tx := createTx(txHash, string(sender), uint64(txNonce))
-			cache.AddTx(tx)
+		for nonce := nTransactionsPerSender - 1; nonce >= 0; nonce-- {
+			transactionHash := createFakeTxHash(sender, nonce)
+			gasPrice := oneBillion + rand.Intn(3*oneBillion)
+			transaction := createTx(transactionHash, string(sender), uint64(nonce)).withGasPrice(uint64(gasPrice))
+
+			cache.AddTx(transaction)
 		}
 	}
 }
 
+func createBunchesOfTransactionsWithUniformDistribution(nSenders int, nTransactionsPerSender int) []bunchOfTransactions {
+	bunches := make([]bunchOfTransactions, 0, nSenders)
+	host := txcachemocks.NewMempoolHostMock()
+
+	for senderTag := 0; senderTag < nSenders; senderTag++ {
+		bunch := make(bunchOfTransactions, 0, nTransactionsPerSender)
+		sender := createFakeSenderAddress(senderTag)
+
+		for nonce := 0; nonce < nTransactionsPerSender; nonce++ {
+			transactionHash := createFakeTxHash(sender, nonce)
+			gasPrice := oneBillion + rand.Intn(3*oneBillion)
+			transaction := createTx(transactionHash, string(sender), uint64(nonce)).withGasPrice(uint64(gasPrice))
+			transaction.precomputeFields(host)
+
+			bunch = append(bunch, transaction)
+		}
+
+		bunches = append(bunches, bunch)
+	}
+
+	return bunches
+}
+
 func createTx(hash []byte, sender string, nonce uint64) *WrappedTransaction {
 	tx := &transaction.Transaction{
-		SndAddr: []byte(sender),
-		Nonce:   nonce,
-	}
-
-	return &WrappedTransaction{
-		Tx:     tx,
-		TxHash: hash,
-		Size:   int64(estimatedSizeOfBoundedTxFields),
-	}
-}
-func createTxWithGasLimit(hash []byte, sender string, nonce uint64, gasLimit uint64) *WrappedTransaction {
-	tx := &transaction.Transaction{
 		SndAddr:  []byte(sender),
 		Nonce:    nonce,
-		GasLimit: gasLimit,
+		GasLimit: 50000,
+		GasPrice: oneBillion,
 	}
 
 	return &WrappedTransaction{
@@ -119,25 +190,50 @@ func createTxWithGasLimit(hash []byte, sender string, nonce uint64, gasLimit uin
 	}
 }
 
-func createTxWithParams(hash []byte, sender string, nonce uint64, size uint64, gasLimit uint64, gasPrice uint64) *WrappedTransaction {
-	dataLength := int(size) - int(estimatedSizeOfBoundedTxFields)
-	if dataLength < 0 {
-		panic("createTxWithData(): invalid length for dummy tx")
-	}
+func (wrappedTx *WrappedTransaction) withSize(size uint64) *WrappedTransaction {
+	dataLength := size - estimatedSizeOfBoundedTxFields
+	tx := wrappedTx.Tx.(*transaction.Transaction)
+	tx.Data = make([]byte, dataLength)
+	wrappedTx.Size = int64(size)
+	return wrappedTx
+}
 
-	tx := &transaction.Transaction{
-		SndAddr:  []byte(sender),
-		Nonce:    nonce,
-		Data:     make([]byte, dataLength),
-		GasLimit: gasLimit,
-		GasPrice: gasPrice,
-	}
+func (wrappedTx *WrappedTransaction) withData(data []byte) *WrappedTransaction {
+	tx := wrappedTx.Tx.(*transaction.Transaction)
+	tx.Data = data
+	wrappedTx.Size = int64(len(data)) + int64(estimatedSizeOfBoundedTxFields)
+	return wrappedTx
+}
 
-	return &WrappedTransaction{
-		Tx:     tx,
-		TxHash: hash,
-		Size:   int64(size),
-	}
+func (wrappedTx *WrappedTransaction) withDataLength(dataLength int) *WrappedTransaction {
+	tx := wrappedTx.Tx.(*transaction.Transaction)
+	tx.Data = make([]byte, dataLength)
+	wrappedTx.Size = int64(dataLength) + int64(estimatedSizeOfBoundedTxFields)
+	return wrappedTx
+}
+
+func (wrappedTx *WrappedTransaction) withGasPrice(gasPrice uint64) *WrappedTransaction {
+	tx := wrappedTx.Tx.(*transaction.Transaction)
+	tx.GasPrice = gasPrice
+	return wrappedTx
+}
+
+func (wrappedTx *WrappedTransaction) withGasLimit(gasLimit uint64) *WrappedTransaction {
+	tx := wrappedTx.Tx.(*transaction.Transaction)
+	tx.GasLimit = gasLimit
+	return wrappedTx
+}
+
+func (wrappedTx *WrappedTransaction) withValue(value *big.Int) *WrappedTransaction {
+	tx := wrappedTx.Tx.(*transaction.Transaction)
+	tx.Value = value
+	return wrappedTx
+}
+
+func (wrappedTx *WrappedTransaction) withRelayer(relayer []byte) *WrappedTransaction {
+	tx := wrappedTx.Tx.(*transaction.Transaction)
+	tx.RelayerAddr = relayer
+	return wrappedTx
 }
 
 func createFakeSenderAddress(senderTag int) []byte {
@@ -153,40 +249,4 @@ func createFakeTxHash(fakeSenderAddress []byte, nonce int) []byte {
 	binary.LittleEndian.PutUint64(bytes[8:], uint64(nonce))
 	binary.LittleEndian.PutUint64(bytes[16:], uint64(nonce))
 	return bytes
-}
-
-func measureWithStopWatch(b *testing.B, function func()) {
-	sw := core.NewStopWatch()
-	sw.Start("time")
-	function()
-	sw.Stop("time")
-
-	duration := sw.GetMeasurementsMap()["time"]
-	b.ReportMetric(duration, "time@stopWatch")
-}
-
-// waitTimeout waits for the waitgroup for the specified max timeout.
-// Returns true if waiting timed out.
-// Reference: https://stackoverflow.com/a/32843750/1475331
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return false // completed normally
-	case <-time.After(timeout):
-		return true // timed out
-	}
-}
-
-var _ scoreComputer = (*disabledScoreComputer)(nil)
-
-type disabledScoreComputer struct {
-}
-
-func (computer *disabledScoreComputer) computeScore(_ senderScoreParams) uint32 {
-	return 0
 }
