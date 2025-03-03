@@ -7,6 +7,7 @@ import (
 	"time"
 
 	logger "github.com/multiversx/mx-chain-logger-go"
+
 	"github.com/multiversx/mx-chain-storage-go/common"
 )
 
@@ -63,14 +64,12 @@ func checkArg(arg ArgTimeCacher) error {
 
 // startSweeping handles sweeping the time cache
 func (tc *timeCacher) startSweeping(ctx context.Context) {
-	timer := time.NewTimer(tc.cacheExpiry)
-	defer timer.Stop()
+	ticker := time.NewTicker(tc.cacheExpiry)
+	defer ticker.Stop()
 
 	for {
-		timer.Reset(tc.cacheExpiry)
-
 		select {
-		case <-timer.C:
+		case <-ticker.C:
 			tc.timeCache.sweep()
 		case <-ctx.Done():
 			log.Info("closing mapTimeCacher's sweep go routine...")
