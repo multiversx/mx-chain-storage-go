@@ -5,8 +5,8 @@ go 1.23
 require (
 	github.com/hashicorp/golang-lru v0.6.0
 	github.com/multiversx/concurrent-map v0.1.4
-	github.com/multiversx/mx-chain-core-go v1.3.2-0.20250520074139-18b645ad397a
-	github.com/multiversx/mx-chain-logger-go v1.0.16-0.20250520074859-b2faf3c90273
+	github.com/multiversx/mx-chain-core-go v1.4.0
+	github.com/multiversx/mx-chain-logger-go v1.1.0
 	github.com/stretchr/testify v1.7.2
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d
 )
