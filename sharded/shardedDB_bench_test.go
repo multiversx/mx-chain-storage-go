@@ -120,7 +120,7 @@ func BenchmarkPersisterGetRandomKeys(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < numRandomKeys; i++ {
 			_, err = singleDB.Get([]byte(missingKeys[i]))
-			require.Equal(b, common.ErrInvalidConfig, err)
+			require.Equal(b, common.ErrKeyNotFound, err)
 		}
 	})
 
@@ -137,7 +137,7 @@ func BenchmarkPersisterGetRandomKeys(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < numRandomKeys; i++ {
 			_, err = singleDB.Get([]byte(missingKeys[i]))
-			require.Equal(b, common.ErrInvalidConfig, err)
+			require.Equal(b, common.ErrKeyNotFound, err)
 		}
 	})
 
@@ -154,7 +154,7 @@ func BenchmarkPersisterGetRandomKeys(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < numRandomKeys; i++ {
 			_, err = singleDB.Get([]byte(missingKeys[i]))
-			require.Equal(b, common.ErrInvalidConfig, err)
+			require.Equal(b, common.ErrKeyNotFound, err)
 		}
 	})
 
@@ -171,7 +171,7 @@ func BenchmarkPersisterGetRandomKeys(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < numRandomKeys; i++ {
 			_, err = singleDB.Get([]byte(missingKeys[i]))
-			require.Equal(b, common.ErrInvalidConfig, err)
+			require.Equal(b, common.ErrKeyNotFound, err)
 		}
 	})
 }
