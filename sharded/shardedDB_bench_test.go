@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/leveldb"
 	"github.com/multiversx/mx-chain-storage-go/sharded"
 	"github.com/multiversx/mx-chain-storage-go/testscommon"
@@ -46,12 +48,12 @@ func putKeysBenchmarkByNumKeys(
 	entries, _ := generateKeys(numKeys)
 
 	persisterPath := b.TempDir()
-	singleDB, err := createPersister(persisterPath, singleID)
+	singleDB, err := createPersister(persisterPath, singleID, 0)
 	require.Nil(b, err)
 	defer singleDB.Close()
 
 	shardedPersisterPath := b.TempDir()
-	shardedDB, err := createPersister(shardedPersisterPath, shardedID)
+	shardedDB, err := createPersister(shardedPersisterPath, shardedID, 0)
 	require.Nil(b, err)
 	defer shardedDB.Close()
 
@@ -100,28 +102,102 @@ func BenchmarkPersisterCopyAllKeys(b *testing.B) {
 	})
 }
 
+func BenchmarkPersisterGetRandomKeys(b *testing.B) {
+	const numRandomKeys = 100_000
+	entries, _ := generateKeys(_4Mil)
+	_, missingKeys := generateKeys(numRandomKeys)
+
+	b.Run("persister no bloom filter", func(b *testing.B) {
+		persisterPath := b.TempDir()
+		singleDB, err := createPersister(persisterPath, singleID, 0)
+		require.Nil(b, err)
+		err = populatePersister(singleDB, entries)
+		require.Nil(b, err)
+		defer singleDB.Close()
+
+		time.Sleep(5 * time.Second)
+
+		b.ResetTimer()
+		for i := 0; i < numRandomKeys; i++ {
+			_, err = singleDB.Get([]byte(missingKeys[i]))
+			require.Equal(b, common.ErrInvalidConfig, err)
+		}
+	})
+
+	b.Run("persister with bloom filter 5", func(b *testing.B) {
+		persisterPath := b.TempDir()
+		singleDB, err := createPersister(persisterPath, singleID, 5)
+		require.Nil(b, err)
+		err = populatePersister(singleDB, entries)
+		require.Nil(b, err)
+		defer singleDB.Close()
+
+		time.Sleep(5 * time.Second)
+
+		b.ResetTimer()
+		for i := 0; i < numRandomKeys; i++ {
+			_, err = singleDB.Get([]byte(missingKeys[i]))
+			require.Equal(b, common.ErrInvalidConfig, err)
+		}
+	})
+
+	b.Run("persister with bloom filter 10", func(b *testing.B) {
+		persisterPath := b.TempDir()
+		singleDB, err := createPersister(persisterPath, singleID, 10)
+		require.Nil(b, err)
+		err = populatePersister(singleDB, entries)
+		require.Nil(b, err)
+		defer singleDB.Close()
+
+		time.Sleep(5 * time.Second)
+
+		b.ResetTimer()
+		for i := 0; i < numRandomKeys; i++ {
+			_, err = singleDB.Get([]byte(missingKeys[i]))
+			require.Equal(b, common.ErrInvalidConfig, err)
+		}
+	})
+
+	b.Run("persister with bloom filter 20", func(b *testing.B) {
+		persisterPath := b.TempDir()
+		singleDB, err := createPersister(persisterPath, singleID, 20)
+		require.Nil(b, err)
+		err = populatePersister(singleDB, entries)
+		require.Nil(b, err)
+		defer singleDB.Close()
+
+		time.Sleep(5 * time.Second)
+
+		b.ResetTimer()
+		for i := 0; i < numRandomKeys; i++ {
+			_, err = singleDB.Get([]byte(missingKeys[i]))
+			require.Equal(b, common.ErrInvalidConfig, err)
+		}
+	})
+}
+
 func copyKeysBenchmarkByNumKeys(b *testing.B, numKeys int) {
 	entries, _ := generateKeys(_1Mil)
 
 	persisterPath := b.TempDir()
-	singleDB, err := createPersister(persisterPath, singleID)
+	singleDB, err := createPersister(persisterPath, singleID, 0)
 	require.Nil(b, err)
 	err = populatePersister(singleDB, entries)
 	require.Nil(b, err)
 	defer singleDB.Close()
 
 	shardedPersisterPath := b.TempDir()
-	shardedDB, err := createPersister(shardedPersisterPath, shardedID)
+	shardedDB, err := createPersister(shardedPersisterPath, shardedID, 0)
 	require.Nil(b, err)
 	err = populatePersister(shardedDB, entries)
 	require.Nil(b, err)
 	defer shardedDB.Close()
 
-	singleDBNew, err := createPersister(b.TempDir(), singleID)
+	singleDBNew, err := createPersister(b.TempDir(), singleID, 0)
 	require.Nil(b, err)
 	defer singleDB.Close()
 
-	shardedDBNew, err := createPersister(b.TempDir(), shardedID)
+	shardedDBNew, err := createPersister(b.TempDir(), shardedID, 0)
 	require.Nil(b, err)
 	defer shardedDB.Close()
 
@@ -269,15 +345,15 @@ func BenchmarkPersister8milGetAllKeys(b *testing.B) {
 	})
 }
 
-func createPersister(path string, id string) (types.Persister, error) {
+func createPersister(path string, id string, bloomFilterSize int) (types.Persister, error) {
 	switch id {
 	case singleID:
-		return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+		return leveldb.NewSerialDB(path, 2, _1Mil, 10, bloomFilterSize)
 	case shardedID:
 		shardCoordinator, _ := sharded.NewShardIDProvider(numShards)
 		persisterCreator := &testscommon.PersisterCreatorStub{
 			CreateBasePersisterCalled: func(path string) (types.Persister, error) {
-				return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+				return leveldb.NewSerialDB(path, 2, _1Mil, 10, bloomFilterSize)
 			},
 		}
 
@@ -299,7 +375,7 @@ func populatePersister(db types.Persister, entries map[string][]byte) error {
 }
 
 func createAndPopulatePersister(path string, id string, entries map[string][]byte) error {
-	db, err := createPersister(path, id)
+	db, err := createPersister(path, id, 0)
 	if err != nil {
 		return err
 	}
@@ -360,7 +436,7 @@ func getKeys(
 
 func createPersisterWithTimerControl(b *testing.B, path, id string) types.Persister {
 	b.StopTimer()
-	db, err := createPersister(path, id)
+	db, err := createPersister(path, id, 0)
 	require.Nil(b, err)
 	b.StartTimer()
 
@@ -388,6 +464,15 @@ func generateKeys(numKeys int) (map[string][]byte, []string) {
 	}
 
 	return entries, keys
+}
+
+func generateRandomKeys(numKeys int, keySize int) [][]byte {
+	keys := make([][]byte, numKeys)
+	for i := 0; i < numKeys; i++ {
+		keys[i] = generateRandomByteArray(keySize)
+	}
+
+	return keys
 }
 
 func generateRandomByteArray(size int) []byte {
