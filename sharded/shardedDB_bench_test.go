@@ -466,15 +466,6 @@ func generateKeys(numKeys int) (map[string][]byte, []string) {
 	return entries, keys
 }
 
-func generateRandomKeys(numKeys int, keySize int) [][]byte {
-	keys := make([][]byte, numKeys)
-	for i := 0; i < numKeys; i++ {
-		keys[i] = generateRandomByteArray(keySize)
-	}
-
-	return keys
-}
-
 func generateRandomByteArray(size int) []byte {
 	r := make([]byte, size)
 	_, _ = rand.Read(r)
