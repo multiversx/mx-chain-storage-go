@@ -16,9 +16,9 @@ const (
 
 func BenchmarkLevelDBBloomMiss(b *testing.B) {
 	_, keysForDB := generateKeys(_1Mil)
-	_, missingKeys := generateKeys(5 * _1KB)
+	_, missingKeys := generateKeys(_1Mil)
 
-	bigValue := generateRandomByteArray(5_000)
+	bigValue := generateRandomByteArray(5 * _1KB)
 
 	runBenchmark := func(b *testing.B, bloomBits int) {
 		persisterPath := b.TempDir()
