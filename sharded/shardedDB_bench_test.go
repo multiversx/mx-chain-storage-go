@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/leveldb"
 	"github.com/multiversx/mx-chain-storage-go/sharded"
 	"github.com/multiversx/mx-chain-storage-go/testscommon"
@@ -99,80 +97,6 @@ func BenchmarkPersisterCopyAllKeys(b *testing.B) {
 	})
 	b.Run("2 mil keys", func(b *testing.B) {
 		copyKeysBenchmarkByNumKeys(b, _2Mil)
-	})
-}
-
-func BenchmarkPersisterGetRandomKeys(b *testing.B) {
-	const numRandomKeys = 100_000
-	entries, _ := generateKeys(_4Mil)
-	_, missingKeys := generateKeys(numRandomKeys)
-
-	b.Run("persister no bloom filter", func(b *testing.B) {
-		persisterPath := b.TempDir()
-		singleDB, err := createPersister(persisterPath, singleID, 0)
-		require.Nil(b, err)
-		err = populatePersister(singleDB, entries)
-		require.Nil(b, err)
-		defer singleDB.Close()
-
-		time.Sleep(5 * time.Second)
-
-		b.ResetTimer()
-		for i := 0; i < numRandomKeys; i++ {
-			_, err = singleDB.Get([]byte(missingKeys[i]))
-			require.Equal(b, common.ErrKeyNotFound, err)
-		}
-	})
-
-	b.Run("persister with bloom filter 5", func(b *testing.B) {
-		persisterPath := b.TempDir()
-		singleDB, err := createPersister(persisterPath, singleID, 5)
-		require.Nil(b, err)
-		err = populatePersister(singleDB, entries)
-		require.Nil(b, err)
-		defer singleDB.Close()
-
-		time.Sleep(5 * time.Second)
-
-		b.ResetTimer()
-		for i := 0; i < numRandomKeys; i++ {
-			_, err = singleDB.Get([]byte(missingKeys[i]))
-			require.Equal(b, common.ErrKeyNotFound, err)
-		}
-	})
-
-	b.Run("persister with bloom filter 10", func(b *testing.B) {
-		persisterPath := b.TempDir()
-		singleDB, err := createPersister(persisterPath, singleID, 10)
-		require.Nil(b, err)
-		err = populatePersister(singleDB, entries)
-		require.Nil(b, err)
-		defer singleDB.Close()
-
-		time.Sleep(5 * time.Second)
-
-		b.ResetTimer()
-		for i := 0; i < numRandomKeys; i++ {
-			_, err = singleDB.Get([]byte(missingKeys[i]))
-			require.Equal(b, common.ErrKeyNotFound, err)
-		}
-	})
-
-	b.Run("persister with bloom filter 20", func(b *testing.B) {
-		persisterPath := b.TempDir()
-		singleDB, err := createPersister(persisterPath, singleID, 20)
-		require.Nil(b, err)
-		err = populatePersister(singleDB, entries)
-		require.Nil(b, err)
-		defer singleDB.Close()
-
-		time.Sleep(5 * time.Second)
-
-		b.ResetTimer()
-		for i := 0; i < numRandomKeys; i++ {
-			_, err = singleDB.Get([]byte(missingKeys[i]))
-			require.Equal(b, common.ErrKeyNotFound, err)
-		}
 	})
 }
 
