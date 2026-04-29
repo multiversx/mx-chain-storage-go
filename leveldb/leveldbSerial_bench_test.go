@@ -11,14 +11,14 @@ import (
 
 const (
 	_1Mil = 1_000_000
-	_1KB  = 1_024
+	_1KiB = 1_024
 )
 
 func BenchmarkLevelDBBloomMiss(b *testing.B) {
 	_, keysForDB := generateKeys(_1Mil)
 	_, missingKeys := generateKeys(_1Mil)
 
-	bigValue := generateRandomByteArray(5 * _1KB)
+	bigValue := generateRandomByteArray(5 * _1KiB)
 
 	runBenchmark := func(b *testing.B, bloomBits int) {
 		persisterPath := b.TempDir()
