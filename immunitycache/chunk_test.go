@@ -22,7 +22,7 @@ func TestImmunityChunk_ImmunizeKeys(t *testing.T) {
 	require.Equal(t, 3, chunk.Count())
 
 	// Immunize some items
-	numNow, numFuture := chunk.ImmunizeKeys(keysAsBytes([]string{"x", "z"}))
+	numNow, numFuture := chunk.ImmunizeKeys(keysAsBytes([]string{"x", "z"}), 7)
 	require.Equal(t, 2, numNow)
 	require.Equal(t, 0, numFuture)
 
@@ -62,14 +62,14 @@ func TestImmunityChunk_AddItemDoesNotEvictImmuneItems(t *testing.T) {
 	chunk.addTestItems("x", "y", "z")
 	require.Equal(t, 3, chunk.Count())
 
-	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"x", "y"}))
+	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"x", "y"}), 7)
 
 	chunk.addTestItems("a")
 	require.Equal(t, []string{"x", "y", "a"}, keysAsStrings(chunk.KeysInOrder()))
 	chunk.addTestItems("b")
 	require.Equal(t, []string{"x", "y", "b"}, keysAsStrings(chunk.KeysInOrder()))
 
-	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"b"}))
+	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"b"}), 7)
 	has, added := chunk.AddItem(newCacheItem("foo", "c", 1))
 	require.False(t, has)
 	require.False(t, added)

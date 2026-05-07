@@ -12,12 +12,14 @@ import (
 var emptyStruct struct{}
 
 type immunityChunk struct {
-	config      immunityChunkConfig
-	items       map[string]chunkItemWrapper
-	itemsAsList *list.List
-	immuneKeys  map[string]struct{}
-	numBytes    int
-	mutex       sync.RWMutex
+	config             immunityChunkConfig
+	items              map[string]chunkItemWrapper
+	itemsAsList        *list.List
+	immuneKeys         map[string]uint64
+	currentImmuneNonce uint64
+	oldestImmuneNonce  uint64
+	numBytes           int
+	mutex              sync.RWMutex
 }
 
 type chunkItemWrapper struct {
@@ -32,32 +34,47 @@ func newImmunityChunk(config immunityChunkConfig) *immunityChunk {
 		config:      config,
 		items:       make(map[string]chunkItemWrapper),
 		itemsAsList: list.New(),
-		immuneKeys:  make(map[string]struct{}),
+		immuneKeys:  make(map[string]uint64),
 	}
 }
 
 // ImmunizeKeys marks keys as immune to eviction
-func (chunk *immunityChunk) ImmunizeKeys(keys [][]byte) (numNow, numFuture int) {
+func (chunk *immunityChunk) ImmunizeKeys(keys [][]byte, nonce uint64) (numNow, numFuture int) {
 	chunk.mutex.Lock()
 	defer chunk.mutex.Unlock()
 
 	for _, key := range keys {
-		item, ok := chunk.getItemNoLock(string(key))
+		keyAsString := string(key)
+		item, ok := chunk.getItemNoLock(keyAsString)
 
 		if ok {
-			// Item exists, immunize now!
-			item.immunizeAgainstEviction()
+			item.setImmuneNonce(nonce)
 			numNow++
 		} else {
-			// Item not yet in cache, will be immunized in the future
 			numFuture++
 		}
 
-		// Disregarding the items presence, we hold the immune key
-		chunk.immuneKeys[string(key)] = emptyStruct
+		storedNonce := chunk.immuneKeys[keyAsString]
+		if nonce > storedNonce {
+			chunk.immuneKeys[keyAsString] = nonce
+		}
 	}
 
 	return
+}
+
+func (chunk *immunityChunk) SetOldestImmuneNonce(nonce uint64) {
+	chunk.mutex.Lock()
+	defer chunk.mutex.Unlock()
+
+	if nonce > chunk.currentImmuneNonce {
+		chunk.currentImmuneNonce = nonce
+	}
+	if nonce > chunk.oldestImmuneNonce {
+		chunk.oldestImmuneNonce = nonce
+	}
+
+	chunk.cleanupInactiveImmuneKeysNoLock()
 }
 
 func (chunk *immunityChunk) getItemNoLock(key string) (*cacheItem, bool) {
@@ -74,31 +91,47 @@ func (chunk *immunityChunk) AddItem(item *cacheItem) (has, added bool) {
 	chunk.mutex.Lock()
 	defer chunk.mutex.Unlock()
 
-	err := chunk.evictItemsIfCapacityExceededNoLock()
-	if err != nil {
-		// No more room for the new item
-		return false, false
-	}
-
 	// Discard duplicates
 	if chunk.itemExistsNoLock(item) {
 		return true, false
 	}
 
-	chunk.addItemNoLock(item)
 	chunk.immunizeItemOnAddNoLock(item)
+	err := chunk.evictItemsIfCapacityExceededNoLock(item)
+	if err != nil {
+		return false, false
+	}
+
+	chunk.addItemNoLock(item)
 	chunk.trackNumBytesOnAddNoLock(item)
 	return false, true
 }
 
-func (chunk *immunityChunk) evictItemsIfCapacityExceededNoLock() error {
+func (chunk *immunityChunk) evictItemsIfCapacityExceededNoLock(incomingItem *cacheItem) error {
 	if !chunk.isCapacityExceededNoLock() {
 		return nil
 	}
 
 	numRemoved, err := chunk.evictItemsNoLock()
-	chunk.monitorEvictionNoLock(numRemoved, err)
-	return err
+	if err == nil {
+		chunk.monitorEvictionNoLock(numRemoved, err)
+		return nil
+	}
+	if !incomingItem.isImmuneToEviction(chunk.oldestImmuneNonce) {
+		chunk.monitorEvictionNoLock(numRemoved, err)
+		return err
+	}
+
+	for chunk.isCapacityExceededNoLock() {
+		if !chunk.removeFarthestImmuneNoLock(incomingItem.immuneNonce) {
+			chunk.monitorEvictionNoLock(numRemoved, err)
+			return err
+		}
+		numRemoved++
+	}
+
+	chunk.monitorEvictionNoLock(numRemoved, nil)
+	return nil
 }
 
 func (chunk *immunityChunk) isCapacityExceededNoLock() bool {
@@ -133,7 +166,7 @@ func (chunk *immunityChunk) removeOldestNoLock(numToRemove int) int {
 	for element != nil && numRemoved < numToRemove {
 		item := element.Value.(*cacheItem)
 
-		if item.isImmuneToEviction() {
+		if item.isImmuneToEviction(chunk.oldestImmuneNonce) {
 			element = element.Next()
 			continue
 		}
@@ -151,6 +184,7 @@ func (chunk *immunityChunk) removeOldestNoLock(numToRemove int) int {
 func (chunk *immunityChunk) removeNoLock(element *list.Element) {
 	item := element.Value.(*cacheItem)
 	delete(chunk.items, item.key)
+	delete(chunk.immuneKeys, item.key)
 	chunk.itemsAsList.Remove(element)
 	chunk.trackNumBytesOnRemoveNoLock(item)
 }
@@ -174,9 +208,9 @@ func (chunk *immunityChunk) addItemNoLock(item *cacheItem) {
 }
 
 func (chunk *immunityChunk) immunizeItemOnAddNoLock(item *cacheItem) {
-	if _, immunize := chunk.immuneKeys[item.key]; immunize {
-		item.immunizeAgainstEviction()
-		// We do not remove the key from "immuneKeys", we hold it there until item's removal.
+	immuneNonce, immunize := chunk.immuneKeys[item.key]
+	if immunize {
+		item.setImmuneNonce(immuneNonce)
 	}
 }
 
@@ -232,7 +266,24 @@ func (chunk *immunityChunk) Count() int {
 func (chunk *immunityChunk) CountImmune() int {
 	chunk.mutex.RLock()
 	defer chunk.mutex.RUnlock()
-	return len(chunk.immuneKeys)
+
+	count := 0
+	for key, immuneNonce := range chunk.immuneKeys {
+		if immuneNonce < chunk.oldestImmuneNonce {
+			continue
+		}
+
+		wrapper, ok := chunk.items[key]
+		if !ok {
+			count++
+			continue
+		}
+		if wrapper.item.isImmuneToEviction(chunk.oldestImmuneNonce) {
+			count++
+		}
+	}
+
+	return count
 }
 
 // NumBytes gets the number of bytes stored
@@ -281,4 +332,52 @@ func (chunk *immunityChunk) ForEachItem(function types.ForEachItem) {
 // IsInterfaceNil returns true if there is no value under the interface
 func (chunk *immunityChunk) IsInterfaceNil() bool {
 	return chunk == nil
+}
+
+func (chunk *immunityChunk) removeFarthestImmuneNoLock(referenceNonce uint64) bool {
+	var selectedElement *list.Element
+	var maxDistance uint64
+
+	for element := chunk.itemsAsList.Front(); element != nil; element = element.Next() {
+		item := element.Value.(*cacheItem)
+		if !item.isImmuneToEviction(chunk.oldestImmuneNonce) {
+			continue
+		}
+
+		distance := computeNonceDistance(referenceNonce, item.immuneNonce)
+		if selectedElement == nil || distance > maxDistance {
+			selectedElement = element
+			maxDistance = distance
+		}
+	}
+
+	if selectedElement == nil {
+		return false
+	}
+
+	chunk.removeNoLock(selectedElement)
+	return true
+}
+
+func (chunk *immunityChunk) cleanupInactiveImmuneKeysNoLock() {
+	for key, immuneNonce := range chunk.immuneKeys {
+		if immuneNonce >= chunk.oldestImmuneNonce {
+			continue
+		}
+
+		wrapper, ok := chunk.items[key]
+		if ok && wrapper.item.isImmuneToEviction(chunk.oldestImmuneNonce) {
+			continue
+		}
+
+		delete(chunk.immuneKeys, key)
+	}
+}
+
+func computeNonceDistance(firstNonce uint64, secondNonce uint64) uint64 {
+	if firstNonce >= secondNonce {
+		return firstNonce - secondNonce
+	}
+
+	return secondNonce - firstNonce
 }

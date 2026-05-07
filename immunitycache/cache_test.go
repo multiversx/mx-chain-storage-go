@@ -59,7 +59,7 @@ func TestImmunityCache_ImmunizeAgainstEviction(t *testing.T) {
 	cache := newCacheToTest(1, 8, maxNumBytesUpperBound)
 
 	cache.addTestItems("a", "b", "c", "d")
-	numNow, numFuture := cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "e", "f"}))
+	numNow, numFuture := cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "e", "f"}), 7)
 	require.Equal(t, 2, numNow)
 	require.Equal(t, 2, numFuture)
 	require.Equal(t, 4, cache.Len())
@@ -80,15 +80,15 @@ func TestImmunityCache_ImmunizeAgainstEviction(t *testing.T) {
 func TestImmunityCache_ImmunizeDoesNothingIfCapacityReached(t *testing.T) {
 	cache := newCacheToTest(1, 4, maxNumBytesUpperBound)
 
-	numNow, numFuture := cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "c", "d"}))
+	numNow, numFuture := cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "c", "d"}), 7)
 	require.Equal(t, 0, numNow)
 	require.Equal(t, 4, numFuture)
 	require.Equal(t, 4, cache.CountImmune())
 
-	numNow, numFuture = cache.ImmunizeKeys(keysAsBytes([]string{"e", "f", "g", "h"}))
+	numNow, numFuture = cache.ImmunizeKeys(keysAsBytes([]string{"e", "f", "g", "h"}), 8)
 	require.Equal(t, 0, numNow)
-	require.Equal(t, 0, numFuture)
-	require.Equal(t, 4, cache.CountImmune())
+	require.Equal(t, 4, numFuture)
+	require.Equal(t, 8, cache.CountImmune())
 }
 
 func TestImmunityCache_AddThenRemove(t *testing.T) {
@@ -203,7 +203,7 @@ func TestImmunityCache_AddDoesNotWork_WhenFullWithImmune(t *testing.T) {
 	cache := newCacheToTest(1, 4, 1000)
 
 	cache.addTestItems("a", "b", "c", "d")
-	numNow, numFuture := cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "c", "d"}))
+	numNow, numFuture := cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "c", "d"}), 7)
 	require.Equal(t, 4, numNow)
 	require.Equal(t, 0, numFuture)
 	require.Equal(t, 4, int(cache.hospitality.Get()))
@@ -257,7 +257,7 @@ func TestImmunityCache_DiagnoseAppliesLimitToHospitality(t *testing.T) {
 func TestImmunityCache_DiagnoseResetsHospitalityAfterWarn(t *testing.T) {
 	cache := newCacheToTest(1, 4, 1000)
 	cache.addTestItems("a", "b", "c", "d")
-	_, _ = cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "c", "d"}))
+	_, _ = cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "c", "d"}), 7)
 	require.Equal(t, 4, int(cache.hospitality.Get()))
 
 	cache.addTestItems("e", "f", "g", "h")

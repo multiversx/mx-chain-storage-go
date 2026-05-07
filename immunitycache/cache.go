@@ -5,7 +5,6 @@ import (
 
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
 	logger "github.com/multiversx/mx-chain-logger-go"
-	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -58,28 +57,26 @@ func (ic *ImmunityCache) initializeChunksWithLock() {
 	}
 }
 
-// ImmunizeKeys marks items as immune to eviction
-func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte) (numNowTotal, numFutureTotal int) {
-	immuneItemsCapacityReached := ic.CountImmune()+len(keys) > int(ic.config.MaxNumItems)
-	if immuneItemsCapacityReached {
-		logLevel := ic.decideLogLevelOnCapacityReached()
-		log.Log(logLevel, "ImmunityCache.ImmunizeKeys(): will not immunize", "err", common.ErrImmuneItemsCapacityReached)
-		return
-	}
-
-	ic.forgetCapacityHadBeenReachedInThePast()
-
+// ImmunizeKeys marks items as immune to eviction for the provided confirmation nonce
+func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte, nonce uint64) (numNowTotal, numFutureTotal int) {
 	groups := ic.groupKeysByChunk(keys)
 
 	for chunkIndex, chunkKeys := range groups {
 		chunk := ic.getChunkByIndexWithLock(chunkIndex)
 
-		numNow, numFuture := chunk.ImmunizeKeys(chunkKeys)
+		numNow, numFuture := chunk.ImmunizeKeys(chunkKeys, nonce)
 		numNowTotal += numNow
 		numFutureTotal += numFuture
 	}
 
 	return
+}
+
+// SetOldestImmuneNonce deactivates immunity below the provided nonce
+func (ic *ImmunityCache) SetOldestImmuneNonce(nonce uint64) {
+	for _, chunk := range ic.getChunksWithLock() {
+		chunk.SetOldestImmuneNonce(nonce)
+	}
 }
 
 func (ic *ImmunityCache) decideLogLevelOnCapacityReached() logger.LogLevel {
@@ -240,7 +237,7 @@ func (ic *ImmunityCache) getChunksWithLock() []*immunityChunk {
 	return ic.chunks
 }
 
-// CountImmune returns the number of immunized (current or future) elements within the map
+// CountImmune returns the number of active immunized (current or future) elements within the map
 func (ic *ImmunityCache) CountImmune() int {
 	count := 0
 	for _, chunk := range ic.getChunksWithLock() {
