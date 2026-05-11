@@ -76,6 +76,65 @@ func TestImmunityChunk_AddItemDoesNotEvictImmuneItems(t *testing.T) {
 	require.Equal(t, []string{"x", "y", "b"}, keysAsStrings(chunk.KeysInOrder()))
 }
 
+func TestImmunityChunk_AddItemEvictsImmuneCandidatesInDistanceOrder(t *testing.T) {
+	chunk := newChunkToTest(3, math.MaxUint32)
+	chunk.addTestItems("x", "y", "z")
+
+	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"x"}), 1)
+	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"y"}), 5)
+	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"z"}), 8)
+	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"incoming"}), 6)
+
+	has, added := chunk.AddItem(newCacheItem("foo", "incoming", 1))
+	require.False(t, has)
+	require.True(t, added)
+	require.Equal(t, []string{"y", "z", "incoming"}, keysAsStrings(chunk.KeysInOrder()))
+}
+
+func TestImmunityChunk_SetOldestImmuneNonceDeactivatesImmuneItemsBelowThreshold(t *testing.T) {
+	chunk := newUnconstrainedChunkToTest()
+	chunk.addTestItems("x", "y", "z")
+
+	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"x", "y"}), 7)
+	require.Equal(t, 2, chunk.CountImmune())
+
+	chunk.SetOldestImmuneNonce(8)
+	require.Equal(t, 0, chunk.CountImmune())
+
+	numRemoved := chunk.RemoveOldest(42)
+	require.Equal(t, 3, numRemoved)
+	require.Equal(t, 0, chunk.Count())
+}
+
+func TestImmunityChunk_SetOldestImmuneNonceCleansInactiveFutureImmuneKeys(t *testing.T) {
+	chunk := newUnconstrainedChunkToTest()
+
+	_, numFuture := chunk.ImmunizeKeys(keysAsBytes([]string{"future-a", "future-b"}), 7)
+	require.Equal(t, 2, numFuture)
+	require.Len(t, chunk.immuneKeys, 2)
+	require.Equal(t, 2, chunk.CountImmune())
+
+	chunk.SetOldestImmuneNonce(8)
+	require.Len(t, chunk.immuneKeys, 0)
+	require.Equal(t, 0, chunk.CountImmune())
+}
+
+func TestImmunityChunk_AddItemEvictsPreviouslyImmuneItemsAfterThresholdAdvance(t *testing.T) {
+	chunk := newChunkToTest(3, math.MaxUint32)
+	chunk.addTestItems("x", "y", "z")
+
+	_, _ = chunk.ImmunizeKeys(keysAsBytes([]string{"x", "y", "z"}), 7)
+	require.Equal(t, 3, chunk.CountImmune())
+
+	chunk.SetOldestImmuneNonce(8)
+	require.Equal(t, 0, chunk.CountImmune())
+
+	has, added := chunk.AddItem(newCacheItem("foo", "incoming", 1))
+	require.False(t, has)
+	require.True(t, added)
+	require.Equal(t, []string{"y", "z", "incoming"}, keysAsStrings(chunk.KeysInOrder()))
+}
+
 func newUnconstrainedChunkToTest() *immunityChunk {
 	chunk := newImmunityChunk(immunityChunkConfig{
 		maxNumItems:                 math.MaxUint32,

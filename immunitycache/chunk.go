@@ -2,6 +2,7 @@ package immunitycache
 
 import (
 	"container/list"
+	"sort"
 	"sync"
 
 	"github.com/multiversx/mx-chain-core-go/core"
@@ -118,12 +119,19 @@ func (chunk *immunityChunk) evictItemsIfCapacityExceededNoLock(incomingItem *cac
 		return err
 	}
 
-	for chunk.isCapacityExceededNoLock() {
-		if !chunk.removeFarthestImmuneNoLock(incomingItem.immuneNonce) {
-			chunk.monitorEvictionNoLock(numRemoved, err)
-			return err
+	candidates := chunk.collectImmuneCandidatesByDistanceNoLock(incomingItem.immuneNonce)
+	for _, candidate := range candidates {
+		if !chunk.isCapacityExceededNoLock() {
+			break
 		}
+
+		chunk.removeNoLock(candidate.element)
 		numRemoved++
+	}
+
+	if chunk.isCapacityExceededNoLock() {
+		chunk.monitorEvictionNoLock(numRemoved, err)
+		return err
 	}
 
 	chunk.monitorEvictionNoLock(numRemoved, nil)
@@ -228,10 +236,9 @@ func (chunk *immunityChunk) RemoveItem(key string) bool {
 	chunk.mutex.Lock()
 	defer chunk.mutex.Unlock()
 
-	delete(chunk.immuneKeys, key)
-
 	wrapper, ok := chunk.items[key]
 	if !ok {
+		delete(chunk.immuneKeys, key)
 		return false
 	}
 
@@ -331,28 +338,39 @@ func (chunk *immunityChunk) IsInterfaceNil() bool {
 }
 
 func (chunk *immunityChunk) removeFarthestImmuneNoLock(referenceNonce uint64) bool {
-	var selectedElement *list.Element
-	var maxDistance uint64
+	candidates := chunk.collectImmuneCandidatesByDistanceNoLock(referenceNonce)
+	if len(candidates) == 0 {
+		return false
+	}
 
+	chunk.removeNoLock(candidates[0].element)
+	return true
+}
+
+type immuneCandidate struct {
+	element  *list.Element
+	distance uint64
+}
+
+func (chunk *immunityChunk) collectImmuneCandidatesByDistanceNoLock(referenceNonce uint64) []immuneCandidate {
+	candidates := make([]immuneCandidate, 0)
 	for element := chunk.itemsAsList.Front(); element != nil; element = element.Next() {
 		item := element.Value.(*cacheItem)
 		if !item.isImmuneToEviction(chunk.oldestImmuneNonce) {
 			continue
 		}
 
-		distance := computeNonceDistance(referenceNonce, item.immuneNonce)
-		if selectedElement == nil || distance > maxDistance {
-			selectedElement = element
-			maxDistance = distance
-		}
+		candidates = append(candidates, immuneCandidate{
+			element:  element,
+			distance: computeNonceDistance(referenceNonce, item.immuneNonce),
+		})
 	}
 
-	if selectedElement == nil {
-		return false
-	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return candidates[i].distance > candidates[j].distance
+	})
 
-	chunk.removeNoLock(selectedElement)
-	return true
+	return candidates
 }
 
 func (chunk *immunityChunk) cleanupInactiveImmuneKeysNoLock() {
