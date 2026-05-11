@@ -337,16 +337,6 @@ func (chunk *immunityChunk) IsInterfaceNil() bool {
 	return chunk == nil
 }
 
-func (chunk *immunityChunk) removeFarthestImmuneNoLock(referenceNonce uint64) bool {
-	candidates := chunk.collectImmuneCandidatesByDistanceNoLock(referenceNonce)
-	if len(candidates) == 0 {
-		return false
-	}
-
-	chunk.removeNoLock(candidates[0].element)
-	return true
-}
-
 type immuneCandidate struct {
 	element  *list.Element
 	distance uint64
