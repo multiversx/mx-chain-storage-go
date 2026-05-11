@@ -87,8 +87,8 @@ func TestImmunityCache_ImmunizeDoesNothingIfCapacityReached(t *testing.T) {
 
 	numNow, numFuture = cache.ImmunizeKeys(keysAsBytes([]string{"e", "f", "g", "h"}), 8)
 	require.Equal(t, 0, numNow)
-	require.Equal(t, 4, numFuture)
-	require.Equal(t, 8, cache.CountImmune())
+	require.Equal(t, 0, numFuture)
+	require.Equal(t, 4, cache.CountImmune())
 }
 
 func TestImmunityCache_AddThenRemove(t *testing.T) {

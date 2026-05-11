@@ -12,9 +12,7 @@ func TestCrossTxCache_DoImmunizeTxsAgainstEviction(t *testing.T) {
 	cache := newCrossTxCacheToTest(1, 8, math.MaxUint16)
 
 	cache.addTestTxs("a", "b", "c", "d")
-	numNow, numFuture := cache.ImmunizeKeys(hashesAsBytes([]string{"a", "b", "e", "f"}), 7)
-	require.Equal(t, 2, numNow)
-	require.Equal(t, 2, numFuture)
+	cache.ImmunizeTxsAgainstEviction(hashesAsBytes([]string{"a", "b", "e", "f"}), 7)
 	require.Equal(t, 4, cache.Len())
 
 	cache.addTestTxs("e", "f", "g", "h")
@@ -22,6 +20,7 @@ func TestCrossTxCache_DoImmunizeTxsAgainstEviction(t *testing.T) {
 
 	cache.addTestTxs("i", "j", "k", "l")
 	require.ElementsMatch(t, []string{"a", "b", "e", "f", "i", "j", "k", "l"}, hashesAsStrings(cache.Keys()))
+
 }
 
 func TestCrossTxCache_Get(t *testing.T) {

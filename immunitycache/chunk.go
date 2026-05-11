@@ -12,14 +12,13 @@ import (
 var emptyStruct struct{}
 
 type immunityChunk struct {
-	config             immunityChunkConfig
-	items              map[string]chunkItemWrapper
-	itemsAsList        *list.List
-	immuneKeys         map[string]uint64
-	currentImmuneNonce uint64
-	oldestImmuneNonce  uint64
-	numBytes           int
-	mutex              sync.RWMutex
+	config            immunityChunkConfig
+	items             map[string]chunkItemWrapper
+	itemsAsList       *list.List
+	immuneKeys        map[string]uint64
+	oldestImmuneNonce uint64
+	numBytes          int
+	mutex             sync.RWMutex
 }
 
 type chunkItemWrapper struct {
@@ -67,9 +66,6 @@ func (chunk *immunityChunk) SetOldestImmuneNonce(nonce uint64) {
 	chunk.mutex.Lock()
 	defer chunk.mutex.Unlock()
 
-	if nonce > chunk.currentImmuneNonce {
-		chunk.currentImmuneNonce = nonce
-	}
 	if nonce > chunk.oldestImmuneNonce {
 		chunk.oldestImmuneNonce = nonce
 	}

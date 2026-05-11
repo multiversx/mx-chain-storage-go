@@ -5,6 +5,7 @@ import (
 
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
 	logger "github.com/multiversx/mx-chain-logger-go"
+	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -59,6 +60,15 @@ func (ic *ImmunityCache) initializeChunksWithLock() {
 
 // ImmunizeKeys marks items as immune to eviction for the provided confirmation nonce
 func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte, nonce uint64) (numNowTotal, numFutureTotal int) {
+	immuneItemsCapacityReached := ic.CountImmune()+len(keys) > int(ic.config.MaxNumItems)
+	if immuneItemsCapacityReached {
+		logLevel := ic.decideLogLevelOnCapacityReached()
+		log.Log(logLevel, "ImmunityCache.ImmunizeKeys(): will not immunize", "err", common.ErrImmuneItemsCapacityReached)
+		return
+	}
+
+	ic.forgetCapacityHadBeenReachedInThePast()
+
 	groups := ic.groupKeysByChunk(keys)
 
 	for chunkIndex, chunkKeys := range groups {
