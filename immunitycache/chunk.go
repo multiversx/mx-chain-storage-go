@@ -44,6 +44,10 @@ func (chunk *immunityChunk) ImmunizeKeys(keys [][]byte, nonce uint64) (numNow, n
 	defer chunk.mutex.Unlock()
 
 	for _, key := range keys {
+		if nonce < chunk.oldestImmuneNonce {
+			continue
+		}
+
 		keyAsString := string(key)
 		item, ok := chunk.getItemNoLock(keyAsString)
 
@@ -230,7 +234,7 @@ func (chunk *immunityChunk) GetItem(key string) (*cacheItem, bool) {
 }
 
 // RemoveItem removes an item from the chunk
-// In order to improve the robustness of the cache, we'll also remove from "keysToImmunizeFuture",
+// In order to improve the robustness of the cache, we'll also remove from "immuneKeys",
 // even if the item does not actually exist in the cache - to allow un-doing immunization intent (perhaps useful for rollbacks).
 func (chunk *immunityChunk) RemoveItem(key string) bool {
 	chunk.mutex.Lock()
@@ -269,24 +273,7 @@ func (chunk *immunityChunk) Count() int {
 func (chunk *immunityChunk) CountImmune() int {
 	chunk.mutex.RLock()
 	defer chunk.mutex.RUnlock()
-
-	count := 0
-	for key, immuneNonce := range chunk.immuneKeys {
-		if immuneNonce < chunk.oldestImmuneNonce {
-			continue
-		}
-
-		wrapper, ok := chunk.items[key]
-		if !ok {
-			count++
-			continue
-		}
-		if wrapper.item.isImmuneToEviction(chunk.oldestImmuneNonce) {
-			count++
-		}
-	}
-
-	return count
+	return len(chunk.immuneKeys)
 }
 
 // NumBytes gets the number of bytes stored
@@ -366,11 +353,6 @@ func (chunk *immunityChunk) collectImmuneCandidatesByDistanceNoLock(referenceNon
 func (chunk *immunityChunk) cleanupInactiveImmuneKeysNoLock() {
 	for key, immuneNonce := range chunk.immuneKeys {
 		if immuneNonce >= chunk.oldestImmuneNonce {
-			continue
-		}
-
-		wrapper, ok := chunk.items[key]
-		if ok && wrapper.item.isImmuneToEviction(chunk.oldestImmuneNonce) {
 			continue
 		}
 
