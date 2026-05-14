@@ -17,12 +17,12 @@ func NewStorageUnitFromConf(cacheConf common.CacheConfig, dbConf common.DBConfig
 	}
 
 	argDB := ArgDB{
-		DBType:               dbConf.Type,
-		Path:                 dbConf.FilePath,
-		BatchDelaySeconds:    dbConf.BatchDelaySeconds,
-		MaxBatchSize:         dbConf.MaxBatchSize,
-		MaxOpenFiles:         dbConf.MaxOpenFiles,
-		BloomFilterBtsPerKey: dbConf.BloomFilterBtsPerKey,
+		DBType:                dbConf.Type,
+		Path:                  dbConf.FilePath,
+		BatchDelaySeconds:     dbConf.BatchDelaySeconds,
+		MaxBatchSize:          dbConf.MaxBatchSize,
+		MaxOpenFiles:          dbConf.MaxOpenFiles,
+		BloomFilterBitsPerKey: dbConf.BloomFilterBitsPerKey,
 	}
 	db, err := NewDB(argDB)
 	if err != nil {
