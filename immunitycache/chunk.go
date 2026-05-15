@@ -2,24 +2,32 @@ package immunitycache
 
 import (
 	"container/list"
-	"sort"
 	"sync"
 
 	"github.com/multiversx/mx-chain-core-go/core"
+	"github.com/multiversx/mx-chain-core-go/core/atomic"
+
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
 
-var emptyStruct struct{}
-
+// immunityChunk owns a shard of the cache's keyspace.
+//
+// Immune intent invariants (held under mutex.Lock):
+//   - immuneKeys[k] == n           iff   nonceToKeys[n][k] is set.
+//   - maxImmuneNonce == max(keys of nonceToKeys)   (0 when empty).
+//   - sum of len(immuneKeys) across all chunks == globalImmuneCounter.Get().
 type immunityChunk struct {
-	config            immunityChunkConfig
-	items             map[string]chunkItemWrapper
-	itemsAsList       *list.List
-	immuneKeys        map[string]uint64
-	oldestImmuneNonce uint64
-	numBytes          int
-	mutex             sync.RWMutex
+	config              immunityChunkConfig
+	items               map[string]chunkItemWrapper
+	itemsAsList         *list.List
+	immuneKeys          map[string]uint64
+	nonceToKeys         map[uint64]map[string]struct{}
+	maxImmuneNonce      uint64
+	oldestImmuneNonce   uint64
+	numBytes            int
+	mutex               sync.RWMutex
+	globalImmuneCounter *atomic.Counter
 }
 
 type chunkItemWrapper struct {
@@ -27,46 +35,68 @@ type chunkItemWrapper struct {
 	listElement *list.Element
 }
 
-func newImmunityChunk(config immunityChunkConfig) *immunityChunk {
+// newImmunityChunk creates a chunk. The caller must pass a non-nil counter
+// (the cache shares one across all its chunks via &ic.totalImmune).
+func newImmunityChunk(config immunityChunkConfig, globalImmuneCounter *atomic.Counter) *immunityChunk {
 	log.Trace("newImmunityChunk", "config", config.String())
 
 	return &immunityChunk{
-		config:      config,
-		items:       make(map[string]chunkItemWrapper),
-		itemsAsList: list.New(),
-		immuneKeys:  make(map[string]uint64),
+		config:              config,
+		items:               make(map[string]chunkItemWrapper),
+		itemsAsList:         list.New(),
+		immuneKeys:          make(map[string]uint64),
+		nonceToKeys:         make(map[uint64]map[string]struct{}),
+		globalImmuneCounter: globalImmuneCounter,
 	}
 }
 
-// ImmunizeKeys marks keys as immune to eviction
+// ImmunizeKeys marks keys as immune for the given confirmation nonce.
+// At intent capacity, a NEW key is accepted only when nonce < maxImmuneNonce,
+// displacing one intent at maxImmuneNonce (and evicting its in-cache item, if any).
+// Existing keys are upgraded to max(oldNonce, nonce); downgrades and no-ops are skipped.
 func (chunk *immunityChunk) ImmunizeKeys(keys [][]byte, nonce uint64) (numNow, numFuture int) {
 	chunk.mutex.Lock()
 	defer chunk.mutex.Unlock()
 
+	if nonce < chunk.oldestImmuneNonce {
+		return
+	}
+
+	capacity := int(chunk.config.maxNumItems)
+
 	for _, key := range keys {
-		if nonce < chunk.oldestImmuneNonce {
+		keyStr := string(key)
+		oldNonce, exists := chunk.immuneKeys[keyStr]
+
+		if exists && oldNonce >= nonce {
 			continue
 		}
 
-		keyAsString := string(key)
-		item, ok := chunk.getItemNoLock(keyAsString)
+		if !exists && len(chunk.immuneKeys) >= capacity {
+			if chunk.maxImmuneNonce <= nonce {
+				continue
+			}
+			chunk.displaceOneIntentAtMaxNonceNoLock()
+		}
 
-		if ok {
+		if exists {
+			chunk.removeImmuneKeyNoLock(keyStr)
+		}
+		chunk.addImmuneKeyNoLock(keyStr, nonce)
+
+		if item, ok := chunk.getItemNoLock(keyStr); ok {
 			item.setImmuneNonce(nonce)
 			numNow++
 		} else {
 			numFuture++
-		}
-
-		storedNonce := chunk.immuneKeys[keyAsString]
-		if nonce > storedNonce {
-			chunk.immuneKeys[keyAsString] = nonce
 		}
 	}
 
 	return
 }
 
+// SetOldestImmuneNonce raises the de-immunization frontier. Intents below the
+// new value are dropped; items with immuneNonce below it become evictable.
 func (chunk *immunityChunk) SetOldestImmuneNonce(nonce uint64) {
 	chunk.mutex.Lock()
 	defer chunk.mutex.Unlock()
@@ -92,7 +122,6 @@ func (chunk *immunityChunk) AddItem(item *cacheItem) (has, added bool) {
 	chunk.mutex.Lock()
 	defer chunk.mutex.Unlock()
 
-	// Discard duplicates
 	if chunk.itemExistsNoLock(item) {
 		return true, false
 	}
@@ -115,7 +144,7 @@ func (chunk *immunityChunk) evictItemsIfCapacityExceededNoLock(incomingItem *cac
 
 	numRemoved, err := chunk.evictItemsNoLock()
 	if err == nil {
-		chunk.monitorEvictionNoLock(numRemoved, err)
+		chunk.monitorEvictionNoLock(numRemoved, nil)
 		return nil
 	}
 	if !incomingItem.isImmuneToEviction(chunk.oldestImmuneNonce) {
@@ -123,19 +152,14 @@ func (chunk *immunityChunk) evictItemsIfCapacityExceededNoLock(incomingItem *cac
 		return err
 	}
 
-	candidates := chunk.collectImmuneCandidatesByDistanceNoLock(incomingItem.immuneNonce)
-	for _, candidate := range candidates {
-		if !chunk.isCapacityExceededNoLock() {
-			break
+	// All in-cache items are immune. We may displace those with nonce
+	// strictly greater than the incoming item's nonce (farther future first).
+	for chunk.isCapacityExceededNoLock() {
+		if !chunk.removeHighestImmuneInCacheNoLock(incomingItem.immuneNonce) {
+			chunk.monitorEvictionNoLock(numRemoved, err)
+			return err
 		}
-
-		chunk.removeNoLock(candidate.element)
 		numRemoved++
-	}
-
-	if chunk.isCapacityExceededNoLock() {
-		chunk.monitorEvictionNoLock(numRemoved, err)
-		return err
 	}
 
 	chunk.monitorEvictionNoLock(numRemoved, nil)
@@ -189,12 +213,14 @@ func (chunk *immunityChunk) removeOldestNoLock(numToRemove int) int {
 	return numRemoved
 }
 
+// removeNoLock removes an in-cache item; if it had an immune intent the intent
+// is dropped too (which decrements the shared counter and updates the indices).
 func (chunk *immunityChunk) removeNoLock(element *list.Element) {
 	item := element.Value.(*cacheItem)
 	delete(chunk.items, item.key)
-	delete(chunk.immuneKeys, item.key)
 	chunk.itemsAsList.Remove(element)
 	chunk.trackNumBytesOnRemoveNoLock(item)
+	chunk.removeImmuneKeyNoLock(item.key)
 }
 
 func (chunk *immunityChunk) monitorEvictionNoLock(numRemoved int, err error) {
@@ -233,16 +259,15 @@ func (chunk *immunityChunk) GetItem(key string) (*cacheItem, bool) {
 	return chunk.getItemNoLock(key)
 }
 
-// RemoveItem removes an item from the chunk
-// In order to improve the robustness of the cache, we'll also remove from "immuneKeys",
-// even if the item does not actually exist in the cache - to allow un-doing immunization intent (perhaps useful for rollbacks).
+// RemoveItem removes an item from the chunk and clears any pending future immune intent.
+// Removing an unknown key clears its future intent (useful for rolling back optimistic immunization).
 func (chunk *immunityChunk) RemoveItem(key string) bool {
 	chunk.mutex.Lock()
 	defer chunk.mutex.Unlock()
 
 	wrapper, ok := chunk.items[key]
 	if !ok {
-		delete(chunk.immuneKeys, key)
+		chunk.removeImmuneKeyNoLock(key)
 		return false
 	}
 
@@ -269,7 +294,7 @@ func (chunk *immunityChunk) Count() int {
 	return len(chunk.items)
 }
 
-// CountImmune counts the immune items
+// CountImmune counts the immune intents tracked by this chunk.
 func (chunk *immunityChunk) CountImmune() int {
 	chunk.mutex.RLock()
 	defer chunk.mutex.RUnlock()
@@ -324,46 +349,127 @@ func (chunk *immunityChunk) IsInterfaceNil() bool {
 	return chunk == nil
 }
 
-type immuneCandidate struct {
-	element  *list.Element
-	distance uint64
+// addImmuneKeyNoLock registers a NEW immune intent for `key` at `nonce`.
+// Caller must ensure the key isn't already tracked (call removeImmuneKeyNoLock first
+// to upgrade an existing intent's nonce, preserving bucket invariants).
+func (chunk *immunityChunk) addImmuneKeyNoLock(key string, nonce uint64) {
+	chunk.immuneKeys[key] = nonce
+
+	bucket, ok := chunk.nonceToKeys[nonce]
+	if !ok {
+		bucket = make(map[string]struct{})
+		chunk.nonceToKeys[nonce] = bucket
+	}
+	bucket[key] = struct{}{}
+
+	if nonce > chunk.maxImmuneNonce {
+		chunk.maxImmuneNonce = nonce
+	}
+	chunk.globalImmuneCounter.Increment()
 }
 
-func (chunk *immunityChunk) collectImmuneCandidatesByDistanceNoLock(referenceNonce uint64) []immuneCandidate {
-	candidates := make([]immuneCandidate, 0)
-	for element := chunk.itemsAsList.Front(); element != nil; element = element.Next() {
-		item := element.Value.(*cacheItem)
-		if !item.isImmuneToEviction(chunk.oldestImmuneNonce) {
-			continue
-		}
+// removeImmuneKeyNoLock drops the immune intent for `key`, if any.
+// Recomputes maxImmuneNonce when the last key at the current max leaves.
+func (chunk *immunityChunk) removeImmuneKeyNoLock(key string) {
+	oldNonce, ok := chunk.immuneKeys[key]
+	if !ok {
+		return
+	}
+	delete(chunk.immuneKeys, key)
 
-		candidates = append(candidates, immuneCandidate{
-			element:  element,
-			distance: computeNonceDistance(referenceNonce, item.immuneNonce),
-		})
+	bucket := chunk.nonceToKeys[oldNonce]
+	delete(bucket, key)
+	if len(bucket) == 0 {
+		delete(chunk.nonceToKeys, oldNonce)
+		if oldNonce == chunk.maxImmuneNonce {
+			chunk.recomputeMaxImmuneNonceNoLock()
+		}
 	}
 
-	sort.SliceStable(candidates, func(i, j int) bool {
-		return candidates[i].distance > candidates[j].distance
-	})
-
-	return candidates
+	chunk.globalImmuneCounter.Decrement()
 }
 
+func (chunk *immunityChunk) recomputeMaxImmuneNonceNoLock() {
+	var maxN uint64
+	for n := range chunk.nonceToKeys {
+		if n > maxN {
+			maxN = n
+		}
+	}
+	chunk.maxImmuneNonce = maxN
+}
+
+// displaceOneIntentAtMaxNonceNoLock drops one immune intent at maxImmuneNonce.
+// Prefers evicting an in-cache item (which frees an items slot); otherwise drops
+// a future-only intent. Caller must ensure maxImmuneNonce points to a non-empty bucket.
+func (chunk *immunityChunk) displaceOneIntentAtMaxNonceNoLock() {
+	bucket := chunk.nonceToKeys[chunk.maxImmuneNonce]
+
+	for k := range bucket {
+		if wrapper, ok := chunk.items[k]; ok {
+			chunk.removeNoLock(wrapper.listElement)
+			return
+		}
+	}
+
+	for k := range bucket {
+		chunk.removeImmuneKeyNoLock(k)
+		return
+	}
+}
+
+// removeHighestImmuneInCacheNoLock removes ONE in-cache immune item whose
+// immuneNonce is strictly greater than `threshold`. Returns true on success.
+// Walks `nonceToKeys` once (O(B * average bucket size), B = distinct nonces).
+func (chunk *immunityChunk) removeHighestImmuneInCacheNoLock(threshold uint64) bool {
+	var bestNonce uint64
+	var bestKey string
+	found := false
+
+	for n, bucket := range chunk.nonceToKeys {
+		if n <= threshold {
+			continue
+		}
+		if found && n <= bestNonce {
+			continue
+		}
+		for k := range bucket {
+			if _, inCache := chunk.items[k]; inCache {
+				bestNonce = n
+				bestKey = k
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		return false
+	}
+
+	wrapper := chunk.items[bestKey]
+	chunk.removeNoLock(wrapper.listElement)
+	return true
+}
+
+// cleanupInactiveImmuneKeysNoLock drops every intent whose nonce is below
+// chunk.oldestImmuneNonce. O(B + dropped) where B = distinct nonces.
 func (chunk *immunityChunk) cleanupInactiveImmuneKeysNoLock() {
-	for key, immuneNonce := range chunk.immuneKeys {
-		if immuneNonce >= chunk.oldestImmuneNonce {
+	needsRecompute := false
+	for n, bucket := range chunk.nonceToKeys {
+		if n >= chunk.oldestImmuneNonce {
 			continue
 		}
-
-		delete(chunk.immuneKeys, key)
+		for k := range bucket {
+			delete(chunk.immuneKeys, k)
+			chunk.globalImmuneCounter.Decrement()
+		}
+		delete(chunk.nonceToKeys, n)
+		if n == chunk.maxImmuneNonce {
+			needsRecompute = true
+		}
 	}
-}
-
-func computeNonceDistance(firstNonce uint64, secondNonce uint64) uint64 {
-	if firstNonce >= secondNonce {
-		return firstNonce - secondNonce
+	if needsRecompute {
+		chunk.recomputeMaxImmuneNonceNoLock()
 	}
-
-	return secondNonce - firstNonce
 }
