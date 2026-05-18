@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	logger "github.com/multiversx/mx-chain-logger-go"
-	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/multiversx/mx-chain-storage-go/common"
 )
 
 func TestNewImmunityCache(t *testing.T) {
@@ -324,6 +325,135 @@ func TestImmunityCache_DecideLogLevelOnCapacityReached(t *testing.T) {
 		require.Equal(t, uint64(i+1), cache.numCapacityReachedOccurrences.GetUint64())
 		require.Equal(t, expectedLogLevel, actualLogLevel, fmt.Sprintf("for %d", i))
 	}
+}
+
+func TestImmunityCache_CountImmuneMatchesPerChunkSum(t *testing.T) {
+	cache := newCacheToTest(4, 64, maxNumBytesUpperBound)
+
+	cache.addTestItems("a", "b", "c", "d", "e", "f", "g", "h")
+	_, _ = cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "c", "d", "e", "f"}), 7)
+	require.Equal(t, 6, cache.CountImmune())
+
+	perChunkSum := 0
+	for _, chunk := range cache.getChunksWithLock() {
+		perChunkSum += chunk.CountImmune()
+	}
+	require.Equal(t, perChunkSum, cache.CountImmune())
+
+	cache.Remove([]byte("a"))
+	cache.Remove([]byte("b"))
+	require.Equal(t, 4, cache.CountImmune())
+
+	cache.Clear()
+	require.Equal(t, 0, cache.CountImmune())
+}
+
+func TestImmunityCache_SetOldestImmuneNonceDeactivatesEverywhere(t *testing.T) {
+	cache := newCacheToTest(4, 64, maxNumBytesUpperBound)
+	cache.addTestItems("a", "b", "c", "d")
+	_, _ = cache.ImmunizeKeys(keysAsBytes([]string{"a", "b"}), 5)
+	_, _ = cache.ImmunizeKeys(keysAsBytes([]string{"c", "d"}), 9)
+	require.Equal(t, 4, cache.CountImmune())
+
+	cache.SetOldestImmuneNonce(7)
+	require.Equal(t, 2, cache.CountImmune())
+
+	cache.SetOldestImmuneNonce(20)
+	require.Equal(t, 0, cache.CountImmune())
+}
+
+func TestImmunityCache_SmartRejectAcceptsCloserNonceWhenCapacityReached(t *testing.T) {
+	cache := newCacheToTest(1, 4, maxNumBytesUpperBound)
+
+	// Saturate immune intents at a high nonce (all future, no items yet).
+	numNow, numFuture := cache.ImmunizeKeys(keysAsBytes([]string{"a", "b", "c", "d"}), 100)
+	require.Equal(t, 0, numNow)
+	require.Equal(t, 4, numFuture)
+	require.Equal(t, 4, cache.CountImmune())
+
+	// A NEARER nonce (50) must be allowed in; one of {a,b,c,d}@100 gets displaced.
+	numNow, numFuture = cache.ImmunizeKeys(keysAsBytes([]string{"x"}), 50)
+	require.Equal(t, 0, numNow)
+	require.Equal(t, 1, numFuture)
+	require.Equal(t, 4, cache.CountImmune())
+	chunk := cache.getChunkByKeyWithLock("x")
+	require.Contains(t, chunk.immuneKeys, "x")
+
+	// A FURTHER nonce (200) is silently rejected since the chunk is still at capacity.
+	numNow, numFuture = cache.ImmunizeKeys(keysAsBytes([]string{"y"}), 200)
+	require.Equal(t, 0, numNow)
+	require.Equal(t, 0, numFuture)
+	chunk = cache.getChunkByKeyWithLock("y")
+	require.NotContains(t, chunk.immuneKeys, "y")
+}
+
+func TestImmunityCache_ConcurrentImmunizeAddRemoveAndThreshold(t *testing.T) {
+	cache := newCacheToTest(8, 256, maxNumBytesUpperBound)
+
+	var wg sync.WaitGroup
+	const goroutines = 8
+	const ops = 200
+
+	wg.Add(goroutines)
+	for g := 0; g < goroutines; g++ {
+		go func(seed int) {
+			defer wg.Done()
+			for i := 0; i < ops; i++ {
+				key := []byte(fmt.Sprintf("k-%d-%d", seed, i%32))
+				_, _ = cache.HasOrAdd(key, "v", 1)
+				_, _ = cache.ImmunizeKeys([][]byte{key}, uint64(50+i%20))
+				if i%7 == 0 {
+					cache.SetOldestImmuneNonce(uint64(50 + i%10))
+				}
+				if i%11 == 0 {
+					cache.Remove(key)
+				}
+			}
+		}(g)
+	}
+	wg.Wait()
+
+	// Counter invariant: cache.CountImmune() must equal the sum of per-chunk lengths.
+	sum := 0
+	for _, chunk := range cache.getChunksWithLock() {
+		sum += chunk.CountImmune()
+	}
+	require.Equal(t, sum, cache.CountImmune())
+
+	// Per-chunk structural invariants must still hold.
+	for _, chunk := range cache.getChunksWithLock() {
+		chunk.mutex.RLock()
+		total := 0
+		for _, bucket := range chunk.nonceToKeys {
+			total += len(bucket)
+		}
+		require.Equal(t, len(chunk.immuneKeys), total)
+		var expectedMax uint64
+		for n := range chunk.nonceToKeys {
+			if n > expectedMax {
+				expectedMax = n
+			}
+		}
+		require.Equal(t, expectedMax, chunk.maxImmuneNonce)
+		chunk.mutex.RUnlock()
+	}
+}
+
+func TestImmunityCache_ClearIsolatesCounterFromOrphanedWriters(t *testing.T) {
+	cache := newCacheToTest(1, 16, 1000)
+
+	oldChunks := cache.getChunksWithLock()
+	require.Equal(t, 1, len(oldChunks))
+
+	cache.Clear()
+	require.Equal(t, 0, cache.CountImmune())
+
+	oldChunks[0].ImmunizeKeys([][]byte{[]byte("k")}, 7)
+	require.Equal(t, 0, cache.CountImmune())
+
+	cache.addTestItems("x")
+	_, _ = cache.ImmunizeKeys(keysAsBytes([]string{"x"}), 11)
+	require.Equal(t, 1, cache.CountImmune())
 }
 
 func TestImmunityCache_ForgetCapacityHadBeenReachedInThePast(t *testing.T) {

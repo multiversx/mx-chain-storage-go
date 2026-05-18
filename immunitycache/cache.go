@@ -5,7 +5,7 @@ import (
 
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
 	logger "github.com/multiversx/mx-chain-logger-go"
-	"github.com/multiversx/mx-chain-storage-go/common"
+
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -22,6 +22,7 @@ const capacityReachedWarningPeriod = 100
 type ImmunityCache struct {
 	config                        CacheConfig
 	chunks                        []*immunityChunk
+	totalImmune                   *atomic.Counter
 	hospitality                   atomic.Counter
 	numCapacityReachedOccurrences atomic.Counter
 	mutex                         sync.RWMutex
@@ -52,22 +53,30 @@ func (ic *ImmunityCache) initializeChunksWithLock() {
 	config := ic.config
 	chunkConfig := config.getChunkConfig()
 
+	ic.totalImmune = &atomic.Counter{}
 	ic.chunks = make([]*immunityChunk, config.NumChunks)
 	for i := uint32(0); i < config.NumChunks; i++ {
-		ic.chunks[i] = newImmunityChunk(chunkConfig)
+		ic.chunks[i] = newImmunityChunk(chunkConfig, ic.totalImmune)
 	}
 }
 
-// ImmunizeKeys marks items as immune to eviction for the provided confirmation nonce
+// ImmunizeKeys marks items as immune to eviction for the provided confirmation nonce.
+// The cache-level capacity check is diagnostic only; chunk-level smart-reject decides
+// per-key whether to accept new intents (see immunityChunk.ImmunizeKeys).
 func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte, nonce uint64) (numNowTotal, numFutureTotal int) {
-	immuneItemsCapacityReached := ic.CountImmune()+len(keys) > int(ic.config.MaxNumItems)
-	if immuneItemsCapacityReached {
+	current := ic.CountImmune()
+	if uint64(current)+uint64(len(keys)) > uint64(ic.config.MaxNumItems) {
 		logLevel := ic.decideLogLevelOnCapacityReached()
-		log.Log(logLevel, "ImmunityCache.ImmunizeKeys(): will not immunize", "err", common.ErrImmuneItemsCapacityReached)
-		return
+		log.Log(logLevel, "ImmunityCache.ImmunizeKeys(): immune capacity heuristic exceeded; chunks will smart-reject per key",
+			"name", ic.config.Name,
+			"current", current,
+			"incoming", len(keys),
+			"max", ic.config.MaxNumItems,
+			"nonce", nonce,
+		)
+	} else {
+		ic.forgetCapacityHadBeenReachedInThePast()
 	}
-
-	ic.forgetCapacityHadBeenReachedInThePast()
 
 	groups := ic.groupKeysByChunk(keys)
 
@@ -247,13 +256,12 @@ func (ic *ImmunityCache) getChunksWithLock() []*immunityChunk {
 	return ic.chunks
 }
 
-// CountImmune returns the number of active immunized (current or future) elements within the map
+// CountImmune returns the number of active immune intents across all chunks.
 func (ic *ImmunityCache) CountImmune() int {
-	count := 0
-	for _, chunk := range ic.getChunksWithLock() {
-		count += chunk.CountImmune()
-	}
-	return count
+	ic.mutex.RLock()
+	counter := ic.totalImmune
+	ic.mutex.RUnlock()
+	return int(counter.Get())
 }
 
 // NumBytes estimates the size of the cache, in bytes

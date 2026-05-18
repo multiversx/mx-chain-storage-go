@@ -20,7 +20,6 @@ func TestCrossTxCache_DoImmunizeTxsAgainstEviction(t *testing.T) {
 
 	cache.addTestTxs("i", "j", "k", "l")
 	require.ElementsMatch(t, []string{"a", "b", "e", "f", "i", "j", "k", "l"}, hashesAsStrings(cache.Keys()))
-
 }
 
 func TestCrossTxCache_Get(t *testing.T) {
