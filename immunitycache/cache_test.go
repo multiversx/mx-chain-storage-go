@@ -439,6 +439,23 @@ func TestImmunityCache_ConcurrentImmunizeAddRemoveAndThreshold(t *testing.T) {
 	}
 }
 
+func TestImmunityCache_ClearIsolatesCounterFromOrphanedWriters(t *testing.T) {
+	cache := newCacheToTest(1, 16, 1000)
+
+	oldChunks := cache.getChunksWithLock()
+	require.Equal(t, 1, len(oldChunks))
+
+	cache.Clear()
+	require.Equal(t, 0, cache.CountImmune())
+
+	oldChunks[0].ImmunizeKeys([][]byte{[]byte("k")}, 7)
+	require.Equal(t, 0, cache.CountImmune())
+
+	cache.addTestItems("x")
+	_, _ = cache.ImmunizeKeys(keysAsBytes([]string{"x"}), 11)
+	require.Equal(t, 1, cache.CountImmune())
+}
+
 func TestImmunityCache_ForgetCapacityHadBeenReachedInThePast(t *testing.T) {
 	cache := newCacheToTest(1, 4, 1000)
 

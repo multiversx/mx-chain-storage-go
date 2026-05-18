@@ -22,7 +22,7 @@ const capacityReachedWarningPeriod = 100
 type ImmunityCache struct {
 	config                        CacheConfig
 	chunks                        []*immunityChunk
-	totalImmune                   atomic.Counter
+	totalImmune                   *atomic.Counter
 	hospitality                   atomic.Counter
 	numCapacityReachedOccurrences atomic.Counter
 	mutex                         sync.RWMutex
@@ -53,10 +53,10 @@ func (ic *ImmunityCache) initializeChunksWithLock() {
 	config := ic.config
 	chunkConfig := config.getChunkConfig()
 
-	ic.totalImmune.Reset()
+	ic.totalImmune = &atomic.Counter{}
 	ic.chunks = make([]*immunityChunk, config.NumChunks)
 	for i := uint32(0); i < config.NumChunks; i++ {
-		ic.chunks[i] = newImmunityChunk(chunkConfig, &ic.totalImmune)
+		ic.chunks[i] = newImmunityChunk(chunkConfig, ic.totalImmune)
 	}
 }
 
@@ -65,7 +65,7 @@ func (ic *ImmunityCache) initializeChunksWithLock() {
 // per-key whether to accept new intents (see immunityChunk.ImmunizeKeys).
 func (ic *ImmunityCache) ImmunizeKeys(keys [][]byte, nonce uint64) (numNowTotal, numFutureTotal int) {
 	current := ic.CountImmune()
-	if current+len(keys) > int(ic.config.MaxNumItems) {
+	if uint64(current)+uint64(len(keys)) > uint64(ic.config.MaxNumItems) {
 		logLevel := ic.decideLogLevelOnCapacityReached()
 		log.Log(logLevel, "ImmunityCache.ImmunizeKeys(): immune capacity heuristic exceeded; chunks will smart-reject per key",
 			"name", ic.config.Name,
@@ -127,7 +127,7 @@ func (ic *ImmunityCache) getChunkIndexByKey(key string) uint32 {
 	return fnv32Hash(key) % ic.config.NumChunks
 }
 
-// fnv32Hash implements https://en.wikipedia.org/wiki/Fowler\u2013Noll\u2013Vo_hash_function for 32 bits
+// fnv32Hash implements https://en.wikipedia.org/wiki/Fowler–Noll–Vo_hash_function for 32 bits
 func fnv32Hash(key string) uint32 {
 	hash := uint32(2166136261)
 	const prime32 = uint32(16777619)
@@ -256,10 +256,12 @@ func (ic *ImmunityCache) getChunksWithLock() []*immunityChunk {
 	return ic.chunks
 }
 
-// CountImmune returns the number of active immune intents tracked across all chunks.
-// O(1) via the shared atomic counter.
+// CountImmune returns the number of active immune intents across all chunks.
 func (ic *ImmunityCache) CountImmune() int {
-	return int(ic.totalImmune.Get())
+	ic.mutex.RLock()
+	counter := ic.totalImmune
+	ic.mutex.RUnlock()
+	return int(counter.Get())
 }
 
 // NumBytes estimates the size of the cache, in bytes

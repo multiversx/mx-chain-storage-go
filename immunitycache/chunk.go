@@ -36,7 +36,7 @@ type chunkItemWrapper struct {
 }
 
 // newImmunityChunk creates a chunk. The caller must pass a non-nil counter
-// (the cache shares one across all its chunks via &ic.totalImmune).
+// (shared across the cache's chunks of the same generation; see ImmunityCache.Clear).
 func newImmunityChunk(config immunityChunkConfig, globalImmuneCounter *atomic.Counter) *immunityChunk {
 	log.Trace("newImmunityChunk", "config", config.String())
 
@@ -62,7 +62,7 @@ func (chunk *immunityChunk) ImmunizeKeys(keys [][]byte, nonce uint64) (numNow, n
 		return
 	}
 
-	capacity := int(chunk.config.maxNumItems)
+	capacity := uint64(chunk.config.maxNumItems)
 
 	for _, key := range keys {
 		keyStr := string(key)
@@ -72,7 +72,7 @@ func (chunk *immunityChunk) ImmunizeKeys(keys [][]byte, nonce uint64) (numNow, n
 			continue
 		}
 
-		if !exists && len(chunk.immuneKeys) >= capacity {
+		if !exists && uint64(len(chunk.immuneKeys)) >= capacity {
 			if chunk.maxImmuneNonce <= nonce {
 				continue
 			}
@@ -167,8 +167,8 @@ func (chunk *immunityChunk) evictItemsIfCapacityExceededNoLock(incomingItem *cac
 }
 
 func (chunk *immunityChunk) isCapacityExceededNoLock() bool {
-	tooManyItems := len(chunk.items) >= int(chunk.config.maxNumItems)
-	tooManyBytes := chunk.numBytes >= int(chunk.config.maxNumBytes)
+	tooManyItems := uint64(len(chunk.items)) >= uint64(chunk.config.maxNumItems)
+	tooManyBytes := uint64(chunk.numBytes) >= uint64(chunk.config.maxNumBytes)
 	return tooManyItems || tooManyBytes
 }
 
