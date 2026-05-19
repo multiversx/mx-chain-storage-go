@@ -105,6 +105,7 @@ func (chunk *immunityChunk) SetOldestImmuneNonce(nonce uint64) {
 		chunk.oldestImmuneNonce = nonce
 	}
 
+	// TODO investigate if it is more efficient to trigger the cleanup only when the map si full
 	chunk.cleanupInactiveImmuneKeysNoLock()
 }
 
@@ -155,13 +156,15 @@ func (chunk *immunityChunk) evictItemsIfCapacityExceededNoLock(incomingItem *cac
 	// All in-cache items are immune. We may displace those with nonce
 	// strictly greater than the incoming item's nonce (farther future first).
 	for chunk.isCapacityExceededNoLock() {
-		if !chunk.removeHighestImmuneInCacheNoLock(incomingItem.immuneNonce) {
+		if !chunk.removeHighestImmuneInCacheNoLock(incomingItem.nonce) {
 			chunk.monitorEvictionNoLock(numRemoved, err)
 			return err
 		}
 		numRemoved++
 	}
 
+	// We successfully evicted enough items to fit the incoming immune item. Monitor the eviction (if any) and proceed
+	// with the addition so no error is returned to the caller.
 	chunk.monitorEvictionNoLock(numRemoved, nil)
 	return nil
 }

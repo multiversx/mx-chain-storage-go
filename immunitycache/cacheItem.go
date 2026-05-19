@@ -1,10 +1,10 @@
 package immunitycache
 
 type cacheItem struct {
-	payload     interface{}
-	key         string
-	size        int
-	immuneNonce uint64
+	payload interface{}
+	key     string
+	size    int
+	nonce   uint64
 }
 
 func newCacheItem(payload interface{}, key string, size int) *cacheItem {
@@ -16,11 +16,11 @@ func newCacheItem(payload interface{}, key string, size int) *cacheItem {
 }
 
 func (item *cacheItem) isImmuneToEviction(oldestImmuneNonce uint64) bool {
-	return item.immuneNonce >= oldestImmuneNonce && item.immuneNonce > 0
+	return item.nonce >= oldestImmuneNonce && item.nonce > 0
 }
 
 func (item *cacheItem) setImmuneNonce(nonce uint64) {
-	if nonce > item.immuneNonce {
-		item.immuneNonce = nonce
+	if nonce > item.nonce {
+		item.nonce = nonce
 	}
 }
