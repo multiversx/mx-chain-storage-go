@@ -36,4 +36,7 @@ type DBConfig struct {
 	BatchDelaySeconds int
 	MaxBatchSize      int
 	MaxOpenFiles      int
+	// BloomFilterBitsPerKey == 0, the Bloom filter is disabled.
+	// Otherwise, it specifies the number of bits per key used by the Bloom filter.
+	BloomFilterBitsPerKey int
 }

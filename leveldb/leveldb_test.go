@@ -16,7 +16,7 @@ import (
 )
 
 func createLevelDb(t *testing.T, batchDelaySeconds int, maxBatchSize int, maxOpenFiles int) (p *leveldb.DB) {
-	lvdb, err := leveldb.NewDB(t.TempDir(), batchDelaySeconds, maxBatchSize, maxOpenFiles)
+	lvdb, err := leveldb.NewDB(t.TempDir(), batchDelaySeconds, maxBatchSize, maxOpenFiles, 0)
 
 	assert.Nil(t, err, "Failed creating leveldb database file")
 	return lvdb
@@ -24,7 +24,7 @@ func createLevelDb(t *testing.T, batchDelaySeconds int, maxBatchSize int, maxOpe
 
 func TestDB_CorruptdeDBShouldRecover(t *testing.T) {
 	dir := t.TempDir()
-	db, err := leveldb.NewDB(dir, 10, 1, 10)
+	db, err := leveldb.NewDB(dir, 10, 1, 10, 0)
 	require.Nil(t, err)
 
 	key := []byte("key")
@@ -36,7 +36,7 @@ func TestDB_CorruptdeDBShouldRecover(t *testing.T) {
 	err = os.Remove(path.Join(dir, "MANIFEST-000000"))
 	require.Nil(t, err)
 
-	dbRecovered, err := leveldb.NewDB(dir, 10, 1, 10)
+	dbRecovered, err := leveldb.NewDB(dir, 10, 1, 10, 0)
 	if err != nil {
 		assert.Fail(t, fmt.Sprintf("should have not errored %s", err.Error()))
 		return
@@ -51,20 +51,20 @@ func TestDB_CorruptdeDBShouldRecover(t *testing.T) {
 
 func TestDB_DoubleOpenShouldError(t *testing.T) {
 	dir := t.TempDir()
-	lvdb1, err := leveldb.NewDB(dir, 10, 1, 10)
+	lvdb1, err := leveldb.NewDB(dir, 10, 1, 10, 0)
 	require.Nil(t, err)
 
 	defer func() {
 		_ = lvdb1.Close()
 	}()
 
-	_, err = leveldb.NewDB(dir, 10, 1, 10)
+	_, err = leveldb.NewDB(dir, 10, 1, 10, 0)
 	assert.NotNil(t, err)
 }
 
 func TestDB_DoubleOpenButClosedInTimeShouldWork(t *testing.T) {
 	dir := t.TempDir()
-	lvdb1, err := leveldb.NewDB(dir, 10, 1, 10)
+	lvdb1, err := leveldb.NewDB(dir, 10, 1, 10, 0)
 	require.Nil(t, err)
 
 	defer func() {
@@ -76,7 +76,7 @@ func TestDB_DoubleOpenButClosedInTimeShouldWork(t *testing.T) {
 		_ = lvdb1.Close()
 	}()
 
-	lvdb2, err := leveldb.NewDB(dir, 10, 1, 10)
+	lvdb2, err := leveldb.NewDB(dir, 10, 1, 10, 0)
 	assert.Nil(t, err)
 	assert.NotNil(t, lvdb2)
 
