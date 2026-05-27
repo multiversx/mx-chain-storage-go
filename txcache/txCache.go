@@ -7,6 +7,7 @@ import (
 	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
 	"github.com/multiversx/mx-chain-core-go/core/check"
+
 	"github.com/multiversx/mx-chain-storage-go/monitoring"
 	"github.com/multiversx/mx-chain-storage-go/types"
 )
@@ -280,7 +281,11 @@ func (cache *TxCache) UnRegisterHandler(string) {
 }
 
 // ImmunizeTxsAgainstEviction does nothing for this type of cache
-func (cache *TxCache) ImmunizeTxsAgainstEviction(_ [][]byte) {
+func (cache *TxCache) ImmunizeTxsAgainstEviction(_ [][]byte, _ uint64) {
+}
+
+// SetOldestImmuneNonce does nothing for this type of cache
+func (cache *TxCache) SetOldestImmuneNonce(_ uint64) {
 }
 
 // Close does nothing for this cacher implementation
