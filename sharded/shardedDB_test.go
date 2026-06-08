@@ -45,7 +45,7 @@ func TestNewShardedPersister(t *testing.T) {
 		dir := t.TempDir()
 		persisterCreator := &testscommon.PersisterCreatorStub{
 			CreateBasePersisterCalled: func(path string) (types.Persister, error) {
-				return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+				return leveldb.NewSerialDB(path, 2, _1Mil, 10, 0)
 			},
 		}
 		db, err := sharded.NewShardedPersister(dir, persisterCreator, &testscommon.ShardIDProviderStub{})
@@ -63,7 +63,7 @@ func TestShardedPersister_Operations(t *testing.T) {
 	dir := t.TempDir()
 	persisterCreator := &testscommon.PersisterCreatorStub{
 		CreateBasePersisterCalled: func(path string) (types.Persister, error) {
-			return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+			return leveldb.NewSerialDB(path, 2, _1Mil, 10, 0)
 		},
 	}
 	db, err := sharded.NewShardedPersister(dir, persisterCreator, idProvider)
