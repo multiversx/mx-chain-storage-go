@@ -46,12 +46,12 @@ func putKeysBenchmarkByNumKeys(
 	entries, _ := generateKeys(numKeys)
 
 	persisterPath := b.TempDir()
-	singleDB, err := createPersister(persisterPath, singleID)
+	singleDB, err := createPersister(persisterPath, singleID, 0)
 	require.Nil(b, err)
 	defer singleDB.Close()
 
 	shardedPersisterPath := b.TempDir()
-	shardedDB, err := createPersister(shardedPersisterPath, shardedID)
+	shardedDB, err := createPersister(shardedPersisterPath, shardedID, 0)
 	require.Nil(b, err)
 	defer shardedDB.Close()
 
@@ -104,24 +104,24 @@ func copyKeysBenchmarkByNumKeys(b *testing.B, numKeys int) {
 	entries, _ := generateKeys(_1Mil)
 
 	persisterPath := b.TempDir()
-	singleDB, err := createPersister(persisterPath, singleID)
+	singleDB, err := createPersister(persisterPath, singleID, 0)
 	require.Nil(b, err)
 	err = populatePersister(singleDB, entries)
 	require.Nil(b, err)
 	defer singleDB.Close()
 
 	shardedPersisterPath := b.TempDir()
-	shardedDB, err := createPersister(shardedPersisterPath, shardedID)
+	shardedDB, err := createPersister(shardedPersisterPath, shardedID, 0)
 	require.Nil(b, err)
 	err = populatePersister(shardedDB, entries)
 	require.Nil(b, err)
 	defer shardedDB.Close()
 
-	singleDBNew, err := createPersister(b.TempDir(), singleID)
+	singleDBNew, err := createPersister(b.TempDir(), singleID, 0)
 	require.Nil(b, err)
 	defer singleDB.Close()
 
-	shardedDBNew, err := createPersister(b.TempDir(), shardedID)
+	shardedDBNew, err := createPersister(b.TempDir(), shardedID, 0)
 	require.Nil(b, err)
 	defer shardedDB.Close()
 
@@ -269,15 +269,15 @@ func BenchmarkPersister8milGetAllKeys(b *testing.B) {
 	})
 }
 
-func createPersister(path string, id string) (types.Persister, error) {
+func createPersister(path string, id string, bloomFilterSize int) (types.Persister, error) {
 	switch id {
 	case singleID:
-		return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+		return leveldb.NewSerialDB(path, 2, _1Mil, 10, bloomFilterSize)
 	case shardedID:
 		shardCoordinator, _ := sharded.NewShardIDProvider(numShards)
 		persisterCreator := &testscommon.PersisterCreatorStub{
 			CreateBasePersisterCalled: func(path string) (types.Persister, error) {
-				return leveldb.NewSerialDB(path, 2, _1Mil, 10)
+				return leveldb.NewSerialDB(path, 2, _1Mil, 10, bloomFilterSize)
 			},
 		}
 
@@ -299,7 +299,7 @@ func populatePersister(db types.Persister, entries map[string][]byte) error {
 }
 
 func createAndPopulatePersister(path string, id string, entries map[string][]byte) error {
-	db, err := createPersister(path, id)
+	db, err := createPersister(path, id, 0)
 	if err != nil {
 		return err
 	}
@@ -360,7 +360,7 @@ func getKeys(
 
 func createPersisterWithTimerControl(b *testing.B, path, id string) types.Persister {
 	b.StopTimer()
-	db, err := createPersister(path, id)
+	db, err := createPersister(path, id, 0)
 	require.Nil(b, err)
 	b.StartTimer()
 

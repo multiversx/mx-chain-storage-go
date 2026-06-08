@@ -14,6 +14,7 @@ import (
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/types"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
@@ -39,7 +40,7 @@ type DB struct {
 
 // NewDB is a constructor for the leveldb persister
 // It creates the files in the location given as parameter
-func NewDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFiles int) (s *DB, err error) {
+func NewDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFiles int, bloomFilterSize int) (s *DB, err error) {
 	constructorName := "NewDB"
 
 	sw := core.NewStopWatch()
@@ -60,6 +61,9 @@ func NewDB(path string, batchDelaySeconds int, maxBatchSize int, maxOpenFiles in
 		// disable internal cache
 		BlockCacheCapacity:     -1,
 		OpenFilesCacheCapacity: maxOpenFiles,
+	}
+	if bloomFilterSize > 0 {
+		options.Filter = filter.NewBloomFilter(bloomFilterSize)
 	}
 
 	sw.Start(openLevelDBFunction)

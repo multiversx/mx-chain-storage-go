@@ -14,10 +14,42 @@ import (
 )
 
 func createSerialLevelDb(tb testing.TB, batchDelaySeconds int, maxBatchSize int, maxOpenFiles int) (p *leveldb.SerialDB) {
-	lvdb, err := leveldb.NewSerialDB(tb.TempDir(), batchDelaySeconds, maxBatchSize, maxOpenFiles)
+	lvdb, err := leveldb.NewSerialDB(tb.TempDir(), batchDelaySeconds, maxBatchSize, maxOpenFiles, 0)
 
 	assert.Nil(tb, err, "Failed creating leveldb database file")
 	return lvdb
+}
+
+func TestLevelDBWithoutBloomAndLateWithBloomFilter(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+
+	lvdb, err := leveldb.NewSerialDB(tmp, 10, 1, 10, 0)
+	require.Nil(t, err)
+
+	key, val := []byte("key"), []byte("value")
+	err = lvdb.Put(key, val)
+	require.Nil(t, err)
+
+	err = lvdb.Close()
+	require.Nil(t, err)
+
+	res, err := lvdb.Get(key)
+	require.Nil(t, res)
+	require.Equal(t, common.ErrDBIsClosed, err)
+
+	lvdb, err = leveldb.NewSerialDB(tmp, 10, 1, 10, 10)
+	require.Nil(t, err)
+
+	// Put should work
+	err = lvdb.Put([]byte("new-key"), val)
+	require.Nil(t, err)
+
+	// Get should work
+	res, err = lvdb.Get(key)
+	require.Nil(t, err)
+	require.Equal(t, val, res)
 }
 
 func TestSerialDB_PutNoError(t *testing.T) {
