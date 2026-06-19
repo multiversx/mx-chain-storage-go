@@ -1,14 +1,10 @@
 package immunitycache
 
-import (
-	"github.com/multiversx/mx-chain-core-go/core/atomic"
-)
-
 type cacheItem struct {
-	payload  interface{}
-	key      string
-	size     int
-	isImmune atomic.Flag
+	payload interface{}
+	key     string
+	size    int
+	nonce   uint64
 }
 
 func newCacheItem(payload interface{}, key string, size int) *cacheItem {
@@ -19,10 +15,12 @@ func newCacheItem(payload interface{}, key string, size int) *cacheItem {
 	}
 }
 
-func (item *cacheItem) isImmuneToEviction() bool {
-	return item.isImmune.IsSet()
+func (item *cacheItem) isImmuneToEviction(oldestImmuneNonce uint64) bool {
+	return item.nonce >= oldestImmuneNonce && item.nonce > 0
 }
 
-func (item *cacheItem) immunizeAgainstEviction() {
-	_ = item.isImmune.SetReturningPrevious()
+func (item *cacheItem) setImmuneNonce(nonce uint64) {
+	if nonce > item.nonce {
+		item.nonce = nonce
+	}
 }
