@@ -5,8 +5,8 @@ go 1.26
 require (
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/multiversx/concurrent-map v0.1.4
-	github.com/multiversx/mx-chain-core-go v1.5.1-0.20260619074528-4e8586673c06
-	github.com/multiversx/mx-chain-logger-go v1.1.1-0.20260619081950-e136ff41cdc2
+	github.com/multiversx/mx-chain-core-go v1.5.1-0.20260713100334-14d633236974
+	github.com/multiversx/mx-chain-logger-go v1.1.1-0.20260713100530-e85a16be3260
 	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d
 )
@@ -21,7 +21,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/net v0.2.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
