@@ -6,6 +6,7 @@ import (
 
 	"github.com/multiversx/mx-chain-storage-go/common"
 	"github.com/multiversx/mx-chain-storage-go/factory"
+	"github.com/multiversx/mx-chain-storage-go/pebbledb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -103,5 +104,41 @@ func TestNewDB(t *testing.T) {
 
 		err = persister.Close()
 		require.Nil(t, err)
+	})
+
+	t.Run("PebbleDB type, should work", func(t *testing.T) {
+		t.Parallel()
+
+		argsDB := factory.ArgDB{
+			DBType:                common.PebbleDB,
+			Path:                  t.TempDir(),
+			BatchDelaySeconds:     10,
+			MaxBatchSize:          10,
+			MaxOpenFiles:          10,
+			BloomFilterBitsPerKey: 10,
+			PebbleProfile:         pebbledb.HeavyWriteProfile,
+		}
+		persister, err := factory.NewDB(argsDB)
+		require.Nil(t, err)
+		require.Equal(t, "*pebbledb.DB", fmt.Sprintf("%T", persister))
+
+		err = persister.Close()
+		require.Nil(t, err)
+	})
+
+	t.Run("PebbleDB type with unknown profile, should fail", func(t *testing.T) {
+		t.Parallel()
+
+		argsDB := factory.ArgDB{
+			DBType:            common.PebbleDB,
+			Path:              t.TempDir(),
+			BatchDelaySeconds: 10,
+			MaxBatchSize:      10,
+			MaxOpenFiles:      10,
+			PebbleProfile:     "unknown",
+		}
+		persister, err := factory.NewDB(argsDB)
+		require.Nil(t, persister)
+		require.ErrorIs(t, err, common.ErrInvalidConfig)
 	})
 }
