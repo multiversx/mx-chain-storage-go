@@ -20,6 +20,7 @@ const (
 	LvlDB       DBType = "LvlDB"
 	LvlDBSerial DBType = "LvlDBSerial"
 	MemoryDB    DBType = "MemoryDB"
+	PebbleDB    DBType = "PebbleDB"
 )
 
 // ShardIDProviderType represents the type for the supported shard id provider
