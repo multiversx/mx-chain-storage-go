@@ -646,7 +646,7 @@ func TestStorageCacherAdapter_MaxSize(t *testing.T) {
 	assert.Nil(t, err)
 
 	maxSize := sca.MaxSize()
-	assert.Equal(t, math.MaxInt64, maxSize)
+	assert.Equal(t, math.MaxInt, maxSize)
 }
 
 func TestStorageCacherAdapter_RegisterHandler(t *testing.T) {

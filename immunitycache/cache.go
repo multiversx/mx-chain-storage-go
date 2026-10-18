@@ -1,6 +1,7 @@
 package immunitycache
 
 import (
+	"math"
 	"sync"
 
 	"github.com/multiversx/mx-chain-core-go/core/atomic"
@@ -226,8 +227,12 @@ func (ic *ImmunityCache) Clear() {
 	ic.initializeChunksWithLock()
 }
 
-// MaxSize returns the capacity of the cache
+// MaxSize returns the capacity of the cache, capped at math.MaxInt on platforms where int has 32 bits
 func (ic *ImmunityCache) MaxSize() int {
+	if uint64(ic.config.MaxNumItems) > uint64(math.MaxInt) {
+		return math.MaxInt
+	}
+
 	return int(ic.config.MaxNumItems)
 }
 

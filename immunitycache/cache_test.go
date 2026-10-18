@@ -26,7 +26,7 @@ func TestNewImmunityCache(t *testing.T) {
 	cache, err := NewImmunityCache(config)
 	require.Nil(t, err)
 	require.NotNil(t, cache)
-	require.Equal(t, math.MaxUint32, cache.MaxSize())
+	require.Equal(t, expectedMaxSize(config.MaxNumItems), cache.MaxSize())
 
 	invalidConfig := config
 	invalidConfig.Name = ""
@@ -54,6 +54,34 @@ func requireErrorOnNewCache(t *testing.T, config CacheConfig, errExpected error,
 	require.Nil(t, cache)
 	require.True(t, errors.Is(errReceived, errExpected))
 	require.Contains(t, errReceived.Error(), errPartialMessage)
+}
+
+// expectedMaxSize is the capacity MaxSize must report for maxNumItems on the current platform.
+func expectedMaxSize(maxNumItems uint32) int {
+	if uint64(maxNumItems) > uint64(math.MaxInt) {
+		return math.MaxInt
+	}
+
+	return int(maxNumItems)
+}
+
+func TestImmunityCache_MaxSizeDoesNotOverflow(t *testing.T) {
+	t.Parallel()
+
+	config := CacheConfig{
+		Name:                        "test",
+		NumChunks:                   16,
+		MaxNumItems:                 math.MaxUint32,
+		MaxNumBytes:                 maxNumBytesUpperBound,
+		NumItemsToPreemptivelyEvict: 100,
+	}
+
+	cache, err := NewImmunityCache(config)
+	require.Nil(t, err)
+
+	maxSize := cache.MaxSize()
+	require.Positive(t, maxSize)
+	require.Equal(t, expectedMaxSize(config.MaxNumItems), maxSize)
 }
 
 func TestImmunityCache_ImmunizeAgainstEviction(t *testing.T) {

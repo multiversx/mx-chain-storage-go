@@ -256,9 +256,9 @@ func (c *storageCacherAdapter) SizeInBytesContained() uint64 {
 	return c.cacher.SizeInBytesContained()
 }
 
-// MaxSize returns MaxInt64
+// MaxSize returns math.MaxInt, as the adapter does not limit the number of items
 func (c *storageCacherAdapter) MaxSize() int {
-	return math.MaxInt64
+	return math.MaxInt
 }
 
 // RegisterHandler does nothing
